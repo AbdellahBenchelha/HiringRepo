@@ -7,6 +7,7 @@ export function Field({
   label,
   htmlFor,
   required,
+  optional,
   hint,
   error,
   className = "",
@@ -15,6 +16,7 @@ export function Field({
   label: string;
   htmlFor: string;
   required?: boolean;
+  optional?: boolean;
   hint?: string;
   error?: string;
   className?: string;
@@ -27,6 +29,7 @@ export function Field({
       <label htmlFor={htmlFor} className="label">
         {label}
         {required ? <span className="text-red-600"> *</span> : null}
+        {optional ? <span className="font-normal text-navy-400"> (optional)</span> : null}
       </label>
       {hint ? (
         <p id={hintId} className="mb-1.5 text-xs text-navy-500">
@@ -113,6 +116,7 @@ export function RadioGroup({
   value,
   onChange,
   required,
+  optional,
   inline = true,
 }: {
   legend: string;
@@ -121,6 +125,7 @@ export function RadioGroup({
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  optional?: boolean;
   inline?: boolean;
 }) {
   return (
@@ -128,6 +133,7 @@ export function RadioGroup({
       <legend className="label">
         {legend}
         {required ? <span className="text-red-600"> *</span> : null}
+        {optional ? <span className="font-normal text-navy-400"> (optional)</span> : null}
       </legend>
       <div className={inline ? "flex flex-wrap gap-x-5 gap-y-2" : "space-y-2"}>
         {options.map((opt) => (

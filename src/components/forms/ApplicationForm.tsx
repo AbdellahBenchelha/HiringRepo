@@ -130,10 +130,11 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   const [linkedin, setLinkedin] = useState("");
 
   // ---- Position information ----
+  // All roles are fully remote, so work arrangement is fixed rather than chosen.
+  const workArrangement = "Remote";
   const [position, setPosition] = useState(
     initialPosition && positionOptions.includes(initialPosition) ? initialPosition : ""
   );
-  const [workArrangement, setWorkArrangement] = useState("No preference");
   const [employmentType, setEmploymentType] = useState("No preference");
   const [startDate, setStartDate] = useState("");
   const [schedule, setSchedule] = useState("");
@@ -167,7 +168,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [phoneComfort, setPhoneComfort] = useState("Yes");
   const [targetsComfort, setTargetsComfort] = useState("Yes");
-  const [salaryExpectations, setSalaryExpectations] = useState("");
   const [referralSource, setReferralSource] = useState("");
   const [anythingElse, setAnythingElse] = useState("");
 
@@ -326,7 +326,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       languages, hasExperience, yearsExperience, supportTypes, crmTools,
       experienceDetails, experiences, educationLevel, institution, fieldOfStudy,
       graduationYear, certifications, ...answers, phoneComfort, targetsComfort,
-      salaryExpectations, referralSource, anythingElse,
+      referralSource, anythingElse,
       consent: { confirmAccurate, agreePrivacy, consentProcessing, understandNoGuarantee, marketingOptIn },
     };
     fd.append("application", JSON.stringify(data));
@@ -445,10 +445,15 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       </div>
 
       {/* ---------- STEP HEADER ---------- */}
-      <div className="mb-6 border-b border-navy-100 pb-5">
-        <p className="eyebrow">Step {current + 1} of {STEPS.length}</p>
-        <h3 className="mt-1 text-2xl font-bold text-navy-900">{step.title}</h3>
-        {step.description ? <p className="mt-1 text-sm text-navy-500">{step.description}</p> : null}
+      <div className="mb-6 flex items-start gap-4 border-b border-navy-100 pb-5">
+        <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 sm:flex">
+          <Icon name={step.icon} className="h-6 w-6" />
+        </span>
+        <div>
+          <p className="eyebrow">Step {current + 1} of {STEPS.length}</p>
+          <h3 className="mt-1 text-2xl font-bold text-navy-900">{step.title}</h3>
+          {step.description ? <p className="mt-1 text-sm text-navy-500">{step.description}</p> : null}
+        </div>
       </div>
 
       {/* ---------- STEP-LEVEL ERROR BANNER ---------- */}
@@ -488,7 +493,9 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
               <TextInput id="email" type="email" inputMode="email" value={email} autoComplete="email"
                 onChange={(e) => setField(setEmail, "email")(e.target.value)} error={errors.email} />
             </Field>
-            <Field label="Phone number (with country code)" htmlFor="phone" required error={errors.phone}>
+            <Field label="Phone number (with country code)" htmlFor="phone" required
+              hint="This number must be reachable on WhatsApp — our recruitment team will contact you there."
+              error={errors.phone}>
               <TextInput id="phone" type="tel" inputMode="tel" placeholder="+1 555 000 0000" value={phone}
                 autoComplete="tel" onChange={(e) => setField(setPhone, "phone")(e.target.value)} error={errors.phone} />
             </Field>
@@ -500,14 +507,14 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
               <TextInput id="city" value={city} autoComplete="address-level2"
                 onChange={(e) => setField(setCity, "city")(e.target.value)} error={errors.city} />
             </Field>
-            <Field label="Full address" htmlFor="address" hint="Optional" className="sm:col-span-2">
+            <Field label="Full address" htmlFor="address" optional className="sm:col-span-2">
               <TextInput id="address" value={address} autoComplete="street-address"
                 onChange={(e) => setAddress(e.target.value)} />
             </Field>
-            <Field label="Date of birth" htmlFor="dob" hint="Optional">
+            <Field label="Date of birth" htmlFor="dob" optional>
               <TextInput id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
             </Field>
-            <Field label="Preferred contact method" htmlFor="preferredContact">
+            <Field label="Preferred contact method" htmlFor="preferredContact" optional>
               <Select id="preferredContact" value={preferredContact}
                 onChange={(e) => setPreferredContact(e.target.value)}>
                 <option>Email</option>
@@ -515,7 +522,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
                 <option>Either</option>
               </Select>
             </Field>
-            <Field label="LinkedIn profile" htmlFor="linkedin" hint="Optional" error={errors.linkedin} className="sm:col-span-2">
+            <Field label="LinkedIn profile" htmlFor="linkedin" optional error={errors.linkedin} className="sm:col-span-2">
               <TextInput id="linkedin" type="url" placeholder="https://www.linkedin.com/in/…" value={linkedin}
                 onChange={(e) => setField(setLinkedin, "linkedin")(e.target.value)} error={errors.linkedin} />
             </Field>
@@ -525,6 +532,17 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         {/* STEP 2 — POSITION INFORMATION */}
         {step.id === "position" ? (
           <div className="space-y-5">
+            {/* All roles are fully remote. */}
+            <div className="flex items-start gap-3 rounded-xl border border-brand-100 bg-brand-50/60 p-4">
+              <Icon name="globe" className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
+              <div className="text-sm text-navy-700">
+                <p className="font-semibold text-navy-900">All our positions are 100% remote</p>
+                <p className="mt-0.5">
+                  You will work from home. A reliable internet connection and a quiet workspace are
+                  all you need to get started.
+                </p>
+              </div>
+            </div>
             <Field label="Position applied for" htmlFor="position" required error={errors.position}>
               <Select id="position" value={position}
                 onChange={(e) => setField(setPosition, "position")(e.target.value)} error={errors.position}>
@@ -535,16 +553,13 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
               </Select>
             </Field>
             <div className="grid gap-5 sm:grid-cols-2">
-              <RadioGroup legend="Preferred work arrangement" name="workArrangement"
-                options={siteConfig.workArrangements as unknown as string[]} value={workArrangement}
-                onChange={setWorkArrangement} />
-              <RadioGroup legend="Employment preference" name="employmentType"
+              <RadioGroup legend="Employment preference" name="employmentType" optional
                 options={siteConfig.employmentTypes as unknown as string[]} value={employmentType}
                 onChange={setEmploymentType} />
-              <Field label="Available starting date" htmlFor="startDate">
+              <Field label="Available starting date" htmlFor="startDate" optional>
                 <TextInput id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </Field>
-              <Field label="Preferred working schedule" htmlFor="schedule" hint="e.g. mornings, afternoons, full days">
+              <Field label="Preferred working schedule" htmlFor="schedule" optional hint="e.g. mornings, afternoons, full days">
                 <TextInput id="schedule" value={schedule} onChange={(e) => setSchedule(e.target.value)} />
               </Field>
             </div>
@@ -605,78 +620,98 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         {/* STEP 4 — WORK EXPERIENCE */}
         {step.id === "experience" ? (
           <div className="space-y-5">
-            <div className="grid gap-5 sm:grid-cols-2">
-              <RadioGroup legend="Do you have previous call-center or customer-support experience?"
-                name="hasExperience" options={yesNo} value={hasExperience} onChange={setHasExperience} />
-              <Field label="Total years of relevant experience" htmlFor="yearsExperience">
-                <Select id="yearsExperience" value={yearsExperience} onChange={(e) => setYearsExperience(e.target.value)}>
-                  <option value="">Select…</option>
-                  <option>None</option>
-                  <option>Less than 1 year</option>
-                  <option>1–2 years</option>
-                  <option>3–5 years</option>
-                  <option>5+ years</option>
-                </Select>
-              </Field>
-            </div>
+            <RadioGroup legend="Do you have previous call-center or customer-support experience?"
+              name="hasExperience" options={yesNo} value={hasExperience}
+              onChange={(v) => {
+                setHasExperience(v);
+                if (v === "No") {
+                  setYearsExperience("");
+                  setSupportTypes([]);
+                  setCrmTools("");
+                  setExperienceDetails("");
+                  setExperiences([{ jobTitle: "", company: "", startDate: "", endDate: "", responsibilities: "" }]);
+                }
+              }} />
 
-            <CheckboxGroup legend="Type of customer support performed"
-              options={siteConfig.supportTypes as unknown as string[]} values={supportTypes} onToggle={toggleSupportType} />
+            {hasExperience === "Yes" ? (
+              <div className="space-y-5 border-l-2 border-brand-100 pl-5">
+                <Field label="Total years of relevant experience" htmlFor="yearsExperience">
+                  <Select id="yearsExperience" value={yearsExperience} onChange={(e) => setYearsExperience(e.target.value)}>
+                    <option value="">Select…</option>
+                    <option>Less than 1 year</option>
+                    <option>1–2 years</option>
+                    <option>3–5 years</option>
+                    <option>5+ years</option>
+                  </Select>
+                </Field>
 
-            <Field label="CRM or customer-support tools previously used" htmlFor="crmTools"
-              hint="e.g. Zendesk, Salesforce, Freshdesk, Intercom">
-              <TextInput id="crmTools" value={crmTools} onChange={(e) => setCrmTools(e.target.value)} />
-            </Field>
+                <CheckboxGroup legend="Type of customer support performed"
+                  options={siteConfig.supportTypes as unknown as string[]} values={supportTypes} onToggle={toggleSupportType} />
 
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-navy-800">Employment history</p>
-              {experiences.map((row, i) => (
-                <div key={i} className="rounded-xl border border-navy-100 bg-navy-50/40 p-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Most recent job title" htmlFor={`exp-${i}-title`}>
-                      <TextInput id={`exp-${i}-title`} value={row.jobTitle}
-                        onChange={(e) => updateExperience(i, { jobTitle: e.target.value })} />
-                    </Field>
-                    <Field label="Previous company name" htmlFor={`exp-${i}-company`}>
-                      <TextInput id={`exp-${i}-company`} value={row.company}
-                        onChange={(e) => updateExperience(i, { company: e.target.value })} />
-                    </Field>
-                    <Field label="Start date" htmlFor={`exp-${i}-start`}>
-                      <TextInput id={`exp-${i}-start`} type="month" value={row.startDate}
-                        onChange={(e) => updateExperience(i, { startDate: e.target.value })} />
-                    </Field>
-                    <Field label="End date" htmlFor={`exp-${i}-end`} hint="Leave empty if current">
-                      <TextInput id={`exp-${i}-end`} type="month" value={row.endDate}
-                        onChange={(e) => updateExperience(i, { endDate: e.target.value })} />
-                    </Field>
-                  </div>
-                  <Field label="Main responsibilities" htmlFor={`exp-${i}-resp`} className="mt-4">
-                    <Textarea id={`exp-${i}-resp`} value={row.responsibilities}
-                      onChange={(e) => updateExperience(i, { responsibilities: e.target.value })} />
-                  </Field>
-                  {experiences.length > 1 ? (
-                    <div className="mt-3 text-right">
-                      <button type="button"
-                        onClick={() => setExperiences((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700">
-                        <Icon name="trash" className="h-4 w-4" /> Remove
-                      </button>
+                <Field label="CRM or customer-support tools previously used" htmlFor="crmTools" optional
+                  hint="e.g. Zendesk, Salesforce, Freshdesk, Intercom">
+                  <TextInput id="crmTools" value={crmTools} onChange={(e) => setCrmTools(e.target.value)} />
+                </Field>
+
+                <div className="space-y-4">
+                  <p className="text-sm font-medium text-navy-800">Employment history</p>
+                  {experiences.map((row, i) => (
+                    <div key={i} className="rounded-xl border border-navy-100 bg-navy-50/40 p-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Most recent job title" htmlFor={`exp-${i}-title`}>
+                          <TextInput id={`exp-${i}-title`} value={row.jobTitle}
+                            onChange={(e) => updateExperience(i, { jobTitle: e.target.value })} />
+                        </Field>
+                        <Field label="Previous company name" htmlFor={`exp-${i}-company`}>
+                          <TextInput id={`exp-${i}-company`} value={row.company}
+                            onChange={(e) => updateExperience(i, { company: e.target.value })} />
+                        </Field>
+                        <Field label="Start date" htmlFor={`exp-${i}-start`}>
+                          <TextInput id={`exp-${i}-start`} type="month" value={row.startDate}
+                            onChange={(e) => updateExperience(i, { startDate: e.target.value })} />
+                        </Field>
+                        <Field label="End date" htmlFor={`exp-${i}-end`} hint="Leave empty if current">
+                          <TextInput id={`exp-${i}-end`} type="month" value={row.endDate}
+                            onChange={(e) => updateExperience(i, { endDate: e.target.value })} />
+                        </Field>
+                      </div>
+                      <Field label="Main responsibilities" htmlFor={`exp-${i}-resp`} optional className="mt-4">
+                        <Textarea id={`exp-${i}-resp`} value={row.responsibilities}
+                          onChange={(e) => updateExperience(i, { responsibilities: e.target.value })} />
+                      </Field>
+                      {experiences.length > 1 ? (
+                        <div className="mt-3 text-right">
+                          <button type="button"
+                            onClick={() => setExperiences((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700">
+                            <Icon name="trash" className="h-4 w-4" /> Remove
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  ))}
+                  <button type="button"
+                    onClick={() => setExperiences((prev) => [...prev, { jobTitle: "", company: "", startDate: "", endDate: "", responsibilities: "" }])}
+                    className="btn-secondary">
+                    <Icon name="plus" className="h-4 w-4" /> Add Another Employment Record
+                  </button>
                 </div>
-              ))}
-              <button type="button"
-                onClick={() => setExperiences((prev) => [...prev, { jobTitle: "", company: "", startDate: "", endDate: "", responsibilities: "" }])}
-                className="btn-secondary">
-                <Icon name="plus" className="h-4 w-4" /> Add Another Employment Record
-              </button>
-            </div>
 
-            <Field label="Detailed experience" htmlFor="experienceDetails"
-              hint="Tell us more about your relevant experience.">
-              <Textarea id="experienceDetails" value={experienceDetails}
-                onChange={(e) => setExperienceDetails(e.target.value)} />
-            </Field>
+                <Field label="Detailed experience" htmlFor="experienceDetails" optional
+                  hint="Tell us more about your relevant experience.">
+                  <Textarea id="experienceDetails" value={experienceDetails}
+                    onChange={(e) => setExperienceDetails(e.target.value)} />
+                </Field>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-xl border border-green-100 bg-green-50/60 p-4">
+                <Icon name="checkCircle" className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                <p className="text-sm text-navy-700">
+                  No problem — previous experience is not required. We provide full, paid training,
+                  so a positive attitude and willingness to learn are what matter most.
+                </p>
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -684,24 +719,24 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         {step.id === "education" ? (
           <div className="space-y-5">
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Highest level of education" htmlFor="educationLevel">
+              <Field label="Highest level of education" htmlFor="educationLevel" optional>
                 <Select id="educationLevel" value={educationLevel} onChange={(e) => setEducationLevel(e.target.value)}>
                   <option value="">Select…</option>
                   {siteConfig.educationLevels.map((l) => <option key={l} value={l}>{l}</option>)}
                 </Select>
               </Field>
-              <Field label="School, university, or training institution" htmlFor="institution">
+              <Field label="School, university, or training institution" htmlFor="institution" optional>
                 <TextInput id="institution" value={institution} onChange={(e) => setInstitution(e.target.value)} />
               </Field>
-              <Field label="Field of study" htmlFor="fieldOfStudy">
+              <Field label="Field of study" htmlFor="fieldOfStudy" optional>
                 <TextInput id="fieldOfStudy" value={fieldOfStudy} onChange={(e) => setFieldOfStudy(e.target.value)} />
               </Field>
-              <Field label="Graduation year" htmlFor="graduationYear">
+              <Field label="Graduation year" htmlFor="graduationYear" optional>
                 <TextInput id="graduationYear" inputMode="numeric" placeholder="e.g. 2022" value={graduationYear}
                   onChange={(e) => setGraduationYear(e.target.value)} />
               </Field>
             </div>
-            <Field label="Relevant certifications" htmlFor="certifications" hint="Optional">
+            <Field label="Relevant certifications" htmlFor="certifications" optional>
               <Textarea id="certifications" value={certifications} onChange={(e) => setCertifications(e.target.value)} />
             </Field>
           </div>
@@ -711,7 +746,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         {step.id === "questions" ? (
           <div className="space-y-5">
             {applicationQuestions.map((q, idx) => (
-              <Field key={q.key} label={`${idx + 1}. ${q.label}`} htmlFor={q.key}>
+              <Field key={q.key} label={`${idx + 1}. ${q.label}`} htmlFor={q.key} optional>
                 <Textarea id={q.key} value={answers[q.key] ?? ""}
                   onChange={(e) => setAnswers((prev) => ({ ...prev, [q.key]: e.target.value }))} />
               </Field>
@@ -722,18 +757,13 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
               <RadioGroup legend="7. Are you comfortable working with performance targets?"
                 name="targetsComfort" options={yesNo} value={targetsComfort} onChange={setTargetsComfort} />
             </div>
-            <Field label="8. What are your salary expectations?" htmlFor="salaryExpectations"
-              hint="Optional — you may provide a range or write 'negotiable'.">
-              <TextInput id="salaryExpectations" value={salaryExpectations}
-                onChange={(e) => setSalaryExpectations(e.target.value)} />
-            </Field>
-            <Field label="9. How did you hear about this opportunity?" htmlFor="referralSource">
+            <Field label="8. How did you hear about this opportunity?" htmlFor="referralSource" optional>
               <Select id="referralSource" value={referralSource} onChange={(e) => setReferralSource(e.target.value)}>
                 <option value="">Select…</option>
                 {siteConfig.referralSources.map((s) => <option key={s} value={s}>{s}</option>)}
               </Select>
             </Field>
-            <Field label="10. Is there anything else you would like us to know?" htmlFor="anythingElse">
+            <Field label="9. Is there anything else you would like us to know?" htmlFor="anythingElse" optional>
               <Textarea id="anythingElse" value={anythingElse} onChange={(e) => setAnythingElse(e.target.value)} />
             </Field>
           </div>
