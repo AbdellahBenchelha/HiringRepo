@@ -72,17 +72,6 @@ export function Hero() {
 
         {/* Product-style preview panel */}
         <div className="relative animate-fade-up [animation-delay:120ms]">
-          {/* Floating accent chip */}
-          <div className="absolute -left-4 -top-5 z-10 hidden animate-float items-center gap-2 rounded-2xl border border-navy-100 bg-white/90 px-4 py-3 shadow-card backdrop-blur sm:flex">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
-              <Icon name="sparkles" className="h-5 w-5" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-navy-900">Paid onboarding</p>
-              <p className="text-xs text-navy-500">From day one</p>
-            </div>
-          </div>
-
           <div className="rounded-3xl border border-navy-100 bg-white/80 p-3 shadow-card backdrop-blur">
             {/* Panel header */}
             <div className="flex items-center justify-between rounded-2xl bg-navy-900 px-5 py-4 text-white">

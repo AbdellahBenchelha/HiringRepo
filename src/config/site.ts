@@ -74,14 +74,14 @@ export const siteConfig = {
     recruitmentEmail: "careers@nexacaresupport.example", // PLACEHOLDER
     supportEmail: "support@nexacaresupport.example", // PLACEHOLDER
     privacyEmail: "privacy@nexacaresupport.example", // PLACEHOLDER
-    phone: "+1 (000) 000-0000", // PLACEHOLDER
+    phone: "+44 78 3130 4534",
     address: {
-      line1: "100 Example Business Avenue", // PLACEHOLDER
-      line2: "Suite 2400", // PLACEHOLDER
-      city: "Metropolis", // PLACEHOLDER
-      region: "State / Region", // PLACEHOLDER
-      postalCode: "00000", // PLACEHOLDER
-      country: "Country", // PLACEHOLDER
+      line1: "65 Stroude Road",
+      line2: "",
+      city: "Skeabrae",
+      region: "",
+      postalCode: "KW17 0AX",
+      country: "United Kingdom",
     },
     businessHours: "Monday – Friday, 9:00 AM – 6:00 PM (local time)", // PLACEHOLDER
     /** Optional Google Maps embed URL. Leave empty to hide the map. */
@@ -104,7 +104,7 @@ export const siteConfig = {
     registrationNumber: "REG-000000000", // PLACEHOLDER
     taxNumber: "TAX-000000000", // PLACEHOLDER
     registeredAddress:
-      "100 Example Business Avenue, Suite 2400, Metropolis, 00000, Country", // PLACEHOLDER
+      "65 Stroude Road, Skeabrae, KW17 0AX, United Kingdom",
     websiteOwner: "NexaCare Support Solutions Ltd.", // PLACEHOLDER
     hostingProvider: "Your Hosting Provider Inc., 1 Datacenter Road, Country", // PLACEHOLDER
     /** How long applicant data is retained, in months. Used across legal pages. */
@@ -207,7 +207,7 @@ export type SiteConfig = typeof siteConfig;
 /** Convenience: a single-line, human-readable office address. */
 export function formatAddress(): string {
   const a = siteConfig.contact.address;
-  return [a.line1, a.line2, `${a.city}, ${a.region} ${a.postalCode}`, a.country]
-    .filter(Boolean)
-    .join(", ");
+  const regionPostal = [a.region, a.postalCode].filter(Boolean).join(" ");
+  const cityLine = [a.city, regionPostal].filter(Boolean).join(", ");
+  return [a.line1, a.line2, cityLine, a.country].filter(Boolean).join(", ");
 }
