@@ -5,7 +5,7 @@ import { ContactForm } from "@/components/forms/ContactForm";
 export function ContactSection() {
   const { contact } = siteConfig;
   return (
-    <section id="contact" className="section bg-white">
+    <section id="contact" className="section bg-navy-50/60">
       <div className="container-page">
         {/* Header */}
         <div className="mx-auto max-w-2xl text-center">

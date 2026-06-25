@@ -5,7 +5,6 @@ import { siteConfig } from "@/config/site";
 import { organizationJsonLd } from "@/lib/seo";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { ApplyProvider } from "@/components/apply/ApplyProvider";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
 
 const inter = Inter({
@@ -53,11 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
         />
-        <ApplyProvider>
-          <Header />
-          <main id="main">{children}</main>
-          <Footer />
-        </ApplyProvider>
+        <Header />
+        <main id="main">{children}</main>
+        <Footer />
         <CookieConsent />
       </body>
     </html>

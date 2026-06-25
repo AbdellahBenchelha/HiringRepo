@@ -1,6 +1,4 @@
-"use client";
-
-import { useApply } from "./ApplyProvider";
+import Link from "next/link";
 import { Icon } from "@/components/Icon";
 
 interface ApplyButtonProps {
@@ -25,15 +23,11 @@ export function ApplyButton({
   className = "",
   withIcon = true,
 }: ApplyButtonProps) {
-  const { openApply } = useApply();
+  const href = position ? `/apply?position=${encodeURIComponent(position)}` : "/apply";
   return (
-    <button
-      type="button"
-      onClick={() => openApply(position)}
-      className={`${variantClass[variant]} ${className}`}
-    >
+    <Link href={href} className={`${variantClass[variant]} ${className}`}>
       {label}
       {withIcon ? <Icon name="arrowRight" className="h-4 w-4" /> : null}
-    </button>
+    </Link>
   );
 }
