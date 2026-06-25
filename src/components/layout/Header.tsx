@@ -40,9 +40,11 @@ export function Header() {
         <Link href="/#home" className="flex items-center gap-3" aria-label={`${siteConfig.company.name} home`}>
           <Logo />
           <span className="flex flex-col leading-tight">
-            <span className="text-base font-bold text-navy-900 sm:text-lg">{siteConfig.company.name}</span>
-            <span className="hidden text-[11px] font-medium uppercase tracking-wide text-brand-700 sm:block">
-              Customer Experience Careers
+            <span className="text-base font-bold tracking-tight text-navy-900 sm:text-lg">
+              {siteConfig.company.shortName}
+            </span>
+            <span className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:block">
+              Support Solutions
             </span>
           </span>
         </Link>

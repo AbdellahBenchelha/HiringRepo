@@ -32,7 +32,14 @@ export function Footer() {
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3">
               <Logo />
-              <span className="text-lg font-bold text-white">{siteConfig.company.name}</span>
+              <span className="flex flex-col leading-tight">
+                <span className="text-lg font-bold tracking-tight text-white">
+                  {siteConfig.company.shortName}
+                </span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-300">
+                  Support Solutions
+                </span>
+              </span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-navy-300">
               {siteConfig.company.tagline}
