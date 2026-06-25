@@ -37,6 +37,8 @@ export type IconName =
   | "x"
   | "shield"
   | "headset"
+  | "search"
+  | "briefcase"
   | "star";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
@@ -88,6 +90,12 @@ const paths: Record<IconName, React.ReactNode> = {
   shield: <path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10l-6 6Z" />,
   headset: <path d="M12 2a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h1v-8H5v-1a7 7 0 0 1 14 0v1h-2v8h1a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9Z" />,
   star: <path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 20.5l1.4-6.8L2.2 9l6.9-.7L12 2Z" />,
+  search: (
+    <path d="M10 2a8 8 0 1 0 4.9 14.32l5.39 5.4 1.42-1.42-5.4-5.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z" />
+  ),
+  briefcase: (
+    <path d="M9 4a2 2 0 0 0-2 2v1H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3V6a2 2 0 0 0-2-2H9Zm0 3V6h6v1H9Z" />
+  ),
 };
 
 export function Icon({ name, title, className, ...props }: IconProps) {
