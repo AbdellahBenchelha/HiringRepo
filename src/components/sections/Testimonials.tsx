@@ -155,7 +155,7 @@ export function Testimonials() {
               onPointerUp={endDrag}
               onPointerLeave={endDrag}
               onClickCapture={onClickCapture}
-              className={`no-scrollbar grid grid-flow-col grid-rows-2 gap-4 overflow-x-auto pb-3 ${
+              className={`no-scrollbar flex gap-4 overflow-x-auto pb-3 ${
                 grabbing ? "cursor-grabbing select-none" : "cursor-grab"
               }`}
               role="group"
