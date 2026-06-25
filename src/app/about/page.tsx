@@ -8,7 +8,7 @@ import { CtaBand } from "@/components/sections/CtaBand";
 export const metadata = buildMetadata({
   title: "About Us",
   description:
-    "Learn about NexaCare Support Solutions — a customer-experience outsourcing company helping international brands deliver exceptional service.",
+    "Learn about WorkRoute — a customer-experience outsourcing company helping international brands deliver exceptional service.",
   path: "/about",
 });
 

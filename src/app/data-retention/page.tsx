@@ -5,7 +5,7 @@ import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPage
 export const metadata = buildMetadata({
   title: "Data Retention Policy",
   description:
-    "How long NexaCare Support Solutions retains applications and recruitment records, and how data is securely deleted.",
+    "How long WorkRoute retains applications and recruitment records, and how data is securely deleted.",
   path: "/data-retention",
 });
 

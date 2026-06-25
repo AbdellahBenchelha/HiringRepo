@@ -17,7 +17,7 @@ export interface CookieConsent {
   decidedAt: string;
 }
 
-const STORAGE_KEY = "nexacare.cookie-consent.v1";
+const STORAGE_KEY = "workroute.cookie-consent.v1";
 export const CONSENT_EVENT = "cookie-consent-changed";
 export const OPEN_PREFERENCES_EVENT = "open-cookie-preferences";
 

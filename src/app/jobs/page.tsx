@@ -8,7 +8,7 @@ import { CtaBand } from "@/components/sections/CtaBand";
 export const metadata = buildMetadata({
   title: "Open Positions",
   description:
-    "Browse all open customer-support and call-center positions at NexaCare Support Solutions and apply online today.",
+    "Browse all open customer-support and call-center positions at WorkRoute and apply online today.",
   path: "/jobs",
 });
 

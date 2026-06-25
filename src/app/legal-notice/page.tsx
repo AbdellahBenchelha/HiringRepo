@@ -4,7 +4,7 @@ import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPage
 
 export const metadata = buildMetadata({
   title: "Legal Notice",
-  description: "Legal and company identification details for NexaCare Support Solutions.",
+  description: "Legal and company identification details for WorkRoute.",
   path: "/legal-notice",
 });
 

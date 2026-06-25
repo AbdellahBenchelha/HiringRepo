@@ -9,7 +9,7 @@ import { Icon, type IconName } from "@/components/Icon";
 export const metadata = buildMetadata({
   title: "Apply",
   description:
-    "Apply to NexaCare Support Solutions. Complete our application form — a CV is optional and all documents are sent securely to our recruitment team.",
+    "Apply to WorkRoute. Complete our application form — a CV is optional and all documents are sent securely to our recruitment team.",
   path: "/apply",
 });
 

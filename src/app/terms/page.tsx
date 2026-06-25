@@ -5,7 +5,7 @@ import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPage
 export const metadata = buildMetadata({
   title: "Terms and Conditions",
   description:
-    "The terms and conditions governing the use of the NexaCare Support Solutions recruitment website.",
+    "The terms and conditions governing the use of the WorkRoute recruitment website.",
   path: "/terms",
 });
 

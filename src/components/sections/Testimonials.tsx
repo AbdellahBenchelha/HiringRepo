@@ -81,7 +81,7 @@ export function Testimonials() {
         <div className="max-w-2xl">
           <span className="pill uppercase tracking-wider">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-            Life at NexaCare
+            Life at WorkRoute
           </span>
           <h2 className="mt-4 text-balance text-3xl font-bold leading-[1.1] tracking-tight text-navy-900 sm:text-4xl lg:text-[2.75rem]">
             What our team says
@@ -109,7 +109,7 @@ export function Testimonials() {
               </p>
               <p className="mt-2 text-sm leading-relaxed text-navy-600">
                 {testimonials.length} team members have shared their experience of
-                building a career at NexaCare.
+                building a career at WorkRoute.
               </p>
             </div>
             <ApplyButton label="Join the team" className="w-full sm:w-auto" />

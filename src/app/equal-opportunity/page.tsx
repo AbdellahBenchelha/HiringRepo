@@ -5,7 +5,7 @@ import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPage
 export const metadata = buildMetadata({
   title: "Equal Opportunity Statement",
   description:
-    "NexaCare Support Solutions is committed to fair recruitment and considering qualified applicants without unlawful discrimination.",
+    "WorkRoute is committed to fair recruitment and considering qualified applicants without unlawful discrimination.",
   path: "/equal-opportunity",
 });
 

@@ -5,7 +5,7 @@ import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLin
 export const metadata = buildMetadata({
   title: "Cookie Policy",
   description:
-    "Learn about the cookies used on the NexaCare Support Solutions website and how to manage your cookie preferences.",
+    "Learn about the cookies used on the WorkRoute website and how to manage your cookie preferences.",
   path: "/cookie-policy",
 });
 

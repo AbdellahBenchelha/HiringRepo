@@ -5,7 +5,7 @@ import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPage
 export const metadata = buildMetadata({
   title: "Applicant Privacy Notice",
   description:
-    "How NexaCare Support Solutions uses job-applicant information, CVs, employment history, education, interview notes, and assessments during recruitment.",
+    "How WorkRoute uses job-applicant information, CVs, employment history, education, interview notes, and assessments during recruitment.",
   path: "/applicant-privacy",
 });
 

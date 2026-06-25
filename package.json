@@ -1,8 +1,8 @@
 {
-  "name": "nexacare-recruitment",
+  "name": "workroute-recruitment",
   "version": "1.0.0",
   "private": true,
-  "description": "NexaCare Support Solutions — recruitment website for call-center and customer-support roles.",
+  "description": "WorkRoute — recruitment website for call-center and customer-support roles.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

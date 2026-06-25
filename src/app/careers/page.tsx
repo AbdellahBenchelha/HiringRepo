@@ -10,7 +10,7 @@ import { CtaBand } from "@/components/sections/CtaBand";
 export const metadata = buildMetadata({
   title: "Careers",
   description:
-    "Discover why people love building their careers at NexaCare Support Solutions — benefits, open positions, our hiring process, and more.",
+    "Discover why people love building their careers at WorkRoute — benefits, open positions, our hiring process, and more.",
   path: "/careers",
 });
 
@@ -19,7 +19,7 @@ export default function CareersPage() {
     <>
       <PageHeader
         eyebrow="Careers"
-        title="Grow your career with NexaCare"
+        title="Grow your career with WorkRoute"
         description="From paid professional training to internal promotions, we give you the tools and support to succeed."
       />
       <WhyJoinUs />

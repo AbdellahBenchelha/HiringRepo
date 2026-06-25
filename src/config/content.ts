@@ -159,7 +159,7 @@ export const testimonials: Testimonial[] = [
   },
   {
     quote:
-      "I started as a call-center agent and was promoted to team coach within a year. NexaCare really does invest in career growth and professional development.",
+      "I started as a call-center agent and was promoted to team coach within a year. WorkRoute really does invest in career growth and professional development.",
     name: "Daniel M.", // PLACEHOLDER — fictional
     role: "Team Coach", // PLACEHOLDER
     initials: "DM",
@@ -278,7 +278,7 @@ export const testimonials: Testimonial[] = [
   },
   {
     quote:
-      "Flexible scheduling helped me finish my studies while working. NexaCare made it possible to do both well.",
+      "Flexible scheduling helped me finish my studies while working. WorkRoute made it possible to do both well.",
     name: "Grace K.", // PLACEHOLDER — fictional
     role: "Customer Support Representative", // PLACEHOLDER
     initials: "GK",
@@ -306,7 +306,7 @@ export const testimonials: Testimonial[] = [
   },
   {
     quote:
-      "Friendly people, fair pay, and real opportunities to grow. I recommend NexaCare to anyone starting their career.",
+      "Friendly people, fair pay, and real opportunities to grow. I recommend WorkRoute to anyone starting their career.",
     name: "Sara V.", // PLACEHOLDER — fictional
     role: "Sales Support Agent", // PLACEHOLDER
     initials: "SV",
@@ -323,7 +323,7 @@ export const heroTrustIndicators: string[] = [
 /**
  * COMPANIES WE WORK WITH
  * ----------------------
- * Brands NexaCare partners with. These names are PLACEHOLDERS — replace them
+ * Brands WorkRoute partners with. These names are PLACEHOLDERS — replace them
  * with your real clients (and add logo image paths if/when available).
  */
 export interface Client {

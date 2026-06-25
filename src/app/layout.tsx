@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.company.name}`,
   },
   description:
-    "Join NexaCare Support Solutions. Explore customer-support and call-center careers, professional training, and multilingual opportunities. Apply online today.",
+    "Join WorkRoute. Explore customer-support and call-center careers, professional training, and multilingual opportunities. Apply online today.",
   applicationName: siteConfig.company.name,
   authors: [{ name: siteConfig.company.name }],
   keywords: [

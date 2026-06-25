@@ -5,7 +5,7 @@ import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPage
 export const metadata = buildMetadata({
   title: "Privacy Policy",
   description:
-    "How NexaCare Support Solutions collects, uses, stores, and protects personal information, and the rights available to individuals.",
+    "How WorkRoute collects, uses, stores, and protects personal information, and the rights available to individuals.",
   path: "/privacy-policy",
 });
 

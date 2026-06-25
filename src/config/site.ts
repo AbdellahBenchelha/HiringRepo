@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- *  NEXACARE SUPPORT SOLUTIONS — CENTRAL SITE CONFIGURATION
+ *  WORKROUTE — CENTRAL SITE CONFIGURATION
  * =============================================================================
  *
  *  This file is the single source of truth for all editable company content.
@@ -22,17 +22,18 @@
 
 export const siteConfig = {
   /** Public site URL — used for canonical URLs, sitemap and Open Graph. */
-  url: "https://www.nexacaresupport.example", // PLACEHOLDER — set your real domain
+  url: "https://www.workroute.example", // PLACEHOLDER — set your real domain
 
   company: {
-    name: "NexaCare Support Solutions",
-    shortName: "NexaCare",
+    name: "WorkRoute",
+    shortName: "WorkRoute",
+    descriptor: "Customer Experience",
     tagline: "Build Your Career. Connect With People. Make a Difference.",
-    logoInitials: "NC",
+    logoInitials: "WR",
     description:
-      "NexaCare Support Solutions is a customer-experience and business-process outsourcing company committed to helping brands build stronger relationships with their customers. Our teams provide high-quality phone, live chat, email, technical, and sales support across different industries and international markets.",
+      "WorkRoute is a customer-experience and business-process outsourcing company committed to helping brands build stronger relationships with their customers. Our teams provide high-quality phone, live chat, email, technical, and sales support across different industries and international markets.",
     descriptionExtended:
-      "We believe that excellent customer service begins with excellent people. That is why we invest in training, professional development, teamwork, communication, and a positive working environment. Whether you already have customer-service experience or are beginning your professional career, NexaCare gives you the tools, support, and opportunities needed to succeed.",
+      "We believe that excellent customer service begins with excellent people. That is why we invest in training, professional development, teamwork, communication, and a positive working environment. Whether you already have customer-service experience or are beginning your professional career, WorkRoute gives you the tools, support, and opportunities needed to succeed.",
     values: [
       {
         title: "Customer First",
@@ -71,9 +72,9 @@ export const siteConfig = {
   /** CONTACT — editable placeholders, review before publishing.              */
   /** ----------------------------------------------------------------------- */
   contact: {
-    recruitmentEmail: "careers@nexacaresupport.example", // PLACEHOLDER
-    supportEmail: "support@nexacaresupport.example", // PLACEHOLDER
-    privacyEmail: "privacy@nexacaresupport.example", // PLACEHOLDER
+    recruitmentEmail: "careers@workroute.example", // PLACEHOLDER
+    supportEmail: "support@workroute.example", // PLACEHOLDER
+    privacyEmail: "privacy@workroute.example", // PLACEHOLDER
     phone: "+44 78 3130 4534",
     address: {
       line1: "65 Stroude Road",
@@ -99,13 +100,13 @@ export const siteConfig = {
   /** LEGAL / COMPANY REGISTRATION — must be completed by the company.        */
   /** ----------------------------------------------------------------------- */
   legal: {
-    registeredName: "NexaCare Support Solutions Ltd.", // PLACEHOLDER
+    registeredName: "WorkRoute Ltd.", // PLACEHOLDER
     businessType: "Private Limited Company", // PLACEHOLDER
     registrationNumber: "REG-000000000", // PLACEHOLDER
     taxNumber: "TAX-000000000", // PLACEHOLDER
     registeredAddress:
       "65 Stroude Road, Skeabrae, KW17 0AX, United Kingdom",
-    websiteOwner: "NexaCare Support Solutions Ltd.", // PLACEHOLDER
+    websiteOwner: "WorkRoute Ltd.", // PLACEHOLDER
     hostingProvider: "Your Hosting Provider Inc., 1 Datacenter Road, Country", // PLACEHOLDER
     /** How long applicant data is retained, in months. Used across legal pages. */
     applicantDataRetentionMonths: 12, // PLACEHOLDER — confirm with legal counsel

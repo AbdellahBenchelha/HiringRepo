@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 export const metadata = buildMetadata({
   title: "Contact",
   description:
-    "Contact the NexaCare Support Solutions recruitment team. Find our email, phone, address, and business hours, or send us a message.",
+    "Contact the WorkRoute recruitment team. Find our email, phone, address, and business hours, or send us a message.",
   path: "/contact",
 });
 

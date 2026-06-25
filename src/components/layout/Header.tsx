@@ -44,7 +44,7 @@ export function Header() {
               {siteConfig.company.shortName}
             </span>
             <span className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:block">
-              Support Solutions
+              {siteConfig.company.descriptor}
             </span>
           </span>
         </Link>

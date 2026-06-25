@@ -1,16 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="NexaCare logo mark">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="WorkRoute logo mark">
   <defs>
-    <linearGradient id="ncMark" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="wrMark" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#2dc6ae"/>
       <stop offset="0.55" stop-color="#14b8a6"/>
       <stop offset="1" stop-color="#0d9488"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="18" fill="url(#ncMark)"/>
+  <rect width="64" height="64" rx="18" fill="url(#wrMark)"/>
   <rect width="64" height="32" rx="18" fill="#ffffff" opacity="0.10"/>
-  <g stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M20 44 V20" stroke="#ffffff"/>
-    <path d="M44 44 V20" stroke="#ffffff"/>
-    <path d="M20 20 L44 44" stroke="#ff7a52"/>
-  </g>
+  <path d="M21 43 C21 30 43 34 43 21" fill="none" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round"/>
+  <circle cx="21" cy="43" r="4.8" fill="#ffffff"/>
+  <circle cx="43" cy="21" r="5.9" fill="#ff7a52" stroke="#ffffff" stroke-width="2.2"/>
 </svg>

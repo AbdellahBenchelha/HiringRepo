@@ -37,7 +37,7 @@ export function Footer() {
                   {siteConfig.company.shortName}
                 </span>
                 <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-300">
-                  Support Solutions
+                  {siteConfig.company.descriptor}
                 </span>
               </span>
             </div>

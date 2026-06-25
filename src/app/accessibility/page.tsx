@@ -5,7 +5,7 @@ import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
 export const metadata = buildMetadata({
   title: "Accessibility Statement",
   description:
-    "NexaCare Support Solutions is committed to making its recruitment website accessible to all candidates.",
+    "WorkRoute is committed to making its recruitment website accessible to all candidates.",
   path: "/accessibility",
 });
 
