@@ -55,9 +55,9 @@ export const benefits: Benefit[] = [
     icon: "clock",
   },
   {
-    title: "On-site, Hybrid & Remote",
+    title: "Fully Remote Work",
     description:
-      "Work arrangements available depending on the role and location.",
+      "Every role is 100% remote — work from wherever you're based, with no commute.",
     icon: "globe",
   },
   {
@@ -278,7 +278,7 @@ export const faqs: FaqItem[] = [
   {
     question: "Are remote positions available?",
     answer:
-      "Yes, depending on the role and your location. We offer on-site, hybrid, and remote opportunities where available. Each job listing indicates the work arrangements that apply.",
+      "Yes — all of our positions are fully remote. You can work from wherever you're based, and each job listing confirms the remote arrangement.",
   },
   {
     question: "Is training provided?",

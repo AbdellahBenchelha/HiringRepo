@@ -30,7 +30,7 @@ export const jobs: JobPosting[] = [
     title: "Customer Support Representative",
     shortDescription:
       "Be the friendly, knowledgeable voice that helps customers across phone, email, and live chat — resolving issues and creating positive experiences.",
-    workArrangement: "On-site · Hybrid · Remote (role dependent)",
+    workArrangement: "Remote",
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-01-15",
@@ -57,7 +57,7 @@ export const jobs: JobPosting[] = [
     title: "Call Center Agent",
     shortDescription:
       "Handle inbound or outbound calls with confidence, helping customers understand products and services while meeting quality and performance standards.",
-    workArrangement: "On-site · Hybrid (role dependent)",
+    workArrangement: "Remote",
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-01-15",
@@ -84,7 +84,7 @@ export const jobs: JobPosting[] = [
     title: "Live Chat and Email Support Agent",
     shortDescription:
       "Deliver fast, accurate, and professional written support across live chat and email, managing multiple conversations with care.",
-    workArrangement: "Remote · Hybrid (role dependent)",
+    workArrangement: "Remote",
     experienceLevel: "Entry level to experienced",
     languages: "Strong written English required; additional languages a plus",
     datePosted: "2026-01-15",
@@ -109,7 +109,7 @@ export const jobs: JobPosting[] = [
     title: "Technical Support Representative",
     shortDescription:
       "Guide customers through technical issues with patience and clarity, turning frustration into confidence with simple, helpful solutions.",
-    workArrangement: "On-site · Hybrid · Remote (role dependent)",
+    workArrangement: "Remote",
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-01-15",
@@ -134,7 +134,7 @@ export const jobs: JobPosting[] = [
     title: "Sales and Retention Agent",
     shortDescription:
       "Build relationships, understand customer needs, and present the right solutions — helping customers stay and grow with the brands we support.",
-    workArrangement: "On-site · Hybrid (role dependent)",
+    workArrangement: "Remote",
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-01-15",

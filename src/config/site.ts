@@ -147,7 +147,7 @@ export const siteConfig = {
 
   proficiencyLevels: ["Beginner", "Intermediate", "Advanced", "Fluent", "Native"],
 
-  workArrangements: ["On-site", "Remote", "Hybrid", "No preference"],
+  workArrangements: ["Remote"],
 
   employmentTypes: ["Full-time", "Part-time", "Temporary", "No preference"],
 
