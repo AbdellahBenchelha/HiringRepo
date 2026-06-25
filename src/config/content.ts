@@ -185,6 +185,132 @@ export const testimonials: Testimonial[] = [
     role: "Sales Support Agent", // PLACEHOLDER
     initials: "LP",
   },
+  {
+    quote:
+      "The onboarding was the smoothest I have ever experienced. Clear expectations, patient trainers, and real support from day one.",
+    name: "Omar T.", // PLACEHOLDER — fictional
+    role: "Customer Support Representative", // PLACEHOLDER
+    initials: "OT",
+  },
+  {
+    quote:
+      "I love that good work gets noticed here. The performance bonuses are real, and recognition comes regularly, not just once a year.",
+    name: "Priya N.", // PLACEHOLDER — fictional
+    role: "Call Center Agent", // PLACEHOLDER
+    initials: "PN",
+  },
+  {
+    quote:
+      "Switching to a fully remote role let me keep my career while moving closer to family. The flexibility has meant everything to me.",
+    name: "Carlos V.", // PLACEHOLDER — fictional
+    role: "Technical Support Specialist", // PLACEHOLDER
+    initials: "CV",
+  },
+  {
+    quote:
+      "My coach genuinely wants me to succeed. The one-on-one feedback has made me far more confident on every channel.",
+    name: "Hana B.", // PLACEHOLDER — fictional
+    role: "Live Chat & Email Support Agent", // PLACEHOLDER
+    initials: "HB",
+  },
+  {
+    quote:
+      "I have improved my English and my problem-solving skills more in six months here than in years anywhere else.",
+    name: "Yusuf A.", // PLACEHOLDER — fictional
+    role: "Bilingual Support Agent", // PLACEHOLDER
+    initials: "YA",
+  },
+  {
+    quote:
+      "The tools and systems are modern and reliable, so I can focus on actually helping customers instead of fighting with software.",
+    name: "Elena D.", // PLACEHOLDER — fictional
+    role: "Quality Analyst", // PLACEHOLDER
+    initials: "ED",
+  },
+  {
+    quote:
+      "What surprised me most is how approachable the leadership is. You can raise an idea and actually see it taken seriously.",
+    name: "Tom W.", // PLACEHOLDER — fictional
+    role: "Team Coach", // PLACEHOLDER
+    initials: "TW",
+  },
+  {
+    quote:
+      "I was nervous about working from home, but the daily check-ins and team chat keep me connected and motivated.",
+    name: "Mei C.", // PLACEHOLDER — fictional
+    role: "Customer Support Representative", // PLACEHOLDER
+    initials: "MC",
+  },
+  {
+    quote:
+      "Clear targets, fair reviews, and a manager who has my back. It is a healthy place to build a long-term career.",
+    name: "Andre S.", // PLACEHOLDER — fictional
+    role: "Sales Support Agent", // PLACEHOLDER
+    initials: "AS",
+  },
+  {
+    quote:
+      "The training never really stops — there is always a new skill or product to learn, which keeps the work interesting.",
+    name: "Fatima Z.", // PLACEHOLDER — fictional
+    role: "Onboarding Trainer", // PLACEHOLDER
+    initials: "FZ",
+  },
+  {
+    quote:
+      "I came in as a beginner and now I help train new starters. The growth path here is real if you put in the effort.",
+    name: "Liam O.", // PLACEHOLDER — fictional
+    role: "Call Center Agent", // PLACEHOLDER
+    initials: "LO",
+  },
+  {
+    quote:
+      "Supporting customers across different markets has broadened my perspective and made every day feel a little different.",
+    name: "Nadia H.", // PLACEHOLDER — fictional
+    role: "Technical Support Specialist", // PLACEHOLDER
+    initials: "NH",
+  },
+  {
+    quote:
+      "The culture is genuinely inclusive. I have colleagues from all over the world and everyone is treated with respect.",
+    name: "Diego R.", // PLACEHOLDER — fictional
+    role: "Live Chat & Email Support Agent", // PLACEHOLDER
+    initials: "DR",
+  },
+  {
+    quote:
+      "Flexible scheduling helped me finish my studies while working. NexaCare made it possible to do both well.",
+    name: "Grace K.", // PLACEHOLDER — fictional
+    role: "Customer Support Representative", // PLACEHOLDER
+    initials: "GK",
+  },
+  {
+    quote:
+      "I feel trusted to do my job. Less micromanagement, more support — that balance has made me far more productive.",
+    name: "Ibrahim F.", // PLACEHOLDER — fictional
+    role: "Quality Analyst", // PLACEHOLDER
+    initials: "IF",
+  },
+  {
+    quote:
+      "The promotion process is transparent. I knew exactly what to work on, and within months I moved into a senior role.",
+    name: "Julia M.", // PLACEHOLDER — fictional
+    role: "Workforce Coordinator", // PLACEHOLDER
+    initials: "JM",
+  },
+  {
+    quote:
+      "Even remotely, I never feel alone with a tricky case. Help is one message away and the knowledge base is excellent.",
+    name: "Kofi A.", // PLACEHOLDER — fictional
+    role: "Technical Support Specialist", // PLACEHOLDER
+    initials: "KA",
+  },
+  {
+    quote:
+      "Friendly people, fair pay, and real opportunities to grow. I recommend NexaCare to anyone starting their career.",
+    name: "Sara V.", // PLACEHOLDER — fictional
+    role: "Sales Support Agent", // PLACEHOLDER
+    initials: "SV",
+  },
 ];
 
 export const heroTrustIndicators: string[] = [

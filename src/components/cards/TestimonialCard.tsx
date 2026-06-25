@@ -44,10 +44,12 @@ export function TestimonialCard({
   testimonial,
   index = 0,
   featured = false,
+  compact = false,
 }: {
   testimonial: Testimonial;
   index?: number;
   featured?: boolean;
+  compact?: boolean;
 }) {
   if (featured) {
     return (
@@ -83,7 +85,11 @@ export function TestimonialCard({
   return (
     <figure className="flex h-full flex-col rounded-2xl border border-navy-100 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
       <Stars className="text-amber-400" />
-      <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-navy-700">
+      <blockquote
+        className={`mt-4 flex-1 text-sm leading-relaxed text-navy-700 ${
+          compact ? "line-clamp-5" : ""
+        }`}
+      >
         {testimonial.quote}
       </blockquote>
       <figcaption className="mt-6 flex items-center gap-3 border-t border-navy-100 pt-4">
