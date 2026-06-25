@@ -180,6 +180,46 @@ export const heroTrustIndicators: string[] = [
   "Supportive Work Environment",
 ];
 
+/**
+ * COMPANIES WE WORK WITH
+ * ----------------------
+ * Brands NexaCare partners with. These names are PLACEHOLDERS — replace them
+ * with your real clients (and add logo image paths if/when available).
+ */
+export interface Client {
+  name: string;
+  industry: string;
+}
+
+export const clients: Client[] = [
+  { name: "Brightwave", industry: "SaaS" },
+  { name: "Northbridge", industry: "Finance" },
+  { name: "Vellora", industry: "Retail" },
+  { name: "Quantyx", industry: "Technology" },
+  { name: "Maple & Co", industry: "E-commerce" },
+  { name: "Stratos", industry: "Logistics" },
+  { name: "Lumen Health", industry: "Healthcare" },
+  { name: "Cobalt", industry: "Telecom" },
+  { name: "Everpeak", industry: "Travel" },
+  { name: "Nimbus", industry: "Cloud" },
+  { name: "Harborline", industry: "Insurance" },
+  { name: "Pulsewave", industry: "Media" },
+  { name: "Greenfield", industry: "Energy" },
+  { name: "Orbital", industry: "Aerospace" },
+  { name: "Solstice", industry: "Hospitality" },
+  { name: "Trailhead", industry: "Outdoor" },
+  { name: "Meridian", industry: "Banking" },
+  { name: "Aerolink", industry: "Airlines" },
+  { name: "Cedarwood", industry: "Home Goods" },
+  { name: "Vantage", industry: "Consulting" },
+  { name: "Brightpay", industry: "Fintech" },
+  { name: "Wavelength", industry: "Streaming" },
+  { name: "Ironclad", industry: "Security" },
+  { name: "Sunpath", industry: "Solar" },
+  { name: "Fjordly", industry: "Automotive" },
+  { name: "Crestline", industry: "Real Estate" },
+];
+
 export interface FaqItem {
   question: string;
   answer: string;
