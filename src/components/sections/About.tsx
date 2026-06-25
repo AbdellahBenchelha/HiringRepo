@@ -71,7 +71,7 @@ export function About() {
                 <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 text-2xl font-bold text-white shadow-glow">
                   {company.logoInitials}
                 </span>
-                <h3 className="mt-6 text-2xl font-bold tracking-tight">{company.name}</h3>
+                <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">{company.name}</h3>
                 <p className="mt-2 max-w-sm text-navy-200">{company.tagline}</p>
 
                 <div className="mt-8 grid grid-cols-2 gap-4 border-t border-white/10 pt-6">
