@@ -232,6 +232,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       case "personal":
         if (!firstName.trim()) e.firstName = "First name is required.";
         if (!lastName.trim()) e.lastName = "Last name is required.";
+        if (!dob.trim()) e.dob = "Date of birth is required.";
         if (!email.trim()) e.email = "Email address is required.";
         else if (!isValidEmail(email)) e.email = "Please enter a valid email address.";
         if (!phone.trim()) e.phone = "Phone number is required.";
@@ -489,6 +490,10 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
               <TextInput id="lastName" value={lastName} autoComplete="family-name"
                 onChange={(e) => setField(setLastName, "lastName")(e.target.value)} error={errors.lastName} />
             </Field>
+            <Field label="Date of birth" htmlFor="dob" required error={errors.dob}>
+              <TextInput id="dob" type="date" value={dob} autoComplete="bday"
+                onChange={(e) => setField(setDob, "dob")(e.target.value)} error={errors.dob} />
+            </Field>
             <Field label="Email address" htmlFor="email" required error={errors.email}>
               <TextInput id="email" type="email" inputMode="email" value={email} autoComplete="email"
                 onChange={(e) => setField(setEmail, "email")(e.target.value)} error={errors.email} />
@@ -510,9 +515,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             <Field label="Full address" htmlFor="address" optional className="sm:col-span-2">
               <TextInput id="address" value={address} autoComplete="street-address"
                 onChange={(e) => setAddress(e.target.value)} />
-            </Field>
-            <Field label="Date of birth" htmlFor="dob" optional>
-              <TextInput id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
             </Field>
             <Field label="Preferred contact method" htmlFor="preferredContact" optional>
               <Select id="preferredContact" value={preferredContact}
