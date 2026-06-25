@@ -8,7 +8,7 @@ export function ContactSection() {
     <section id="contact" className="section bg-white">
       <div className="container-page">
         {/* Header */}
-        <div className="max-w-2xl">
+        <div className="mx-auto max-w-2xl text-center">
           <span className="pill uppercase tracking-wider">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
             Contact
@@ -22,36 +22,45 @@ export function ContactSection() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-5">
-          {/* Contact details */}
-          <div className="space-y-6 lg:col-span-2">
-            <div className="rounded-2xl border border-navy-100 bg-white p-6 shadow-soft sm:p-7">
-              <ul className="divide-y divide-navy-100">
-                <ContactRow icon="mail" label="Recruitment email">
-                  <a href={`mailto:${contact.recruitmentEmail}`} className="hover:text-brand-700">
-                    {contact.recruitmentEmail}
-                  </a>
-                </ContactRow>
-                <ContactRow icon="mail" label="General support">
-                  <a href={`mailto:${contact.supportEmail}`} className="hover:text-brand-700">
-                    {contact.supportEmail}
-                  </a>
-                </ContactRow>
-                <ContactRow icon="phone" label="Phone">
-                  <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="hover:text-brand-700">
-                    {contact.phone}
-                  </a>
-                </ContactRow>
-                <ContactRow icon="mapPin" label="Office address">
-                  {formatAddress()}
-                </ContactRow>
-                <ContactRow icon="clock" label="Business hours">
-                  {contact.businessHours}
-                </ContactRow>
-              </ul>
+        {/* Split card */}
+        <div className="mt-12 overflow-hidden rounded-3xl border border-navy-100 bg-white shadow-card">
+          <div className="grid lg:grid-cols-5">
+            {/* Info panel */}
+            <div className="relative flex flex-col overflow-hidden bg-gradient-to-br from-navy-800 via-navy-900 to-brand-900 p-8 text-white sm:p-10 lg:col-span-2">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-0 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.07)_1px,transparent_0)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_80%_70%_at_30%_0%,black,transparent)]" />
+                <div className="absolute -right-16 top-10 h-56 w-56 rounded-full bg-brand-500/25 blur-3xl" />
+                <div className="absolute -bottom-16 -left-10 h-48 w-48 rounded-full bg-brand-600/20 blur-3xl" />
+              </div>
 
-              <div className="mt-6 border-t border-navy-100 pt-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
+              <div className="relative">
+                <h3 className="text-xl font-bold tracking-tight">Contact information</h3>
+                <p className="mt-2 text-sm leading-relaxed text-navy-200">
+                  Reach our recruitment team through any of these channels.
+                </p>
+
+                <ul className="mt-8 space-y-5">
+                  <InfoRow icon="mail" label="Recruitment email">
+                    <a href={`mailto:${contact.recruitmentEmail}`} className="transition hover:text-brand-200">
+                      {contact.recruitmentEmail}
+                    </a>
+                  </InfoRow>
+                  <InfoRow icon="phone" label="Phone">
+                    <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="transition hover:text-brand-200">
+                      {contact.phone}
+                    </a>
+                  </InfoRow>
+                  <InfoRow icon="mapPin" label="Office address">
+                    {formatAddress()}
+                  </InfoRow>
+                  <InfoRow icon="clock" label="Business hours">
+                    {contact.businessHours}
+                  </InfoRow>
+                </ul>
+              </div>
+
+              <div className="relative mt-8 border-t border-white/10 pt-6 lg:mt-auto">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-200/80">
                   Follow us
                 </p>
                 <div className="mt-3 flex items-center gap-2">
@@ -62,7 +71,7 @@ export function ContactSection() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={s.label}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-50 text-navy-700 transition hover:bg-brand-50 hover:text-brand-700"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-inset ring-white/10 transition hover:bg-white/20"
                     >
                       <Icon name={s.icon as IconName} className="h-4 w-4" />
                     </a>
@@ -71,35 +80,28 @@ export function ContactSection() {
               </div>
             </div>
 
-            {/* Map */}
-            {contact.mapEmbedUrl ? (
-              <iframe
-                title="Office location map"
-                src={contact.mapEmbedUrl}
-                loading="lazy"
-                className="h-64 w-full rounded-2xl border border-navy-100"
-              />
-            ) : (
-              <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-navy-200 bg-navy-50/50 p-6 text-center text-sm text-navy-500">
-                <span>
-                  <Icon name="mapPin" className="mx-auto mb-2 h-6 w-6 text-navy-400" />
-                  {formatAddress()}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Form */}
-          <div className="lg:col-span-3">
-            <ContactForm />
+            {/* Form */}
+            <div className="p-6 sm:p-8 lg:col-span-3 lg:p-10">
+              <ContactForm bare />
+            </div>
           </div>
         </div>
+
+        {/* Optional map */}
+        {contact.mapEmbedUrl ? (
+          <iframe
+            title="Office location map"
+            src={contact.mapEmbedUrl}
+            loading="lazy"
+            className="mt-6 h-72 w-full rounded-2xl border border-navy-100"
+          />
+        ) : null}
       </div>
     </section>
   );
 }
 
-function ContactRow({
+function InfoRow({
   icon,
   label,
   children,
@@ -109,13 +111,13 @@ function ContactRow({
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+    <li className="flex items-start gap-4">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-brand-300 ring-1 ring-inset ring-white/10">
         <Icon name={icon} className="h-5 w-5" />
       </span>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">{label}</p>
-        <p className="mt-0.5 break-words text-sm text-navy-800">{children}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-200/80">{label}</p>
+        <p className="mt-0.5 break-words text-sm text-white">{children}</p>
       </div>
     </li>
   );

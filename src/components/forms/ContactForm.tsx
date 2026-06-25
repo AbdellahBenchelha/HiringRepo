@@ -7,7 +7,7 @@ import { submitContact } from "@/lib/submit";
 import { Icon } from "@/components/Icon";
 import { Field, TextInput, Textarea } from "./fields";
 
-export function ContactForm() {
+export function ContactForm({ bare = false }: { bare?: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -61,7 +61,7 @@ export function ContactForm() {
 
   if (status === "success") {
     return (
-      <div className="card text-center" role="status" aria-live="polite">
+      <div className={`${bare ? "" : "card"} text-center`} role="status" aria-live="polite">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
           <Icon name="checkCircle" className="h-7 w-7 text-green-600" />
         </div>
@@ -79,7 +79,7 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="card space-y-4">
+    <form onSubmit={handleSubmit} noValidate className={`${bare ? "" : "card"} space-y-4`}>
       <h3 className="text-lg font-semibold text-navy-900">Send us a message</h3>
 
       <div aria-hidden="true" className="absolute left-[-9999px] h-px w-px overflow-hidden">
