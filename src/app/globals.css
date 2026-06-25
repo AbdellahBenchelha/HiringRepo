@@ -46,15 +46,15 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .btn-primary {
-    @apply btn bg-brand-600 text-white shadow-soft hover:bg-brand-700 hover:shadow-card;
+    @apply btn bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-glow hover:from-brand-400 hover:to-brand-500 hover:-translate-y-0.5;
   }
 
   .btn-secondary {
-    @apply btn bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50;
+    @apply btn bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:ring-brand-300 hover:bg-brand-50 hover:text-brand-700;
   }
 
   .btn-ghost {
@@ -62,7 +62,7 @@
   }
 
   .btn-white {
-    @apply btn bg-white text-brand-700 shadow-soft hover:bg-brand-50;
+    @apply btn bg-white text-brand-700 shadow-soft hover:bg-brand-50 hover:-translate-y-0.5;
   }
 
   .btn-outline-white {
@@ -74,11 +74,26 @@
   }
 
   .section {
-    @apply scroll-mt-24 py-16 sm:py-20 lg:py-24;
+    @apply scroll-mt-24 py-16 sm:py-20 lg:py-28;
   }
 
   .eyebrow {
-    @apply text-sm font-semibold uppercase tracking-wider text-brand-700;
+    @apply text-sm font-semibold uppercase tracking-wider text-brand-600;
+  }
+
+  /* Teal→navy gradient text for headline emphasis. */
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-500 to-navy-700 bg-clip-text text-transparent;
+  }
+
+  /* Dotted-grid backdrop used behind hero / feature sections. */
+  .bg-grid {
+    @apply bg-grid-navy [background-size:26px_26px];
+  }
+
+  /* Pill badge used for eyebrows and announcements. */
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700;
   }
 
   .prose-legal {

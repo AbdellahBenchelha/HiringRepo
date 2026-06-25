@@ -1,117 +1,157 @@
-import { siteConfig } from "@/config/site";
-import { heroTrustIndicators } from "@/config/content";
-import { Icon } from "@/components/Icon";
+import { jobs } from "@/config/jobs";
 import { ApplyButton } from "@/components/apply/ApplyButton";
+import { Icon } from "@/components/Icon";
+import { siteConfig } from "@/config/site";
 import Link from "next/link";
 
 export function Hero() {
+  const previewRoles = jobs.slice(0, 3);
+
   return (
     <section
       id="home"
-      className="relative overflow-hidden bg-gradient-to-b from-navy-50 via-white to-white"
+      className="relative overflow-hidden border-b border-navy-100 bg-white"
     >
-      {/* Decorative background accents */}
+      {/* Layered background: dotted grid + soft color blobs */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-100/60 blur-3xl" />
-        <div className="absolute -left-20 top-40 h-64 w-64 rounded-full bg-navy-100/60 blur-3xl" />
+        <div className="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent)]" />
+        <div className="absolute -left-24 top-[-6rem] h-[26rem] w-[26rem] rounded-full bg-brand-200/40 blur-3xl" />
+        <div className="absolute right-[-6rem] top-24 h-[24rem] w-[24rem] rounded-full bg-navy-200/40 blur-3xl" />
+        <div className="absolute left-1/3 top-[18rem] h-[18rem] w-[18rem] rounded-full bg-accent-200/30 blur-3xl" />
       </div>
 
-      <div className="container-page relative grid items-center gap-12 py-16 lg:grid-cols-2 lg:py-24">
-        <div className="animate-fade-up">
-          <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-100">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-600" />
-            We are hiring · {siteConfig.company.tagline}
+      <div className="container-page relative grid items-center gap-14 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
+        {/* Copy */}
+        <div className="animate-fade-up text-center lg:text-left">
+          <span className="pill">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
+            </span>
+            We&apos;re hiring · {jobs.length} open roles
           </span>
 
-          <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight text-navy-900 sm:text-5xl lg:text-6xl">
-            Start Your Career in <span className="text-brand-600">Customer Support</span>
+          <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.05] tracking-tight text-navy-900 sm:text-5xl lg:text-6xl">
+            Grow a career in{" "}
+            <span className="text-gradient">customer experience</span>
           </h1>
 
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-navy-600">
-            Join a professional, people-focused team helping international businesses deliver
-            exceptional customer experiences. We are looking for motivated, friendly, and
-            multilingual candidates who are ready to grow.
+          <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-navy-600 lg:mx-0">
+            Join a people-first team helping international brands deliver
+            exceptional support — fully remote, with paid training and real room
+            to grow.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <ApplyButton label="Apply Now" className="sm:px-8" />
-            <Link href="/#open-positions" className="btn-secondary sm:px-8">
-              View Open Positions
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
+            <ApplyButton label="Apply Now" className="w-full sm:w-auto sm:px-8" />
+            <Link
+              href="/#open-positions"
+              className="btn-secondary w-full sm:w-auto sm:px-8"
+            >
+              Browse open roles
             </Link>
           </div>
 
-          <ul className="mt-10 grid grid-cols-2 gap-3 sm:max-w-lg">
-            {heroTrustIndicators.map((item) => (
-              <li key={item} className="flex items-center gap-2.5 text-sm font-medium text-navy-700">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700">
-                  <Icon name="check" className="h-4 w-4" />
-                </span>
-                {item}
+          {/* Trust strip */}
+          <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-navy-600 lg:justify-start">
+            {[
+              { icon: "globe", label: "100% remote" },
+              { icon: "graduation", label: "Paid training" },
+              { icon: "trendingUp", label: "Promote from within" },
+            ].map((item) => (
+              <li key={item.label} className="flex items-center gap-2">
+                <Icon
+                  name={item.icon as "globe"}
+                  className="h-4 w-4 text-brand-600"
+                />
+                {item.label}
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Decorative "support team" composition (no external image required) */}
-        <div className="relative animate-fade-in lg:justify-self-end">
-          <div className="relative mx-auto w-full max-w-md">
-            <div
-              role="img"
-              aria-label="A diverse customer-support team collaborating in a modern office"
-              className="rounded-2xl bg-gradient-to-br from-navy-700 to-brand-700 p-6 shadow-card"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white">
-                  <Icon name="headset" className="h-6 w-6" />
-                  <span className="font-semibold">Support Hub</span>
-                </div>
-                <span className="rounded-full bg-green-400/20 px-2.5 py-1 text-xs font-medium text-green-200">
-                  ● Online
-                </span>
-              </div>
+        {/* Product-style preview panel */}
+        <div className="relative animate-fade-up [animation-delay:120ms]">
+          {/* Floating accent chip */}
+          <div className="absolute -left-4 top-6 z-10 hidden animate-float items-center gap-2 rounded-2xl border border-navy-100 bg-white/90 px-4 py-3 shadow-card backdrop-blur sm:flex">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
+              <Icon name="sparkles" className="h-5 w-5" />
+            </span>
+            <div className="leading-tight">
+              <p className="text-sm font-bold text-navy-900">Paid onboarding</p>
+              <p className="text-xs text-navy-500">From day one</p>
+            </div>
+          </div>
 
-              <div className="mt-5 flex -space-x-2">
-                {["AR", "DM", "SL", "KT", "+"].map((a) => (
-                  <span
-                    key={a}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-navy-700 bg-white/90 text-xs font-semibold text-navy-700"
+          <div className="rounded-3xl border border-navy-100 bg-white/80 p-3 shadow-card backdrop-blur">
+            {/* Panel header */}
+            <div className="flex items-center justify-between rounded-2xl bg-navy-900 px-5 py-4 text-white">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white">
+                  <Icon name="headset" className="h-5 w-5" />
+                </span>
+                <div className="leading-tight">
+                  <p className="text-sm font-semibold">Open positions</p>
+                  <p className="text-xs text-navy-300">
+                    {siteConfig.company.shortName} careers
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full bg-brand-500/20 px-2.5 py-1 text-xs font-semibold text-brand-200">
+                Live
+              </span>
+            </div>
+
+            {/* Role rows */}
+            <ul className="mt-3 space-y-2.5">
+              {previewRoles.map((job) => (
+                <li key={job.slug}>
+                  <Link
+                    href={`/jobs/${job.slug}`}
+                    className="group flex items-center justify-between gap-3 rounded-2xl border border-navy-100 bg-white px-4 py-3.5 transition hover:border-brand-200 hover:bg-brand-50/40"
                   >
-                    {a}
-                  </span>
-                ))}
-              </div>
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                        <Icon name="chat" className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-navy-900">
+                          {job.title}
+                        </span>
+                        <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-navy-500">
+                          <Icon name="globe" className="h-3.5 w-3.5" />
+                          Remote
+                        </span>
+                      </span>
+                    </span>
+                    <Icon
+                      name="arrowRight"
+                      className="h-4 w-4 shrink-0 text-navy-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
 
-              <div className="mt-5 space-y-3">
-                <div className="rounded-xl bg-white/95 p-3">
-                  <p className="text-xs font-medium text-navy-500">Live chat · resolved</p>
-                  <p className="mt-1 text-sm text-navy-800">“Thank you, that solved my issue!” 🙌</p>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { k: "CSAT", v: "98%" },
-                    { k: "Langs", v: "15+" },
-                    { k: "Replies", v: "< 2m" },
-                  ].map((s) => (
-                    <div key={s.k} className="rounded-xl bg-white/10 p-3 text-center">
-                      <p className="text-lg font-bold text-white">{s.v}</p>
-                      <p className="text-[11px] text-white/70">{s.k}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <Link
+              href="/#open-positions"
+              className="mt-3 flex items-center justify-center gap-1.5 rounded-2xl bg-navy-50 px-4 py-3 text-sm font-semibold text-navy-700 transition hover:bg-brand-50 hover:text-brand-700"
+            >
+              View all {jobs.length} roles
+              <Icon name="arrowRight" className="h-4 w-4" />
+            </Link>
+          </div>
 
-            <div className="absolute -bottom-5 -left-5 hidden rounded-xl bg-white p-3 shadow-card ring-1 ring-navy-100 sm:block">
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 text-green-700">
-                  <Icon name="trendingUp" className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-xs text-navy-500">Career growth</p>
-                  <p className="text-sm font-semibold text-navy-900">Promote from within</p>
-                </div>
-              </div>
-            </div>
+          {/* Floating rating chip */}
+          <div className="absolute -bottom-5 right-2 z-10 hidden animate-float items-center gap-2 rounded-2xl border border-navy-100 bg-white/90 px-4 py-3 shadow-card backdrop-blur [animation-delay:1.5s] sm:flex">
+            <span className="flex gap-0.5 text-accent-400" aria-hidden="true">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Icon key={i} name="star" className="h-4 w-4" />
+              ))}
+            </span>
+            <p className="text-xs font-semibold text-navy-700">
+              Loved by our team
+            </p>
           </div>
         </div>
       </div>

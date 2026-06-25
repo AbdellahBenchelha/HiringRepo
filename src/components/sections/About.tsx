@@ -21,8 +21,11 @@ export function About() {
           <h3 className="text-center text-xl font-semibold text-navy-900">Our Values</h3>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {siteConfig.company.values.map((value) => (
-              <div key={value.title} className="card h-full">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+              <div
+                key={value.title}
+                className="group h-full rounded-2xl border border-navy-100 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition duration-200 group-hover:bg-gradient-to-br group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white group-hover:shadow-glow">
                   <Icon name="checkCircle" className="h-5 w-5" />
                 </span>
                 <h4 className="mt-4 text-base font-semibold text-navy-900">{value.title}</h4>

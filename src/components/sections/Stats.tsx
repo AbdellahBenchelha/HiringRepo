@@ -7,17 +7,23 @@ import { siteConfig } from "@/config/site";
  */
 export function Stats() {
   return (
-    <section className="bg-brand-700 py-14 text-white">
-      <div className="container-page">
-        <p className="text-center text-sm font-semibold uppercase tracking-wider text-brand-100">
+    <section className="relative overflow-hidden bg-navy-900 py-16 text-white">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/4 top-[-8rem] h-[20rem] w-[20rem] rounded-full bg-brand-500/20 blur-3xl" />
+        <div className="absolute right-1/4 bottom-[-8rem] h-[20rem] w-[20rem] rounded-full bg-brand-600/15 blur-3xl" />
+      </div>
+      <div className="container-page relative">
+        <p className="text-center text-sm font-semibold uppercase tracking-wider text-brand-300">
           Trusted by international businesses
         </p>
-        <dl className="mt-8 grid grid-cols-2 gap-8 text-center sm:grid-cols-3 lg:grid-cols-5">
+        <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 text-center sm:grid-cols-3 lg:grid-cols-5">
           {siteConfig.stats.map((stat) => (
             <div key={stat.label}>
               <dt className="sr-only">{stat.label}</dt>
-              <dd className="text-3xl font-bold sm:text-4xl">{stat.value}</dd>
-              <p className="mt-1 text-sm text-brand-100">{stat.label}</p>
+              <dd className="bg-gradient-to-b from-white to-brand-200 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
+                {stat.value}
+              </dd>
+              <p className="mt-2 text-sm leading-snug text-navy-300">{stat.label}</p>
             </div>
           ))}
         </dl>
