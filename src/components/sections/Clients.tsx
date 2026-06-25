@@ -9,6 +9,12 @@ export function Clients() {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  const [grabbing, setGrabbing] = useState(false);
+
+  // Drag-to-scroll state (mouse only; touch/trackpad use native scrolling).
+  const dragging = useRef(false);
+  const dragMoved = useRef(false);
+  const start = useRef({ x: 0, left: 0 });
 
   const update = useCallback(() => {
     const el = scrollerRef.current;
@@ -35,6 +41,38 @@ export function Clients() {
     el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
   };
 
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType !== "mouse") return; // let touch swipe scroll natively
+    const el = scrollerRef.current;
+    if (!el) return;
+    dragging.current = true;
+    dragMoved.current = false;
+    start.current = { x: e.clientX, left: el.scrollLeft };
+    setGrabbing(true);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    const dx = e.clientX - start.current.x;
+    if (Math.abs(dx) > 3) dragMoved.current = true;
+    el.scrollLeft = start.current.left - dx;
+  };
+
+  const endDrag = () => {
+    dragging.current = false;
+    setGrabbing(false);
+  };
+
+  // Suppress accidental clicks fired at the end of a drag.
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (dragMoved.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (
     <section id="clients" className="section bg-navy-50/60">
       <div className="container-page">
@@ -56,7 +94,7 @@ export function Clients() {
 
           <div className="flex items-center gap-3">
             <span className="hidden text-sm font-medium text-navy-500 lg:inline">
-              Drag or use arrows
+              Drag to explore
             </span>
             <div className="flex gap-2">
               <button
@@ -81,30 +119,31 @@ export function Clients() {
           </div>
         </div>
 
-        {/* Manually scrollable track */}
+        {/* Manually scrollable 2-row track — drag anywhere to scroll */}
         <div className="relative mt-10 [mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]">
           <div
             ref={scrollerRef}
-            className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3"
-            tabIndex={0}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerLeave={endDrag}
+            onClickCapture={onClickCapture}
+            className={`no-scrollbar grid grid-flow-col grid-rows-2 gap-4 overflow-x-auto pb-3 ${
+              grabbing ? "cursor-grabbing select-none" : "cursor-grab"
+            }`}
             role="group"
-            aria-label="Client companies — scroll horizontally to explore"
+            aria-label="Client companies — drag or use arrows to explore"
           >
             {clients.map((client, i) => (
               <article
                 key={client.name}
-                className="group flex min-w-[16rem] snap-start flex-col justify-between gap-8 rounded-2xl border border-navy-100 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card sm:min-w-[17rem]"
+                className="group flex min-w-[15rem] items-center rounded-2xl border border-navy-100 bg-white px-5 py-4 shadow-soft transition duration-200 hover:border-brand-200 hover:shadow-card"
               >
-                <CompanyLogo name={client.name} index={i} />
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center rounded-full bg-navy-50 px-2.5 py-1 text-xs font-medium text-navy-600">
-                    {client.industry}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 opacity-0 transition duration-200 group-hover:opacity-100">
-                    Partner
-                    <Icon name="checkCircle" className="h-3.5 w-3.5" />
-                  </span>
-                </div>
+                <CompanyLogo
+                  name={client.name}
+                  industry={client.industry}
+                  index={i}
+                />
               </article>
             ))}
           </div>

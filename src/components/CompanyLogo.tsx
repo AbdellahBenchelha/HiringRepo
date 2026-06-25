@@ -108,10 +108,12 @@ const palette = [
 
 export function CompanyLogo({
   name,
+  industry,
   index,
   className = "",
 }: {
   name: string;
+  industry?: string;
   index: number;
   className?: string;
 }) {
@@ -125,7 +127,14 @@ export function CompanyLogo({
         style={{ color }}
         aria-hidden="true"
       />
-      <span className="text-lg font-bold tracking-tight text-navy-900">{name}</span>
+      <span className="min-w-0">
+        <span className="block truncate text-base font-bold tracking-tight text-navy-900">
+          {name}
+        </span>
+        {industry ? (
+          <span className="block truncate text-xs text-navy-500">{industry}</span>
+        ) : null}
+      </span>
     </span>
   );
 }
