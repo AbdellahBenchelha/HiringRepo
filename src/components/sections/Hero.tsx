@@ -73,7 +73,7 @@ export function Hero() {
         {/* Product-style preview panel */}
         <div className="relative animate-fade-up [animation-delay:120ms]">
           {/* Floating accent chip */}
-          <div className="absolute -left-4 top-6 z-10 hidden animate-float items-center gap-2 rounded-2xl border border-navy-100 bg-white/90 px-4 py-3 shadow-card backdrop-blur sm:flex">
+          <div className="absolute -left-4 -top-5 z-10 hidden animate-float items-center gap-2 rounded-2xl border border-navy-100 bg-white/90 px-4 py-3 shadow-card backdrop-blur sm:flex">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
               <Icon name="sparkles" className="h-5 w-5" />
             </span>
