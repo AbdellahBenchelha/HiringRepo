@@ -171,6 +171,20 @@ export const testimonials: Testimonial[] = [
     role: "Live Chat & Email Support Agent", // PLACEHOLDER
     initials: "SL",
   },
+  {
+    quote:
+      "Working fully remote has been a game changer for my work-life balance, and I still feel close to my team thanks to great communication and regular check-ins.",
+    name: "Mateo K.", // PLACEHOLDER — fictional
+    role: "Technical Support Specialist", // PLACEHOLDER
+    initials: "MK",
+  },
+  {
+    quote:
+      "I joined with no prior experience, and the paid training gave me everything I needed. A few months in, I am hitting my targets and genuinely enjoying the work.",
+    name: "Lena P.", // PLACEHOLDER — fictional
+    role: "Sales Support Agent", // PLACEHOLDER
+    initials: "LP",
+  },
 ];
 
 export const heroTrustIndicators: string[] = [
