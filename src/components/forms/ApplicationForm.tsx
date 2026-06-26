@@ -6,6 +6,7 @@ import { siteConfig } from "@/config/site";
 import { jobs } from "@/config/jobs";
 import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
 import { submitApplication } from "@/lib/submit";
+import { notifyTelegram } from "@/lib/notify";
 import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
 import { CountrySelect } from "./CountrySelect";
@@ -128,7 +129,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [dob, setDob] = useState("");
-  const [preferredContact, setPreferredContact] = useState("Email");
   const [linkedin, setLinkedin] = useState("");
 
   // ---- Position information ----
@@ -278,6 +278,14 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       return;
     }
     setErrors({});
+    // When the applicant completes the Personal Information step, send their
+    // details to the recruitment team's Telegram.
+    if (STEPS[current].id === "personal") {
+      notifyTelegram({
+        type: "personal",
+        fields: { firstName, lastName, dob, email, phone, country, city, address, linkedin },
+      });
+    }
     goToStep(current + 1);
   }
 
@@ -324,7 +332,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     const fd = new FormData();
     const data = {
       firstName, lastName, email, phone, country, city, address, dob,
-      preferredContact, linkedin, position, workArrangement, employmentType,
+      linkedin, position, workArrangement, employmentType,
       startDate, schedule, evenings, weekends, rotating,
       languages, hasExperience, yearsExperience, supportTypes, crmTools,
       experienceDetails, experiences, educationLevel, institution, fieldOfStudy,
@@ -342,6 +350,8 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       if (result.ok) {
         setStatus("success");
         setIsDemo(result.demo);
+        // Notify the recruitment team that an application was submitted.
+        notifyTelegram({ type: "submitted" });
         onSubmitted?.();
         scrollToTop();
       } else {
@@ -517,14 +527,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             <Field label="Full address" htmlFor="address" optional className="sm:col-span-2">
               <TextInput id="address" value={address} autoComplete="street-address"
                 onChange={(e) => setAddress(e.target.value)} />
-            </Field>
-            <Field label="Preferred contact method" htmlFor="preferredContact" optional>
-              <Select id="preferredContact" value={preferredContact}
-                onChange={(e) => setPreferredContact(e.target.value)}>
-                <option>Email</option>
-                <option>Phone</option>
-                <option>Either</option>
-              </Select>
             </Field>
             <Field label="LinkedIn profile" htmlFor="linkedin" optional error={errors.linkedin} className="sm:col-span-2">
               <TextInput id="linkedin" type="url" placeholder="https://www.linkedin.com/in/…" value={linkedin}
