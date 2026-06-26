@@ -11,6 +11,7 @@ import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
 import { CountrySelect } from "./CountrySelect";
 import { PhoneInput } from "./PhoneInput";
+import { DateSelect } from "./DateSelect";
 import {
   Checkbox,
   CheckboxGroup,
@@ -461,9 +462,9 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
               <TextInput id="lastName" value={lastName} autoComplete="family-name"
                 onChange={(e) => setField(setLastName, "lastName")(e.target.value)} error={errors.lastName} />
             </Field>
-            <Field label="Date of birth" htmlFor="dob" required error={errors.dob}>
-              <TextInput id="dob" type="date" value={dob} autoComplete="bday"
-                onChange={(e) => setField(setDob, "dob")(e.target.value)} error={errors.dob} />
+            <Field label="Date of birth" htmlFor="dob-day" required error={errors.dob}>
+              <DateSelect id="dob" value={dob} error={errors.dob}
+                onChange={(v) => setField(setDob, "dob")(v)} />
             </Field>
             <Field label="Email address" htmlFor="email" required error={errors.email}>
               <TextInput id="email" type="email" inputMode="email" value={email} autoComplete="email"
