@@ -32,7 +32,7 @@ export function CountrySelect({
     if (!dirty) return countries;
     const q = query.trim().toLowerCase();
     if (!q) return countries;
-    return countries.filter((c) => c.toLowerCase().includes(q));
+    return countries.filter((c) => c.toLowerCase().startsWith(q));
   }, [query, dirty]);
 
   // Close when clicking/tapping outside.

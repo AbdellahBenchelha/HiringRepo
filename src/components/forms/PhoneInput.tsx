@@ -56,7 +56,11 @@ export function PhoneInput({
     const q = query.trim().toLowerCase();
     if (!q) return phoneCountries;
     return phoneCountries.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.dial.includes(q) || c.iso2.includes(q),
+      (c) =>
+        c.name.toLowerCase().startsWith(q) ||
+        c.iso2.startsWith(q) ||
+        c.dial.startsWith(q) ||
+        c.dial.replace("+", "").startsWith(q),
     );
   }, [query]);
 
