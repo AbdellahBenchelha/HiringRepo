@@ -1,4 +1,4 @@
-import type { CandidateStatus } from "@/lib/candidateStatus";
+import type { CandidateStatus, VoiceStatus } from "@/lib/candidateStatus";
 
 const STATUS_STYLES: Record<CandidateStatus, string> = {
   "New Application": "bg-blue-50 text-blue-700 border-blue-200",
@@ -27,6 +27,35 @@ export function InterviewBadge({ completed }: { completed: boolean }) {
       }`}
     >
       {completed ? "Completed" : "Not completed"}
+    </span>
+  );
+}
+
+const VOICE_STYLES: Record<VoiceStatus, string> = {
+  "Voice Assessment Not Requested": "bg-navy-50 text-navy-500 border-navy-200",
+  "Voice Assessment Requested": "bg-amber-50 text-amber-700 border-amber-200",
+  "Voice Recording Received": "bg-blue-50 text-blue-700 border-blue-200",
+  "Voice Assessment Passed": "bg-green-50 text-green-700 border-green-200",
+  "Voice Assessment Failed": "bg-red-50 text-red-700 border-red-200",
+};
+
+export function VoiceBadge({ status }: { status: VoiceStatus }) {
+  const cls = VOICE_STYLES[status] ?? "bg-navy-50 text-navy-500 border-navy-200";
+  return (
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
+      {status}
+    </span>
+  );
+}
+
+export function SuccessMessageBadge({ sent }: { sent: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+        sent ? "bg-green-50 text-green-700 border-green-200" : "bg-navy-50 text-navy-500 border-navy-200"
+      }`}
+    >
+      {sent ? "Success Message Sent" : "Success Message Not Sent"}
     </span>
   );
 }

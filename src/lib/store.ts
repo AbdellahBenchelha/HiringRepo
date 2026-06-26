@@ -11,10 +11,15 @@
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
+import {
+  CANDIDATE_STATUSES,
+  VOICE_STATUSES,
+  type CandidateStatus,
+  type VoiceStatus,
+} from "@/lib/candidateStatus";
 
-export { CANDIDATE_STATUSES };
-export type { CandidateStatus };
+export { CANDIDATE_STATUSES, VOICE_STATUSES };
+export type { CandidateStatus, VoiceStatus };
 
 export interface LanguageRow {
   language: string;
@@ -51,6 +56,10 @@ export interface Candidate {
   submittedAt?: string;
   invitationSentAt?: string;
   interview?: InterviewResult;
+  // Post-interview WhatsApp follow-ups (Interviews section).
+  successMessageSentAt?: string;
+  voiceRequestedAt?: string;
+  voiceStatus?: VoiceStatus;
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -231,6 +240,36 @@ export function recordInvitation(id: string): Promise<Candidate | null> {
     if (!c) return { list, result: null };
     c.invitationSentAt = new Date().toISOString();
     if (c.status === "New Application") c.status = "Interview Invitation Sent";
+    return { list, result: c };
+  });
+}
+
+export function recordSuccessMessage(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.successMessageSentAt = new Date().toISOString();
+    return { list, result: c };
+  });
+}
+
+export function recordVoiceRequest(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.voiceRequestedAt = new Date().toISOString();
+    if (!c.voiceStatus || c.voiceStatus === "Voice Assessment Not Requested") {
+      c.voiceStatus = "Voice Assessment Requested";
+    }
+    return { list, result: c };
+  });
+}
+
+export function setVoiceStatus(id: string, status: VoiceStatus): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.voiceStatus = status;
     return { list, result: c };
   });
 }
