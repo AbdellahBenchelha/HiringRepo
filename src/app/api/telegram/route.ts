@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildPersonalMessage, buildSubmittedMessage, sendTelegramMessage } from "@/lib/telegram";
+import { createInterviewToken } from "@/lib/token";
 
 /**
  * Telegram notification endpoint used by the application form.
  *
  * "personal"  — sent when the applicant completes the Personal Information step.
+ *               The message also includes a generated interview link the
+ *               recruiter can forward to the applicant.
  * "submitted" — sent when the applicant submits the completed form.
  *
  * Both messages go out through this single endpoint so they share the exact
@@ -16,6 +19,18 @@ export const runtime = "nodejs";
 type Payload =
   | { type: "submitted"; name?: string }
   | { type: "personal"; fields?: Record<string, unknown> };
+
+function str(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** Public base URL for building absolute links (honours a proxy host). */
+function baseUrl(req: NextRequest): string {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, "");
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
+  return `${proto}://${host}`;
+}
 
 export async function POST(req: NextRequest) {
   let payload: Payload;
@@ -29,7 +44,14 @@ export async function POST(req: NextRequest) {
   if (payload.type === "submitted") {
     text = buildSubmittedMessage(payload.name);
   } else if (payload.type === "personal") {
-    text = buildPersonalMessage(payload.fields ?? {});
+    const fields = payload.fields ?? {};
+    const base = buildPersonalMessage(fields);
+    if (base) {
+      const fullName = `${str(fields.firstName)} ${str(fields.lastName)}`.trim() || "Candidate";
+      const token = createInterviewToken({ name: fullName, email: str(fields.email) || undefined });
+      const link = `${baseUrl(req)}/interview?id=${token}`;
+      text = `${base}\n\n📝 <b>Interview link — send this to the applicant:</b>\n${link}`;
+    }
   }
 
   if (!text) {

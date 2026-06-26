@@ -37,6 +37,32 @@ export function buildSubmittedMessage(name?: string): string {
     : "✅ A candidate has just submitted the application form.";
 }
 
+/** Message sent to the recruiter when an applicant completes the interview. */
+export function buildInterviewResultMessage(
+  name: string,
+  email: string | undefined,
+  correct: number,
+  total: number,
+  written: { question: string; answer: string }[],
+): string {
+  const lines = [
+    "📩 <b>Interview completed</b>",
+    "",
+    `<b>Name:</b> ${escapeHtml(name)}`,
+  ];
+  if (email) lines.push(`<b>Email:</b> ${escapeHtml(email)}`);
+  lines.push(`<b>Score:</b> ${correct} / ${total}`);
+
+  if (written.length) {
+    lines.push("", "<b>Written answers</b>");
+    for (const w of written) {
+      const answer = (w.answer || "—").slice(0, 700);
+      lines.push("", `• ${escapeHtml(w.question)}`, escapeHtml(answer));
+    }
+  }
+  return lines.join("\n");
+}
+
 /** Build the "Personal information" message (sent after the first step). */
 export function buildPersonalMessage(fields: Record<string, unknown>): string | null {
   const lines = PERSONAL_FIELDS.flatMap(({ key, label }) => {
