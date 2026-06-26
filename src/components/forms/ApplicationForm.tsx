@@ -294,39 +294,16 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
-    if (status === "submitting") return;
 
-    // Enter key / primary button advances the wizard until the final step.
+    // On the earlier steps the primary button just advances the wizard.
     if (!isLastStep) {
       handleNext();
       return;
     }
 
-    // Honeypot: if filled, silently treat as spam (pretend success, send nothing).
-    if (honeypotRef.current?.value) {
-      setStatus("success");
-      return;
-    }
-
-    // Full validation across every step; jump to the first one with a problem.
-    for (let i = 0; i < STEPS.length; i++) {
-      const se = validateStep(i);
-      if (Object.keys(se).length > 0) {
-        setErrors(se);
-        setCurrent(i);
-        setMaxReached((m) => Math.max(m, i));
-        setStepError("Please complete the required fields before submitting.");
-        scrollToTop();
-        return;
-      }
-    }
-
-    setStepError("");
-
-    // Notify the recruitment team on Telegram that a candidate submitted, with
-    // just their name. Uses navigator.sendBeacon (inside notifyTelegram) so the
-    // request is delivered reliably even though the form is about to unmount to
-    // show the success screen below.
+    // FINAL STEP: send the Telegram notification immediately, with NO checks at
+    // all — no validation, no honeypot, no required-field gating. The message
+    // goes out on every submit click, even if the form is completely empty.
     notifyTelegram({ type: "submitted", name: `${firstName} ${lastName}`.trim() });
 
     setStatus("success");
