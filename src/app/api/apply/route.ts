@@ -25,7 +25,9 @@ export async function POST(req: NextRequest) {
     /* ignore malformed bodies — we still acknowledge so the UX isn't blocked */
   }
 
-  await sendTelegramMessage(SUBMITTED_MESSAGE);
+  const result = await sendTelegramMessage(SUBMITTED_MESSAGE);
+  // eslint-disable-next-line no-console
+  console.log("[apply] submission received — telegram result:", JSON.stringify(result));
 
   return NextResponse.json({ ok: true });
 }
