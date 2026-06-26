@@ -5,8 +5,10 @@ import { buildPersonalMessage, SUBMITTED_MESSAGE, sendTelegramMessage } from "@/
  * Telegram notification endpoint used by the application form.
  *
  * "personal"  — sent when the applicant completes the Personal Information step.
- * "submitted" — kept for completeness; the final submit notification is sent
- *               server-side by /api/apply (see that route).
+ * "submitted" — sent when the applicant submits the completed form.
+ *
+ * Both messages go out through this single endpoint so they share the exact
+ * same, known-working delivery path.
  */
 
 export const runtime = "nodejs";
@@ -35,6 +37,8 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await sendTelegramMessage(text);
+  // eslint-disable-next-line no-console
+  console.log(`[telegram] type=${payload.type} result=${JSON.stringify(result)}`);
   if (result.ok) {
     return NextResponse.json({ ok: true });
   }

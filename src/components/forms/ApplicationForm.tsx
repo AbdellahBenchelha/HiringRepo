@@ -5,7 +5,6 @@ import Link from "next/link";
 import { siteConfig } from "@/config/site";
 import { jobs } from "@/config/jobs";
 import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
-import { submitApplication } from "@/lib/submit";
 import { notifyTelegram } from "@/lib/notify";
 import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
@@ -190,8 +189,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
   // ---- Form meta ----
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [submitMessage, setSubmitMessage] = useState<string>("");
+  const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
 
   const isLastStep = current === STEPS.length - 1;
   const step = STEPS[current];
@@ -324,42 +322,22 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     }
 
     setStatus("submitting");
-    setSubmitMessage("");
     setStepError("");
 
-    const fd = new FormData();
-    const data = {
-      firstName, lastName, email, phone, country, city, address, dob,
-      linkedin, position, workArrangement, employmentType,
-      startDate, schedule, evenings, weekends, rotating,
-      languages, hasExperience, yearsExperience, supportTypes, crmTools,
-      experienceDetails, experiences, educationLevel, institution, fieldOfStudy,
-      graduationYear, certifications, ...answers, phoneComfort, targetsComfort,
-      referralSource, anythingElse,
-      consent: { confirmAccurate, agreePrivacy, consentProcessing, understandNoGuarantee, marketingOptIn },
-    };
-    fd.append("application", JSON.stringify(data));
-    if (cv) fd.append("cv", cv);
-    if (coverLetter) fd.append("coverLetter", coverLetter);
-    if (certificate) fd.append("certificate", certificate);
+    // Notify the recruitment team on Telegram that a candidate submitted.
+    //
+    // This deliberately uses the SAME /api/telegram request that already works
+    // for the personal-information step — if that message reaches Telegram,
+    // this one will too. It is AWAITED so the request fully completes before
+    // the form is unmounted to show the success screen below; otherwise the
+    // browser can cancel the request mid-flight. notifyTelegram never throws,
+    // so the applicant always sees a successful submission even if Telegram is
+    // momentarily unreachable.
+    await notifyTelegram({ type: "submitted" });
 
-    try {
-      const result = await submitApplication(fd);
-      if (result.ok) {
-        // The "candidate submitted the form" Telegram notification is sent
-        // server-side by /api/apply, so it can never be lost when the form
-        // unmounts to show the success screen below.
-        setStatus("success");
-        onSubmitted?.();
-        scrollToTop();
-      } else {
-        setStatus("error");
-        setSubmitMessage(result.message ?? "Something went wrong. Please try again.");
-      }
-    } catch {
-      setStatus("error");
-      setSubmitMessage("A network error occurred. Please try again.");
-    }
+    setStatus("success");
+    onSubmitted?.();
+    scrollToTop();
   }
 
   if (status === "success") {
@@ -832,10 +810,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
                 I agree to receive future job opportunities and recruitment updates. (Optional)
               </Checkbox>
             </div>
-
-            {status === "error" && submitMessage ? (
-              <p role="alert" className="text-sm font-medium text-red-600">{submitMessage}</p>
-            ) : null}
           </div>
         ) : null}
       </div>
