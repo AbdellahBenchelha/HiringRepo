@@ -2,25 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { readInterviewToken } from "@/lib/token";
 import { interviewQuestions, scoreAnswers } from "@/config/interviewQuestions";
 import { buildInterviewResultMessage, sendTelegramMessage } from "@/lib/telegram";
-import { recordInterview } from "@/lib/store";
+import { recordInterview, getCandidate } from "@/lib/store";
 
 /**
  * Receives an applicant's interview answers, scores the multiple-choice ones,
  * and notifies the recruiter on Telegram with the name + score (+ written
- * answers). Stateless: the identity comes from the signed token.
+ * answers). The identity comes from the short candidate id (preferred) or a
+ * legacy signed token.
  */
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  let body: { token?: string; answers?: Record<string, string> };
+  let body: { id?: string; token?: string; answers?: Record<string, string> };
   try {
     body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
 
-  const identity = readInterviewToken(body.token);
+  let identity: { id?: string; name: string; email?: string } | null = null;
+  if (body.id) {
+    const cand = await getCandidate(body.id);
+    if (cand) identity = { id: cand.id, name: cand.fullName, email: cand.email || undefined };
+  }
+  if (!identity && body.token) {
+    identity = readInterviewToken(body.token);
+  }
   if (!identity) {
     return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 400 });
   }

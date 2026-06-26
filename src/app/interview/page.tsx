@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { readInterviewToken } from "@/lib/token";
+import { getCandidate } from "@/lib/store";
 import { publicQuestions, sections } from "@/config/interviewQuestions";
 import { siteConfig } from "@/config/site";
 import { Icon } from "@/components/Icon";
@@ -11,17 +12,31 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+function one(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[0] : v;
+}
+
 export default async function InterviewPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const raw = params.id;
-  const id = Array.isArray(raw) ? raw[0] : raw;
-  const identity = readInterviewToken(id);
+  const candidateId = one(params.c); // short link: /interview?c=<id>
+  const tokenParam = one(params.id); // legacy signed-token link
 
-  if (!identity || !id) {
+  // Prefer the short candidate-id link (looked up in storage); fall back to the
+  // legacy signed token so old links keep working.
+  let identity: { id?: string; name: string } | null = null;
+  if (candidateId) {
+    const cand = await getCandidate(candidateId);
+    if (cand) identity = { id: cand.id, name: cand.fullName };
+  }
+  if (!identity && tokenParam) {
+    identity = readInterviewToken(tokenParam);
+  }
+
+  if (!identity) {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 py-16 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
@@ -42,7 +57,8 @@ export default async function InterviewPage({
   return (
     <InterviewExperience
       fullName={identity.name}
-      token={id}
+      candidateId={identity.id}
+      token={identity.id ? undefined : tokenParam}
       questions={publicQuestions()}
       sections={sections}
     />

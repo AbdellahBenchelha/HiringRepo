@@ -71,8 +71,11 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const token = createInterviewToken({ id, name: fullName, email: str(fields.email) || undefined });
-      const link = `${baseUrl(req)}/interview?id=${token}`;
+      // Short link using the candidate's unguessable id; fall back to a signed
+      // token if no id is available.
+      const link = id
+        ? `${baseUrl(req)}/interview?c=${id}`
+        : `${baseUrl(req)}/interview?id=${createInterviewToken({ name: fullName, email: str(fields.email) || undefined })}`;
       text = `${base}\n\n📝 <b>Interview link — send this to the applicant:</b>\n${link}`;
     }
   }

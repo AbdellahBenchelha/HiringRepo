@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
-import { createInterviewToken } from "@/lib/token";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { CandidatesTable, type CandidateView } from "@/components/admin/CandidatesTable";
 
@@ -22,7 +21,6 @@ export default async function AdminCandidatesPage() {
   const candidates = await listCandidates();
 
   const views: CandidateView[] = candidates.map((c) => {
-    const token = createInterviewToken({ id: c.id, name: c.fullName, email: c.email || undefined });
     return {
       id: c.id,
       fullName: c.fullName,
@@ -42,7 +40,7 @@ export default async function AdminCandidatesPage() {
       interviewCompleted: !!c.interview,
       score: c.interview?.score,
       total: c.interview?.total,
-      interviewLink: `${base}/interview?id=${token}`,
+      interviewLink: `${base}/interview?c=${c.id}`,
     };
   });
 

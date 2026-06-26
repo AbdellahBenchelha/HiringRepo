@@ -8,7 +8,10 @@ import type { Difficulty, PublicQuestion, Section } from "@/config/interviewQues
 
 interface Props {
   fullName: string;
-  token: string;
+  /** Short-link candidate id (preferred). */
+  candidateId?: string;
+  /** Legacy signed token (used when there's no candidateId). */
+  token?: string;
   questions: PublicQuestion[];
   sections: Section[];
 }
@@ -28,8 +31,8 @@ const DIFFICULTY_STYLES: Record<Difficulty, string> = {
   Advanced: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
-export function InterviewExperience({ fullName, token, questions, sections }: Props) {
-  const storageKey = `wr-interview:${token}`;
+export function InterviewExperience({ fullName, candidateId, token, questions, sections }: Props) {
+  const storageKey = `wr-interview:${candidateId || token}`;
 
   // Group questions by section (preserving section + question order).
   const groups = useMemo(
@@ -136,7 +139,7 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
       const res = await fetch("/api/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, answers }),
+        body: JSON.stringify(candidateId ? { id: candidateId, answers } : { token, answers }),
       });
       if (!res.ok) throw new Error("failed");
       try {
