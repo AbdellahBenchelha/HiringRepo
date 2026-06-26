@@ -192,7 +192,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState<string>("");
-  const [isDemo, setIsDemo] = useState(false);
 
   const isLastStep = current === STEPS.length - 1;
   const step = STEPS[current];
@@ -308,7 +307,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     // Honeypot: if filled, silently treat as spam (pretend success, send nothing).
     if (honeypotRef.current?.value) {
       setStatus("success");
-      setIsDemo(siteConfig.demoMode);
       return;
     }
 
@@ -348,13 +346,10 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     try {
       const result = await submitApplication(fd);
       if (result.ok) {
-        // Notify the recruitment team that an application was submitted.
-        // Awaited (and sent BEFORE we swap in the success screen) so the
-        // request fully reaches the server instead of being dropped when the
-        // form unmounts. notifyTelegram never throws.
-        await notifyTelegram({ type: "submitted" });
+        // The "candidate submitted the form" Telegram notification is sent
+        // server-side by /api/apply, so it can never be lost when the form
+        // unmounts to show the success screen below.
         setStatus("success");
-        setIsDemo(result.demo);
         onSubmitted?.();
         scrollToTop();
       } else {
@@ -374,11 +369,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
           <Icon name="checkCircle" className="h-9 w-9 text-green-600" />
         </div>
         <h3 className="mt-6 text-2xl font-semibold">Application Submitted Successfully</h3>
-        {isDemo ? (
-          <p className="mx-auto mt-3 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-            Demonstration mode — this was a TEST submission. No data was sent.
-          </p>
-        ) : null}
         <p className="mt-4 leading-relaxed text-navy-600">
           Thank you for applying to {siteConfig.company.name}. Our recruitment team will review your
           application. Candidates whose qualifications match our current requirements may be
@@ -845,14 +835,6 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
             {status === "error" && submitMessage ? (
               <p role="alert" className="text-sm font-medium text-red-600">{submitMessage}</p>
-            ) : null}
-
-            {siteConfig.demoMode ? (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                <strong>Demonstration mode:</strong> this form is not connected to a backend.
-                Submitting will show a confirmation but will <strong>not</strong> transmit or store
-                any data.
-              </p>
             ) : null}
           </div>
         ) : null}

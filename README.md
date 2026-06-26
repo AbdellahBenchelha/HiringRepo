@@ -44,7 +44,7 @@ Almost everything is editable from a few config files in `src/config/`:
 
 | File | What it controls |
 | --- | --- |
-| `site.ts` | Company name, tagline, descriptions, **contact emails** (incl. recruitment email), phone, address, social links, legal/registration details, statistics, languages, work arrangements, upload limits, and **demo mode**. |
+| `site.ts` | Company name, tagline, descriptions, **contact emails** (incl. recruitment email), phone, address, social links, legal/registration details, statistics, languages, work arrangements, and upload limits. |
 | `jobs.ts` | Open positions (title, slug, description, responsibilities, requirements). |
 | `content.ts` | Benefits, candidate requirements, recruitment steps, testimonials, FAQs. |
 | `navigation.ts` | Header and footer navigation links. |
@@ -67,21 +67,30 @@ Search the codebase for `PLACEHOLDER` and replace every marked value:
 - Have all **legal pages reviewed by a qualified legal professional** for your
   jurisdiction.
 
-## Demonstration vs. production (backend)
+## Form submissions & Telegram notifications
 
-The site ships in **demo mode** (`siteConfig.demoMode = true`). In demo mode the
-application and contact forms **do not transmit any data** — submissions are
-clearly labelled as TEST submissions and nothing leaves the browser.
+The application and contact forms post to server-side API routes that forward a
+notification to a Telegram chat:
 
-To go live, set `demoMode = false` and implement the backend integration points
-documented in **`src/lib/submit.ts`**, including:
+- `/api/apply` — sends a "candidate submitted the form" confirmation.
+- `/api/contact` — forwards the contact message.
+- `/api/telegram` — sends the applicant's personal details once they complete
+  the first step of the application.
 
-1. Application submission endpoint (`/api/apply`)
-2. Secure CV storage (private, encrypted object storage)
-3. Email notifications (to the recruitment team + applicant confirmation)
-4. Database storage with the configured retention period
-5. Server-side spam protection (CAPTCHA + honeypot + rate limiting)
-6. Applicant-data deletion process
+Configure two server-side environment variables in `.env.local` (git-ignored,
+see `.env.example`):
+
+```
+TELEGRAM_BOT_TOKEN=...   # from @BotFather
+TELEGRAM_CHAT_ID=...      # your chat id (message the bot, then read it from getUpdates)
+```
+
+If they are not set, the forms still work — the Telegram step simply no-ops.
+
+For a full production backend you would additionally want: secure CV storage
+(private, encrypted object storage), email notifications, database storage with
+the configured retention period, server-side spam protection (CAPTCHA + rate
+limiting), and an applicant-data deletion process.
 
 > **Security:** never place private API keys in the frontend. All secrets belong
 > in server-side environment variables.

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { siteConfig } from "@/config/site";
 import { isValidEmail } from "@/lib/validation";
 import { submitContact } from "@/lib/submit";
 import { Icon } from "@/components/Icon";
@@ -14,7 +13,6 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [isDemo, setIsDemo] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
 
   function validate() {
@@ -32,7 +30,6 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
     if (status === "submitting") return;
     if (honeypotRef.current?.value) {
       setStatus("success");
-      setIsDemo(siteConfig.demoMode);
       return;
     }
     const e = validate();
@@ -50,7 +47,6 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
       const result = await submitContact(fd);
       if (result.ok) {
         setStatus("success");
-        setIsDemo(result.demo);
       } else {
         setStatus("error");
       }
@@ -66,11 +62,6 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
           <Icon name="checkCircle" className="h-7 w-7 text-green-600" />
         </div>
         <h3 className="mt-4 text-lg font-semibold">Message sent</h3>
-        {isDemo ? (
-          <p className="mx-auto mt-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-            Demonstration mode — TEST message, nothing was sent.
-          </p>
-        ) : null}
         <p className="mt-2 text-sm text-navy-600">
           Thank you for reaching out. We will respond as soon as possible.
         </p>

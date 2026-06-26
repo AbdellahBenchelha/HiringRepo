@@ -6,8 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Demonstration submissions go nowhere; no private endpoints to disallow yet.
-      // Add disallow paths here (e.g. "/api/") once a backend is connected.
+      disallow: "/api/",
     },
     sitemap: `${siteConfig.url}/sitemap.xml`,
     host: siteConfig.url,

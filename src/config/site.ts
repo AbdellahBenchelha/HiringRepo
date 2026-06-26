@@ -183,14 +183,6 @@ export const siteConfig = {
     "Other",
   ],
 
-  /**
-   * Demonstration mode.
-   * When true, the application & contact forms DO NOT transmit data anywhere.
-   * Submissions are clearly labelled as TEST submissions. Set to false only
-   * after wiring up the backend integration points in src/lib/submit.ts.
-   */
-  demoMode: true,
-
   /** File-upload constraints used by the form and the uploader component. */
   upload: {
     maxFileSizeMB: 5,
