@@ -281,7 +281,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     // When the applicant completes the Personal Information step, send their
     // details to the recruitment team's Telegram.
     if (STEPS[current].id === "personal") {
-      notifyTelegram({
+      void notifyTelegram({
         type: "personal",
         fields: { firstName, lastName, dob, email, phone, country, city, address, linkedin },
       });
@@ -348,10 +348,13 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     try {
       const result = await submitApplication(fd);
       if (result.ok) {
+        // Notify the recruitment team that an application was submitted.
+        // Awaited (and sent BEFORE we swap in the success screen) so the
+        // request fully reaches the server instead of being dropped when the
+        // form unmounts. notifyTelegram never throws.
+        await notifyTelegram({ type: "submitted" });
         setStatus("success");
         setIsDemo(result.demo);
-        // Notify the recruitment team that an application was submitted.
-        notifyTelegram({ type: "submitted" });
         onSubmitted?.();
         scrollToTop();
       } else {
