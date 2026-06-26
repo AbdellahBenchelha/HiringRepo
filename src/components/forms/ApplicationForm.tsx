@@ -8,6 +8,7 @@ import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
 import { submitApplication } from "@/lib/submit";
 import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
+import { CountrySelect } from "./CountrySelect";
 import {
   Checkbox,
   CheckboxGroup,
@@ -500,13 +501,13 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             </Field>
             <Field label="Phone number (with country code)" htmlFor="phone" required
               hint="This number must be reachable on WhatsApp — our recruitment team will contact you there."
-              error={errors.phone}>
+              error={errors.phone} className="sm:col-span-2">
               <TextInput id="phone" type="tel" inputMode="tel" placeholder="+1 555 000 0000" value={phone}
                 autoComplete="tel" onChange={(e) => setField(setPhone, "phone")(e.target.value)} error={errors.phone} />
             </Field>
             <Field label="Country" htmlFor="country" required error={errors.country}>
-              <TextInput id="country" value={country} autoComplete="country-name"
-                onChange={(e) => setField(setCountry, "country")(e.target.value)} error={errors.country} />
+              <CountrySelect id="country" value={country} error={errors.country}
+                onChange={(v) => setField(setCountry, "country")(v)} />
             </Field>
             <Field label="City" htmlFor="city" required error={errors.city}>
               <TextInput id="city" value={city} autoComplete="address-level2"
