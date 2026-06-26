@@ -86,10 +86,15 @@ export async function POST(req: NextRequest) {
       }),
     });
     if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      // eslint-disable-next-line no-console
+      console.error(`[telegram] sendMessage failed: HTTP ${res.status} ${detail}`);
       return NextResponse.json({ ok: false, error: "telegram_error" }, { status: 502 });
     }
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[telegram] could not reach api.telegram.org:", err);
     return NextResponse.json({ ok: false, error: "network_error" }, { status: 502 });
   }
 }
