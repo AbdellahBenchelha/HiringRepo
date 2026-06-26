@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildPersonalMessage, SUBMITTED_MESSAGE, sendTelegramMessage } from "@/lib/telegram";
+import { buildPersonalMessage, buildSubmittedMessage, sendTelegramMessage } from "@/lib/telegram";
 
 /**
  * Telegram notification endpoint used by the application form.
@@ -14,7 +14,7 @@ import { buildPersonalMessage, SUBMITTED_MESSAGE, sendTelegramMessage } from "@/
 export const runtime = "nodejs";
 
 type Payload =
-  | { type: "submitted" }
+  | { type: "submitted"; name?: string }
   | { type: "personal"; fields?: Record<string, unknown> };
 
 export async function POST(req: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   let text: string | null = null;
   if (payload.type === "submitted") {
-    text = SUBMITTED_MESSAGE;
+    text = buildSubmittedMessage(payload.name);
   } else if (payload.type === "personal") {
     text = buildPersonalMessage(payload.fields ?? {});
   }

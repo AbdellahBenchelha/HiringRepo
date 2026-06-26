@@ -25,11 +25,16 @@ const PERSONAL_FIELDS: { key: string; label: string }[] = [
   { key: "linkedin", label: "LinkedIn" },
 ];
 
-/** Simple confirmation sent when an applicant submits the full form. */
-export const SUBMITTED_MESSAGE = "✅ A candidate has just submitted the application form.";
-
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Simple confirmation sent when an applicant submits the full form. */
+export function buildSubmittedMessage(name?: string): string {
+  const who = typeof name === "string" ? name.trim() : "";
+  return who
+    ? `✅ ${escapeHtml(who.slice(0, 120))} has just submitted the application form.`
+    : "✅ A candidate has just submitted the application form.";
 }
 
 /** Build the "Personal information" message (sent after the first step). */

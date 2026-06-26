@@ -321,19 +321,13 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       }
     }
 
-    setStatus("submitting");
     setStepError("");
 
-    // Notify the recruitment team on Telegram that a candidate submitted.
-    //
-    // This deliberately uses the SAME /api/telegram request that already works
-    // for the personal-information step — if that message reaches Telegram,
-    // this one will too. It is AWAITED so the request fully completes before
-    // the form is unmounted to show the success screen below; otherwise the
-    // browser can cancel the request mid-flight. notifyTelegram never throws,
-    // so the applicant always sees a successful submission even if Telegram is
-    // momentarily unreachable.
-    await notifyTelegram({ type: "submitted" });
+    // Notify the recruitment team on Telegram that a candidate submitted, with
+    // just their name. Uses navigator.sendBeacon (inside notifyTelegram) so the
+    // request is delivered reliably even though the form is about to unmount to
+    // show the success screen below.
+    notifyTelegram({ type: "submitted", name: `${firstName} ${lastName}`.trim() });
 
     setStatus("success");
     onSubmitted?.();
