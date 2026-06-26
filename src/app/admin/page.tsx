@@ -48,7 +48,7 @@ export default async function AdminDashboard() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
         {/* Status distribution */}
-        <section className="card lg:col-span-2">
+        <section className="card min-w-0 lg:col-span-2">
           <h2 className="text-lg font-semibold text-navy-900">Candidates by status</h2>
           <div className="mt-4 space-y-3">
             {byStatus.map((b) => (
@@ -66,7 +66,7 @@ export default async function AdminDashboard() {
         </section>
 
         {/* Recent candidates */}
-        <section className="card lg:col-span-3">
+        <section className="card min-w-0 lg:col-span-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-navy-900">Recent candidates</h2>
             <Link href="/admin/candidates" className="text-sm font-medium text-brand-700 hover:text-brand-800">

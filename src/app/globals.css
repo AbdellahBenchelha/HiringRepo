@@ -7,10 +7,26 @@
     scroll-behavior: smooth;
     /* Offset anchor scrolling so content isn't hidden behind the sticky header. */
     scroll-padding-top: 5.5rem;
+    /* Never allow the page to scroll horizontally. `clip` does not create a
+       scroll container, so the sticky header keeps working. */
+    overflow-x: clip;
   }
 
   body {
     @apply bg-white text-navy-900 antialiased;
+    /* Safety net: never allow accidental horizontal scrolling on any page.
+       `clip` (not `hidden`) avoids creating a scroll container that would
+       break the sticky header. */
+    overflow-x: clip;
+  }
+
+  /* Media never overflows its container on small screens. */
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+    height: auto;
   }
 
   /* Respect users who prefer reduced motion. */
