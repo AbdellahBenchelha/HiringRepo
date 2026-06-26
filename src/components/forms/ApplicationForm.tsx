@@ -7,6 +7,7 @@ import { jobs } from "@/config/jobs";
 import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
 import { notifyTelegram } from "@/lib/notify";
 import { detectCountryName } from "@/lib/geo";
+import { newId } from "@/lib/id";
 import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
 import { CountrySelect } from "./CountrySelect";
@@ -120,6 +121,8 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   const [maxReached, setMaxReached] = useState(0);
   const [stepError, setStepError] = useState("");
   const topRef = useRef<HTMLDivElement>(null);
+  // Stable id linking this application to its interview + Admin Panel record.
+  const candidateIdRef = useRef<string>(newId());
 
   // ---- Personal information ----
   const [firstName, setFirstName] = useState("");
@@ -298,6 +301,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     if (STEPS[current].id === "personal") {
       void notifyTelegram({
         type: "personal",
+        id: candidateIdRef.current,
         fields: { firstName, lastName, dob, email, phone, country, city, address, linkedin },
       });
     }
@@ -318,6 +322,25 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       handleNext();
       return;
     }
+
+    // Save the full application for the Admin Panel (best-effort; does not block
+    // or change the Telegram notifications below).
+    void fetch("/api/applications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: candidateIdRef.current,
+        application: {
+          firstName, lastName, dob, email, phone, country, city, address, linkedin,
+          position, employmentType, startDate, schedule, evenings, weekends, rotating,
+          languages, hasExperience, yearsExperience, supportTypes, crmTools,
+          experienceDetails, experiences, educationLevel, institution, fieldOfStudy,
+          graduationYear, certifications, ...answers, phoneComfort, targetsComfort,
+          referralSource, anythingElse,
+        },
+      }),
+      keepalive: true,
+    }).catch(() => {});
 
     // FINAL STEP: send the Telegram notification immediately, with NO checks at
     // all — no validation, no honeypot, no required-field gating. The message

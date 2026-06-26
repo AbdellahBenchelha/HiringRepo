@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readInterviewToken } from "@/lib/token";
 import { interviewQuestions, scoreAnswers } from "@/config/interviewQuestions";
 import { buildInterviewResultMessage, sendTelegramMessage } from "@/lib/telegram";
+import { recordInterview } from "@/lib/store";
 
 /**
  * Receives an applicant's interview answers, scores the multiple-choice ones,
@@ -26,6 +27,15 @@ export async function POST(req: NextRequest) {
 
   const answers = body.answers ?? {};
   const { correct, total } = scoreAnswers(answers);
+
+  // Save the result for the Admin Panel (best-effort; never blocks Telegram).
+  if (identity.id) {
+    try {
+      await recordInterview(identity.id, { score: correct, total, answers });
+    } catch {
+      /* storage is best-effort */
+    }
+  }
 
   const written = interviewQuestions
     .filter((q) => q.type === "text")

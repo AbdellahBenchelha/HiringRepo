@@ -13,7 +13,7 @@
  */
 export type TelegramNotification =
   | { type: "submitted"; name?: string }
-  | { type: "personal"; fields: Record<string, string> };
+  | { type: "personal"; id?: string; fields: Record<string, string> };
 
 export function notifyTelegram(payload: TelegramNotification): void {
   const url = "/api/telegram";

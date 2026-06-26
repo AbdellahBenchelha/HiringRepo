@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildPersonalMessage, buildSubmittedMessage, sendTelegramMessage } from "@/lib/telegram";
 import { createInterviewToken } from "@/lib/token";
+import { upsertPersonal } from "@/lib/store";
 
 /**
  * Telegram notification endpoint used by the application form.
@@ -18,7 +19,7 @@ export const runtime = "nodejs";
 
 type Payload =
   | { type: "submitted"; name?: string }
-  | { type: "personal"; fields?: Record<string, unknown> };
+  | { type: "personal"; id?: string; fields?: Record<string, unknown> };
 
 function str(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -48,7 +49,29 @@ export async function POST(req: NextRequest) {
     const base = buildPersonalMessage(fields);
     if (base) {
       const fullName = `${str(fields.firstName)} ${str(fields.lastName)}`.trim() || "Candidate";
-      const token = createInterviewToken({ name: fullName, email: str(fields.email) || undefined });
+      const id = typeof payload.id === "string" && payload.id ? payload.id : undefined;
+
+      // Persist the candidate for the Admin Panel (best-effort, never blocks).
+      if (id) {
+        try {
+          await upsertPersonal({
+            id,
+            firstName: str(fields.firstName),
+            lastName: str(fields.lastName),
+            dob: str(fields.dob),
+            email: str(fields.email),
+            phone: str(fields.phone),
+            country: str(fields.country),
+            city: str(fields.city),
+            address: str(fields.address),
+            linkedin: str(fields.linkedin),
+          });
+        } catch {
+          /* storage is best-effort */
+        }
+      }
+
+      const token = createInterviewToken({ id, name: fullName, email: str(fields.email) || undefined });
       const link = `${baseUrl(req)}/interview?id=${token}`;
       text = `${base}\n\n📝 <b>Interview link — send this to the applicant:</b>\n${link}`;
     }

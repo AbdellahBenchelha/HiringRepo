@@ -3,8 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
 import { organizationJsonLd } from "@/lib/seo";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { SiteHeader, SiteFooter } from "@/components/layout/SiteChrome";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
 
 const inter = Inter({
@@ -52,9 +51,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
         />
-        <Header />
+        <SiteHeader />
         <main id="main">{children}</main>
-        <Footer />
+        <SiteFooter />
         <CookieConsent />
       </body>
     </html>

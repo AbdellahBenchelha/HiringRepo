@@ -33,6 +33,8 @@ function sign(data: string): string {
 }
 
 export interface InterviewIdentity {
+  /** Stable candidate id used to connect application ↔ interview in storage. */
+  id?: string;
   name: string;
   email?: string;
 }
@@ -40,7 +42,7 @@ export interface InterviewIdentity {
 /** Build an opaque token that encodes (and signs) the applicant identity. */
 export function createInterviewToken(identity: InterviewIdentity): string {
   const body = b64url(
-    Buffer.from(JSON.stringify({ n: identity.name, e: identity.email ?? "" })),
+    Buffer.from(JSON.stringify({ i: identity.id ?? "", n: identity.name, e: identity.email ?? "" })),
   );
   return `${body}.${sign(body)}`;
 }
@@ -57,9 +59,17 @@ export function readInterviewToken(token: string | undefined | null): InterviewI
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
 
   try {
-    const obj = JSON.parse(fromB64url(body).toString("utf8")) as { n?: unknown; e?: unknown };
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as {
+      i?: unknown;
+      n?: unknown;
+      e?: unknown;
+    };
     if (typeof obj.n !== "string" || !obj.n) return null;
-    return { name: obj.n, email: typeof obj.e === "string" ? obj.e : undefined };
+    return {
+      id: typeof obj.i === "string" && obj.i ? obj.i : undefined,
+      name: obj.n,
+      email: typeof obj.e === "string" ? obj.e : undefined,
+    };
   } catch {
     return null;
   }
