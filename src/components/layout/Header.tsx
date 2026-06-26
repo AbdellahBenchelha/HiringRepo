@@ -43,7 +43,7 @@ export function Header() {
             <span className="text-base font-bold tracking-tight text-navy-900 sm:text-lg">
               {siteConfig.company.shortName}
             </span>
-            <span className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:block">
+            <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700 sm:text-[10px] sm:tracking-[0.18em]">
               {siteConfig.company.descriptor}
             </span>
           </span>
