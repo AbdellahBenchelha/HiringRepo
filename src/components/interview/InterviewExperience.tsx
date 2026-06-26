@@ -47,7 +47,6 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [sectionIdx, setSectionIdx] = useState(0);
-  const [maxReached, setMaxReached] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [saved, setSaved] = useState(false);
@@ -62,9 +61,7 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
         const data = JSON.parse(raw) as { answers?: Record<string, string>; sectionIdx?: number };
         if (data.answers) setAnswers(data.answers);
         if (typeof data.sectionIdx === "number") {
-          const s = Math.min(Math.max(data.sectionIdx, 0), groups.length - 1);
-          setSectionIdx(s);
-          setMaxReached(s);
+          setSectionIdx(Math.min(Math.max(data.sectionIdx, 0), groups.length - 1));
         }
       }
     } catch {
@@ -98,21 +95,18 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
   }
 
   const group = groups[sectionIdx];
-  const sectionChoiceAnswered =
-    group?.items
-      .filter((q) => q.type === "choice")
-      .every((q) => (answers[q.id] ?? "").trim() !== "") ?? true;
+  const sectionAllAnswered =
+    group?.items.every((q) => (answers[q.id] ?? "").trim() !== "") ?? true;
 
   function goSection(i: number) {
     if (i < 0 || i > groups.length - 1) return;
     setSectionIdx(i);
-    setMaxReached((m) => Math.max(m, i));
     setHint(false);
     scrollTop();
   }
 
   function next() {
-    if (!sectionChoiceAnswered) {
+    if (!sectionAllAnswered) {
       setHint(true);
       scrollTop();
       return;
@@ -219,7 +213,11 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
 
             <div className="mt-7 flex items-start gap-3 rounded-xl border border-brand-100 bg-brand-50/60 p-4 text-sm text-navy-700">
               <Icon name="shield" className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
-              <p>Your progress is saved automatically. You can close this page and return later using the same link.</p>
+              <p>
+                All questions are required. Once you continue to the next section you cannot go back,
+                so please answer carefully. Your progress is saved automatically — you can close this
+                page and return later using the same link.
+              </p>
             </div>
 
             <button type="button" onClick={() => { setPhase("assess"); scrollTop(); }} className="btn-primary mt-7 sm:px-10">
@@ -234,26 +232,21 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
             {/* Section stepper */}
             <div className="mb-5 flex gap-1.5 overflow-x-auto pb-1">
               {groups.map((g, i) => {
-                const reachable = i <= maxReached;
-                const done = g.items.filter((q) => q.type === "choice").every((q) => (answers[q.id] ?? "").trim() !== "") && g.items.some((q) => q.type === "choice");
-                const state = i === sectionIdx ? "current" : done ? "done" : "todo";
+                const state = i < sectionIdx ? "done" : i === sectionIdx ? "current" : "todo";
                 return (
-                  <button
+                  <span
                     key={g.section.id}
-                    type="button"
-                    disabled={!reachable}
-                    onClick={() => goSection(i)}
                     title={g.section.title}
-                    className={`flex h-8 min-w-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition ${
+                    className={`flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-xs font-semibold ${
                       state === "current"
                         ? "bg-brand-600 text-white"
                         : state === "done"
                           ? "bg-brand-100 text-brand-700"
                           : "bg-navy-100 text-navy-400"
-                    } ${reachable ? "cursor-pointer" : "cursor-not-allowed"}`}
+                    }`}
                   >
                     {state === "done" ? <Icon name="check" className="h-3.5 w-3.5" /> : <span>{i + 1}</span>}
-                  </button>
+                  </span>
                 );
               })}
             </div>
@@ -333,28 +326,20 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
               ))}
             </div>
 
-            {hint && !sectionChoiceAnswered ? (
+            {hint && !sectionAllAnswered ? (
               <p role="alert" className="mt-4 text-sm font-medium text-red-600">
-                Please answer all multiple-choice questions in this section before continuing.
+                Please answer all questions in this section before continuing. Once you continue you
+                cannot return to this section.
               </p>
             ) : null}
 
-            {/* Nav */}
-            <div className="mt-6 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => goSection(sectionIdx - 1)}
-                disabled={sectionIdx === 0}
-                className={`btn-secondary ${sectionIdx === 0 ? "invisible" : ""}`}
-              >
-                <Icon name="arrowRight" className="h-4 w-4 rotate-180" /> Back
-              </button>
-
+            {/* Nav — forward only, no going back */}
+            <div className="mt-6 flex items-center gap-3">
               <button type="button" onClick={saveForLater} className="hidden text-sm font-medium text-navy-500 hover:text-brand-700 sm:block">
                 {saved ? "Saved ✓" : "Save & continue later"}
               </button>
 
-              <button type="button" onClick={next} className="btn-primary sm:px-8">
+              <button type="button" onClick={next} className="btn-primary ml-auto sm:px-8">
                 {sectionIdx === groups.length - 1 ? "Review Answers" : "Next Section"}
                 <Icon name="arrowRight" className="h-4 w-4" />
               </button>
@@ -369,24 +354,15 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
               <span className="eyebrow">Almost done</span>
               <h2 className="mt-2 text-3xl font-bold text-navy-900">Review your answers</h2>
               <p className="mx-auto mt-3 max-w-prose text-navy-600">
-                Please check your responses below. You can go back and edit any section before
-                submitting. You answered <strong>{answeredTotal}</strong> of {questions.length} questions.
+                Please review your responses below, then submit your assessment. You have answered all{" "}
+                <strong>{questions.length}</strong> questions.
               </p>
             </div>
 
             <div className="space-y-4">
-              {groups.map((g, i) => (
+              {groups.map((g) => (
                 <div key={g.section.id} className="card">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-navy-900">{g.section.title}</h3>
-                    <button
-                      type="button"
-                      onClick={() => { setPhase("assess"); goSection(i); }}
-                      className="text-sm font-medium text-brand-700 hover:text-brand-800"
-                    >
-                      Edit
-                    </button>
-                  </div>
+                  <h3 className="text-lg font-semibold text-navy-900">{g.section.title}</h3>
                   <dl className="mt-3 space-y-3">
                     {g.items.map((q) => {
                       const a = answers[q.id] ?? "";
@@ -416,11 +392,8 @@ export function InterviewExperience({ fullName, token, questions, sections }: Pr
               </p>
             ) : null}
 
-            <div className="mt-6 flex items-center justify-between gap-3">
-              <button type="button" onClick={() => { setPhase("assess"); goSection(groups.length - 1); }} className="btn-secondary">
-                <Icon name="arrowRight" className="h-4 w-4 rotate-180" /> Back
-              </button>
-              <button type="button" onClick={submit} disabled={status === "submitting"} className="btn-primary sm:px-10">
+            <div className="mt-6 flex justify-center">
+              <button type="button" onClick={submit} disabled={status === "submitting"} className="btn-primary sm:px-12">
                 {status === "submitting" ? "Submitting…" : "Submit Assessment"}
                 {status !== "submitting" ? <Icon name="check" className="h-4 w-4" /> : null}
               </button>
