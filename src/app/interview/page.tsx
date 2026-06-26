@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { readInterviewToken } from "@/lib/token";
-import { publicQuestions } from "@/config/interviewQuestions";
+import { publicQuestions, sections } from "@/config/interviewQuestions";
 import { siteConfig } from "@/config/site";
 import { Icon } from "@/components/Icon";
 import { InterviewExperience } from "@/components/interview/InterviewExperience";
@@ -40,6 +40,11 @@ export default async function InterviewPage({
   }
 
   return (
-    <InterviewExperience fullName={identity.name} token={id} questions={publicQuestions()} />
+    <InterviewExperience
+      fullName={identity.name}
+      token={id}
+      questions={publicQuestions()}
+      sections={sections}
+    />
   );
 }

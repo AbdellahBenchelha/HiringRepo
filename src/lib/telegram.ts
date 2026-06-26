@@ -53,11 +53,12 @@ export function buildInterviewResultMessage(
   if (email) lines.push(`<b>Email:</b> ${escapeHtml(email)}`);
   lines.push(`<b>Score:</b> ${correct} / ${total}`);
 
-  if (written.length) {
+  const answered = written.filter((w) => w.answer.trim() !== "");
+  if (answered.length) {
     lines.push("", "<b>Written answers</b>");
-    for (const w of written) {
-      const answer = (w.answer || "—").slice(0, 700);
-      lines.push("", `• ${escapeHtml(w.question)}`, escapeHtml(answer));
+    for (const w of answered) {
+      const q = w.question.length > 90 ? `${w.question.slice(0, 90)}…` : w.question;
+      lines.push("", `• ${escapeHtml(q)}`, escapeHtml(w.answer.slice(0, 350)));
     }
   }
   return lines.join("\n");
