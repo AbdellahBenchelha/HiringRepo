@@ -9,6 +9,7 @@ import { submitApplication } from "@/lib/submit";
 import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
 import { CountrySelect } from "./CountrySelect";
+import { PhoneInput } from "./PhoneInput";
 import {
   Checkbox,
   CheckboxGroup,
@@ -499,11 +500,11 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
               <TextInput id="email" type="email" inputMode="email" value={email} autoComplete="email"
                 onChange={(e) => setField(setEmail, "email")(e.target.value)} error={errors.email} />
             </Field>
-            <Field label="Phone number (with country code)" htmlFor="phone" required
-              hint="This number must be reachable on WhatsApp — our recruitment team will contact you there."
+            <Field label="Phone number" htmlFor="phone" required
+              hint="Pick your country code, then enter your number. This number must be reachable on WhatsApp — our recruitment team will contact you there."
               error={errors.phone} className="sm:col-span-2">
-              <TextInput id="phone" type="tel" inputMode="tel" placeholder="+1 555 000 0000" value={phone}
-                autoComplete="tel" onChange={(e) => setField(setPhone, "phone")(e.target.value)} error={errors.phone} />
+              <PhoneInput id="phone" value={phone} error={errors.phone}
+                onChange={(v) => setField(setPhone, "phone")(v)} />
             </Field>
             <Field label="Country" htmlFor="country" required error={errors.country}>
               <CountrySelect id="country" value={country} error={errors.country}
