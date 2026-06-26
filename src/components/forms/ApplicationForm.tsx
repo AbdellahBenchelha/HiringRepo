@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
 import { jobs } from "@/config/jobs";
 import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
 import { notifyTelegram } from "@/lib/notify";
+import { detectCountryName } from "@/lib/geo";
 import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
 import { CountrySelect } from "./CountrySelect";
@@ -129,6 +130,22 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   const [address, setAddress] = useState("");
   const [dob, setDob] = useState("");
   const [linkedin, setLinkedin] = useState("");
+  // True once the visitor changes the country themselves — stops IP detection
+  // from overwriting their choice if it resolves later.
+  const countryTouchedRef = useRef(false);
+
+  // On load, pre-fill the country from the visitor's IP location. The visitor
+  // can still change it; we never overwrite a value they've already set.
+  useEffect(() => {
+    let active = true;
+    detectCountryName().then((name) => {
+      if (!active || !name || countryTouchedRef.current) return;
+      setCountry((prev) => (prev ? prev : name));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // ---- Position information ----
   // All roles are fully remote, so work arrangement is fixed rather than chosen.
@@ -460,7 +477,10 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             </Field>
             <Field label="Country" htmlFor="country" required error={errors.country}>
               <CountrySelect id="country" value={country} error={errors.country}
-                onChange={(v) => setField(setCountry, "country")(v)} />
+                onChange={(v) => {
+                  countryTouchedRef.current = true;
+                  setField(setCountry, "country")(v);
+                }} />
             </Field>
             <Field label="City" htmlFor="city" required error={errors.city}>
               <TextInput id="city" value={city} autoComplete="address-level2"
