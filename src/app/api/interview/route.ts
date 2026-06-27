@@ -22,15 +22,28 @@ export async function POST(req: NextRequest) {
   }
 
   let identity: { id?: string; name: string; email?: string } | null = null;
+  let alreadyCompleted = false;
   if (body.id) {
     const cand = await getCandidate(body.id);
-    if (cand) identity = { id: cand.id, name: cand.fullName, email: cand.email || undefined };
+    if (cand) {
+      identity = { id: cand.id, name: cand.fullName, email: cand.email || undefined };
+      alreadyCompleted = !!cand.interview;
+    }
   }
   if (!identity && body.token) {
     identity = readInterviewToken(body.token);
+    if (identity?.id) {
+      const cand = await getCandidate(identity.id);
+      if (cand?.interview) alreadyCompleted = true;
+    }
   }
   if (!identity) {
     return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 400 });
+  }
+
+  // Already submitted — do not record again or re-send Telegram.
+  if (alreadyCompleted) {
+    return NextResponse.json({ ok: false, error: "already_completed" }, { status: 409 });
   }
 
   const answers = body.answers ?? {};

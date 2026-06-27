@@ -141,7 +141,8 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(candidateId ? { id: candidateId, answers } : { token, answers }),
       });
-      if (!res.ok) throw new Error("failed");
+      // 409 = already completed: treat as done rather than an error.
+      if (!res.ok && res.status !== 409) throw new Error("failed");
       try {
         window.localStorage.removeItem(storageKey);
       } catch {

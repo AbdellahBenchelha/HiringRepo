@@ -28,12 +28,46 @@ export default async function InterviewPage({
   // Prefer the short candidate-id link (looked up in storage); fall back to the
   // legacy signed token so old links keep working.
   let identity: { id?: string; name: string } | null = null;
+  let alreadyCompleted = false;
   if (candidateId) {
     const cand = await getCandidate(candidateId);
-    if (cand) identity = { id: cand.id, name: cand.fullName };
+    if (cand) {
+      identity = { id: cand.id, name: cand.fullName };
+      alreadyCompleted = !!cand.interview;
+    }
   }
   if (!identity && tokenParam) {
-    identity = readInterviewToken(tokenParam);
+    const fromToken = readInterviewToken(tokenParam);
+    if (fromToken) {
+      identity = fromToken;
+      // If the token carries a candidate id, check whether they've finished.
+      if (fromToken.id) {
+        const cand = await getCandidate(fromToken.id);
+        if (cand?.interview) alreadyCompleted = true;
+      }
+    }
+  }
+
+  // Already submitted — show a confirmation instead of letting them retake it.
+  if (identity && alreadyCompleted) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 py-16 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+          <Icon name="checkCircle" className="h-9 w-9 text-green-600" />
+        </div>
+        <h1 className="mt-6 text-2xl font-bold text-navy-900 sm:text-3xl">
+          You have already completed this assessment
+        </h1>
+        <p className="mt-3 leading-relaxed text-navy-600">
+          Thank you, {identity.name.split(/\s+/)[0] || identity.name}. Your interview has already
+          been submitted, so it cannot be taken again. Our recruitment team will review your
+          answers and contact you about the next steps.
+        </p>
+        <Link href="/" className="btn-secondary mt-8">
+          Go to {siteConfig.company.name}
+        </Link>
+      </div>
+    );
   }
 
   if (!identity) {
