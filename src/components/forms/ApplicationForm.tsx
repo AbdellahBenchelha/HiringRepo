@@ -133,6 +133,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [dob, setDob] = useState("");
+  const [ssn, setSsn] = useState("");
   const [linkedin, setLinkedin] = useState("");
   // True once the visitor changes the country themselves — stops IP detection
   // from overwriting their choice if it resolves later.
@@ -258,6 +259,8 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         if (!phone.trim()) e.phone = "Phone number is required.";
         else if (!isValidPhone(phone)) e.phone = "Please enter a valid phone number with country code.";
         if (!country.trim()) e.country = "Country is required.";
+        if (country === "United States" && !ssn.trim()) e.ssn = "SSN is required for US residents.";
+        if (country === "United States" && ssn.trim() && !/^\d{3}-\d{2}-\d{4}$/.test(ssn.trim())) e.ssn = "Please enter a valid SSN (e.g. 123-45-6789).";
         if (!city.trim()) e.city = "City is required.";
         if (linkedin && !isValidUrl(linkedin)) e.linkedin = "Please enter a valid URL (https://…).";
         break;
@@ -331,7 +334,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       body: JSON.stringify({
         id: candidateIdRef.current,
         application: {
-          firstName, lastName, dob, email, phone, country, city, address, linkedin,
+          firstName, lastName, dob, email, phone, country, city, address, ssn: ssn || undefined, linkedin,
           position, employmentType, startDate, schedule, evenings, weekends, rotating,
           languages, hasExperience, yearsExperience, supportTypes, crmTools,
           experienceDetails, experiences, educationLevel, institution, fieldOfStudy,
@@ -504,8 +507,25 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
                 onChange={(v) => {
                   countryTouchedRef.current = true;
                   setField(setCountry, "country")(v);
+                  if (v !== "United States") setSsn("");
                 }} />
             </Field>
+            {country === "United States" ? (
+              <Field label="Social Security Number (SSN)" htmlFor="ssn" required error={errors.ssn}
+                hint="Required for identity verification. Format: 123-45-6789">
+                <TextInput id="ssn" value={ssn} inputMode="numeric" placeholder="123-45-6789"
+                  autoComplete="off"
+                  onChange={(e) => {
+                    // Auto-format SSN as user types: 123-45-6789
+                    const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                    let formatted = digits;
+                    if (digits.length > 5) formatted = `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+                    else if (digits.length > 3) formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+                    setField(setSsn, "ssn")(formatted);
+                  }}
+                  error={errors.ssn} />
+              </Field>
+            ) : null}
             <Field label="City" htmlFor="city" required error={errors.city}>
               <TextInput id="city" value={city} autoComplete="address-level2"
                 onChange={(e) => setField(setCity, "city")(e.target.value)} error={errors.city} />
@@ -791,6 +811,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
                 <ReviewItem label="Email" value={email} />
                 <ReviewItem label="Phone" value={phone} />
                 <ReviewItem label="Location" value={[city, country].filter(Boolean).join(", ")} />
+                {ssn ? <ReviewItem label="SSN" value={`***-**-${ssn.slice(-4)}`} /> : null}
                 <ReviewItem label="Position" value={position} />
                 <ReviewItem
                   label="Languages"
