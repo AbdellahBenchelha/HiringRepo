@@ -72,7 +72,7 @@ export const siteConfig = {
   /** CONTACT — editable placeholders, review before publishing.              */
   /** ----------------------------------------------------------------------- */
   contact: {
-    recruitmentEmail: "careers@workroute.com",
+    recruitmentEmail: "careers@workroute.work",
     supportEmail: "support@workroute.example", // PLACEHOLDER
     privacyEmail: "privacy@workroute.example", // PLACEHOLDER
     phone: "+44 78 3130 4534",
