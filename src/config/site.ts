@@ -90,7 +90,7 @@ export const siteConfig = {
   },
 
   social: [
-    { label: "LinkedIn", href: "https://www.linkedin.com/", icon: "linkedin" }, // PLACEHOLDER
+    { label: "LinkedIn", href: "https://www.linkedin.com/company/workroute-services-private-limited/", icon: "linkedin" },
     { label: "Facebook", href: "https://www.facebook.com/", icon: "facebook" }, // PLACEHOLDER
     { label: "Instagram", href: "https://www.instagram.com/", icon: "instagram" }, // PLACEHOLDER
     { label: "X (Twitter)", href: "https://x.com/", icon: "x" }, // PLACEHOLDER
