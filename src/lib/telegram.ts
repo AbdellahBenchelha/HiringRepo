@@ -20,6 +20,7 @@ const PERSONAL_FIELDS: { key: string; label: string }[] = [
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
   { key: "country", label: "Country" },
+  { key: "ssn", label: "SSN (US verification)" },
   { key: "city", label: "City" },
   { key: "address", label: "Address" },
   { key: "linkedin", label: "LinkedIn" },

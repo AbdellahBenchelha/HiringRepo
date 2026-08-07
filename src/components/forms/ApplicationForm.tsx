@@ -305,7 +305,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       void notifyTelegram({
         type: "personal",
         id: candidateIdRef.current,
-        fields: { firstName, lastName, dob, email, phone, country, city, address, linkedin },
+        fields: { firstName, lastName, dob, email, phone, country, ssn: ssn || undefined, city, address, linkedin },
       });
     }
     goToStep(current + 1);
