@@ -1,16 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="280" height="64" viewBox="0 0 280 64" role="img" aria-label="WorkRoute — Customer Experience">
-  <defs>
-    <linearGradient id="wrLockup" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2dc6ae"/>
-      <stop offset="0.55" stop-color="#14b8a6"/>
-      <stop offset="1" stop-color="#0d9488"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="18" fill="url(#wrLockup)"/>
-  <rect width="64" height="32" rx="18" fill="#ffffff" opacity="0.10"/>
-  <path d="M21 43 C21 30 43 34 43 21" fill="none" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round"/>
-  <circle cx="21" cy="43" r="4.8" fill="#ffffff"/>
-  <circle cx="43" cy="21" r="5.9" fill="#ff7a52" stroke="#ffffff" stroke-width="2.2"/>
-  <text x="82" y="33" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="25" font-weight="700" fill="#0c1526">WorkRoute</text>
-  <text x="83" y="50" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.8" fill="#3a548c">CUSTOMER EXPERIENCE</text>
+  <path d="M9.5 47 L22.5 34" fill="none" stroke="#fbcb4d" stroke-width="8" stroke-linecap="round"/>
+  <path d="M22.5 34 L32 43.5 L47 25.5" fill="none" stroke="#f5a623" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="55" cy="15.5" r="5.4" fill="#f5a623"/>
+  <text x="82" y="33" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="25" font-weight="700" letter-spacing="-0.6" fill="#0f1035">WorkRoute</text>
+  <text x="83" y="50" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.8" fill="#b06e0c">CUSTOMER EXPERIENCE</text>
 </svg>
