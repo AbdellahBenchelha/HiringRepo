@@ -5,7 +5,7 @@ import { ContactForm } from "@/components/forms/ContactForm";
 export function ContactSection() {
   const { contact } = siteConfig;
   return (
-    <section id="contact" className="section bg-navy-50/60">
+    <section id="contact" className="section bg-cream-200/70">
       <div className="container-page">
         {/* Header */}
         <div className="mx-auto max-w-2xl text-center">
@@ -23,7 +23,7 @@ export function ContactSection() {
         </div>
 
         {/* Split card */}
-        <div className="mt-12 overflow-hidden rounded-3xl border border-navy-100 bg-white shadow-card">
+        <div className="mt-12 overflow-hidden rounded-3xl border border-cream-300 bg-white shadow-card">
           <div className="grid lg:grid-cols-5">
             {/* Info panel */}
             <div className="relative flex flex-col overflow-hidden bg-gradient-to-br from-navy-800 via-navy-900 to-brand-900 p-8 text-white sm:p-10 lg:col-span-2">
@@ -93,7 +93,7 @@ export function ContactSection() {
             title="Office location map"
             src={contact.mapEmbedUrl}
             loading="lazy"
-            className="mt-6 h-72 w-full rounded-2xl border border-navy-100"
+            className="mt-6 h-72 w-full rounded-2xl border border-cream-300"
           />
         ) : null}
       </div>

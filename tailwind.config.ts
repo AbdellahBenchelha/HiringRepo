@@ -9,61 +9,70 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Modern SaaS palette: deep navy ink + vibrant teal brand + warm coral accent.
+        // Deep indigo ink — headings, dark panels, primary surfaces.
         navy: {
-          50: "#eef2f9",
-          100: "#dce4f2",
-          200: "#b7c6e2",
-          300: "#8aa0cb",
-          400: "#5b76ab",
-          500: "#3a548c",
-          600: "#2b3f6e",
-          700: "#213257",
-          800: "#16223d",
-          900: "#0c1526",
-          950: "#070d18",
+          50: "#f5f5fa",
+          100: "#e8e8f1",
+          200: "#cdcddf",
+          300: "#a6a6c4",
+          400: "#7373a0",
+          500: "#4f4f80",
+          600: "#383864",
+          700: "#26264c",
+          800: "#17173a",
+          900: "#0f1035",
+          950: "#08081f",
         },
-        // Teal/aqua — the signature brand accent.
+        // Golden amber — the signature accent used on every primary action.
         brand: {
-          50: "#effcf9",
-          100: "#c9f5ec",
-          200: "#98ecdc",
-          300: "#5eddc7",
-          400: "#2dc6ae",
-          500: "#14b8a6",
-          600: "#0d9488",
-          700: "#0f766e",
-          800: "#115e59",
-          900: "#134e4a",
+          50: "#fff9eb",
+          100: "#fef0c7",
+          200: "#fde08a",
+          300: "#fbcb4d",
+          400: "#f8b324",
+          500: "#f5a623",
+          600: "#db8b0a",
+          700: "#b06e0c",
+          800: "#8a570f",
+          900: "#714710",
         },
-        // Warm coral — used sparingly for emphasis (badges, highlights).
+        // Warm cream — page background and quiet surfaces. Never pure white.
+        cream: {
+          50: "#fdfdfb",
+          100: "#faf9f5",
+          200: "#f4f2ea",
+          300: "#eae7db",
+          400: "#d9d5c4",
+        },
+        // Warm gold used sparingly for ratings and soft highlight tiles.
         accent: {
-          50: "#fff5f1",
-          100: "#ffe6db",
-          200: "#ffc7b2",
-          300: "#ffa183",
-          400: "#ff7a52",
-          500: "#f85a2c",
-          600: "#e2451c",
-          700: "#bc3518",
+          50: "#fff8ed",
+          100: "#ffeecc",
+          200: "#ffdd9e",
+          300: "#fcc95f",
+          400: "#f5b942",
+          500: "#e8a127",
+          600: "#c8830f",
+          700: "#a06a10",
         },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 4px 24px -8px rgba(12, 21, 38, 0.10)",
-        card: "0 18px 48px -20px rgba(12, 21, 38, 0.28)",
-        glow: "0 16px 50px -12px rgba(20, 184, 166, 0.45)",
+        soft: "0 1px 3px rgba(15, 16, 53, 0.04), 0 8px 24px -14px rgba(15, 16, 53, 0.10)",
+        card: "0 2px 8px rgba(15, 16, 53, 0.04), 0 24px 56px -28px rgba(15, 16, 53, 0.18)",
+        glow: "0 10px 28px -10px rgba(245, 166, 35, 0.55)",
       },
       borderRadius: {
-        xl: "0.9rem",
+        xl: "0.875rem",
         "2xl": "1.25rem",
         "3xl": "1.75rem",
+        "4xl": "2.25rem",
       },
       backgroundImage: {
         "grid-navy":
-          "radial-gradient(circle at 1px 1px, rgba(58,84,140,0.16) 1px, transparent 0)",
+          "radial-gradient(circle at 1px 1px, rgba(15,16,53,0.10) 1px, transparent 0)",
       },
       keyframes: {
         "fade-up": {

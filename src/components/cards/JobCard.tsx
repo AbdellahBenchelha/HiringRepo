@@ -13,7 +13,7 @@ const employmentLabels: Record<JobPosting["employmentType"], string> = {
 
 function Tag({ icon, children }: { icon: IconName; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-50 px-2.5 py-1 text-xs font-medium text-navy-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-cream-200 px-2.5 py-1 text-xs font-medium text-navy-700">
       <Icon name={icon} className="h-3.5 w-3.5 text-brand-500" />
       {children}
     </span>
@@ -26,7 +26,7 @@ export function JobCard({ job }: { job: JobPosting }) {
     : job.workArrangement.split("·")[0].trim();
 
   return (
-    <article className="group relative flex h-full flex-col rounded-2xl border border-navy-100 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
+    <article className="group relative flex h-full flex-col rounded-2xl border border-cream-300 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
       <div className="flex items-start gap-4">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-glow">
           <Icon name="headset" className="h-6 w-6" />
@@ -55,7 +55,7 @@ export function JobCard({ job }: { job: JobPosting }) {
         <Tag icon="trendingUp">{job.experienceLevel.replace(" to ", " – ")}</Tag>
       </div>
 
-      <div className="mt-6 flex items-center gap-3 border-t border-navy-100 pt-5">
+      <div className="mt-6 flex items-center gap-3 border-t border-cream-300 pt-5">
         <ApplyButton
           position={job.title}
           label="Apply now"

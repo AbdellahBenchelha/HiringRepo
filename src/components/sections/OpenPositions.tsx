@@ -48,7 +48,7 @@ export function OpenPositions() {
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-navy-100 bg-navy-50/60 px-5 py-4">
+          <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-cream-300 bg-cream-200/70 px-5 py-4">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-brand-600 shadow-soft ring-1 ring-inset ring-navy-100">
               <Icon name="briefcase" className="h-5 w-5" />
             </span>
@@ -61,7 +61,7 @@ export function OpenPositions() {
 
         {/* Filter toolbar */}
         <div className="sticky top-20 z-20 mt-10">
-          <div className="flex flex-col gap-3 rounded-2xl border border-navy-100 bg-white/95 p-3 shadow-soft backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-cream-300 bg-white/95 p-3 shadow-soft backdrop-blur sm:flex-row sm:items-center sm:justify-between">
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
               <span className="hidden shrink-0 px-2 text-xs font-semibold uppercase tracking-wider text-navy-400 sm:inline">
                 Filter
@@ -77,7 +77,7 @@ export function OpenPositions() {
                     className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
                       isActive
                         ? "bg-brand-600 text-white shadow-soft"
-                        : "bg-navy-50 text-navy-700 hover:bg-navy-100"
+                        : "bg-cream-200 text-navy-700 hover:bg-cream-300"
                     }`}
                   >
                     {cat.label}
@@ -114,7 +114,7 @@ export function OpenPositions() {
         </div>
 
         {/* Open application CTA */}
-        <div className="mt-10 flex flex-col items-center justify-between gap-5 rounded-2xl border border-navy-100 bg-navy-50/50 px-6 py-6 text-center sm:flex-row sm:text-left">
+        <div className="mt-10 flex flex-col items-center justify-between gap-5 rounded-2xl border border-cream-300 bg-cream-200/60 px-6 py-6 text-center sm:flex-row sm:text-left">
           <div className="flex items-center gap-4">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-soft ring-1 ring-inset ring-navy-100">
               <Icon name="sparkles" className="h-6 w-6" />

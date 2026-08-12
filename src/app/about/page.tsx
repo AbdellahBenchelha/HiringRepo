@@ -28,7 +28,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="bg-navy-50/60 py-16 sm:py-20">
+      <section className="bg-cream-200/70 py-16 sm:py-20">
         <div className="container-page">
           <h2 className="text-center text-3xl">Our Values</h2>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

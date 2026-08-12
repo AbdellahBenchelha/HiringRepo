@@ -57,7 +57,7 @@ export function FileUploader({ label, optional, onChange }: FileUploaderProps) {
       {!file ? (
         <label
           htmlFor={inputId}
-          className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-navy-200 bg-navy-50/40 px-4 py-6 text-center transition hover:border-brand-400 hover:bg-brand-50/40 focus-within:border-brand-500"
+          className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-cream-400 bg-cream-200/50 px-4 py-6 text-center transition hover:border-brand-400 hover:bg-brand-50/40 focus-within:border-brand-500"
         >
           <Icon name="upload" className="h-6 w-6 text-brand-600" />
           <span className="text-sm font-medium text-navy-800">
@@ -77,7 +77,7 @@ export function FileUploader({ label, optional, onChange }: FileUploaderProps) {
           />
         </label>
       ) : (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-navy-200 bg-white px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-cream-400 bg-white px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <Icon name="checkCircle" className="h-5 w-5 shrink-0 text-green-600" />
             <div className="min-w-0">

@@ -33,12 +33,12 @@ export default function LegalNoticePage() {
         must be completed with verified company information before publishing.
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-navy-100">
+      <div className="mt-6 overflow-hidden rounded-xl border border-cream-300">
         <table className="w-full text-left text-sm">
           <tbody className="divide-y divide-navy-100">
             {rows.map((row) => (
               <tr key={row.label}>
-                <th scope="row" className="w-1/3 bg-navy-50/60 px-4 py-3 font-medium text-navy-700">
+                <th scope="row" className="w-1/3 bg-cream-200/70 px-4 py-3 font-medium text-navy-700">
                   {row.label}
                 </th>
                 <td className="px-4 py-3 text-navy-800">{row.value}</td>

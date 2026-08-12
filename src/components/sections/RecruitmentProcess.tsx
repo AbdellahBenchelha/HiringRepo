@@ -13,7 +13,7 @@ const stepIcons: IconName[] = [
 
 export function RecruitmentProcess() {
   return (
-    <section id="recruitment-process" className="section bg-navy-50/60">
+    <section id="recruitment-process" className="section bg-cream-200/70">
       <div className="container-page">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-12">
           {/* Sticky intro */}
@@ -31,7 +31,7 @@ export function RecruitmentProcess() {
                 every step along the way.
               </p>
 
-              <div className="mt-8 rounded-2xl border border-navy-100 bg-white p-5 shadow-soft">
+              <div className="mt-8 rounded-2xl border border-cream-300 bg-white p-5 shadow-soft">
                 <p className="flex items-center gap-2 text-sm font-semibold text-navy-900">
                   <Icon name="checkCircle" className="h-4 w-4 text-brand-600" />
                   Good to know
@@ -67,7 +67,7 @@ export function RecruitmentProcess() {
                     </div>
 
                     {/* Content */}
-                    <div className="group mb-0 flex-1 rounded-2xl border border-navy-100 bg-white p-5 shadow-soft transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-card sm:p-6">
+                    <div className="group mb-0 flex-1 rounded-2xl border border-cream-300 bg-white p-5 shadow-soft transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-card sm:p-6">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition duration-200 group-hover:bg-gradient-to-br group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white">

@@ -31,7 +31,7 @@ export default async function ApplyPage({
   return (
     <>
       {/* Hero header */}
-      <header className="relative overflow-hidden border-b border-navy-100 bg-gradient-to-b from-navy-50 to-white">
+      <header className="relative overflow-hidden border-b border-cream-300 bg-gradient-to-b from-navy-50 to-white">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_60%_80%_at_30%_0%,black,transparent)]" />
           <div className="absolute -left-20 top-[-6rem] h-72 w-72 rounded-full bg-brand-200/30 blur-3xl" />
@@ -74,12 +74,12 @@ export default async function ApplyPage({
       </header>
 
       {/* Body */}
-      <section className="section bg-navy-50/60">
+      <section className="section bg-cream-200/70">
         <div className="container-page">
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Form */}
             <div className="lg:col-span-2">
-              <div className="rounded-3xl border border-navy-100 bg-white p-6 shadow-soft sm:p-8 lg:p-10">
+              <div className="rounded-3xl border border-cream-300 bg-white p-6 shadow-soft sm:p-8 lg:p-10">
                 {initialPosition ? (
                   <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-brand-50/70 px-5 py-4">
                     <p className="text-sm text-navy-700">
@@ -102,7 +102,7 @@ export default async function ApplyPage({
             <aside className="lg:col-span-1">
               <div className="space-y-6 lg:sticky lg:top-28">
                 {/* What happens next */}
-                <div className="rounded-2xl border border-navy-100 bg-white p-6 shadow-soft">
+                <div className="rounded-2xl border border-cream-300 bg-white p-6 shadow-soft">
                   <h2 className="text-base font-semibold text-navy-900">What happens next</h2>
                   <ol className="mt-5 space-y-5">
                     {recruitmentProcess.slice(0, 4).map((step, i) => (
@@ -122,7 +122,7 @@ export default async function ApplyPage({
                 </div>
 
                 {/* Privacy reassurance */}
-                <div className="rounded-2xl border border-navy-100 bg-white p-6 shadow-soft">
+                <div className="rounded-2xl border border-cream-300 bg-white p-6 shadow-soft">
                   <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
                     <Icon name="shield" className="h-5 w-5" />
                   </span>
@@ -140,7 +140,7 @@ export default async function ApplyPage({
                 </div>
 
                 {/* Help */}
-                <div className="rounded-2xl border border-navy-100 bg-navy-50/60 p-6">
+                <div className="rounded-2xl border border-cream-300 bg-cream-200/70 p-6">
                   <p className="text-sm font-semibold text-navy-900">Need help applying?</p>
                   <p className="mt-1 text-sm text-navy-600">
                     Email us and our team will be glad to assist.

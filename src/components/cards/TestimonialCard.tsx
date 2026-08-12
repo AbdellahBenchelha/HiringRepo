@@ -83,7 +83,7 @@ export function TestimonialCard({
   }
 
   return (
-    <figure className="flex h-full flex-col rounded-2xl border border-navy-100 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
+    <figure className="flex h-full flex-col rounded-2xl border border-cream-300 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
       <Stars className="text-amber-400" />
       <blockquote
         className={`mt-4 flex-1 text-sm leading-relaxed text-navy-700 ${
@@ -92,7 +92,7 @@ export function TestimonialCard({
       >
         {testimonial.quote}
       </blockquote>
-      <figcaption className="mt-6 flex items-center gap-3 border-t border-navy-100 pt-4">
+      <figcaption className="mt-6 flex items-center gap-3 border-t border-cream-300 pt-4">
         <Avatar initials={testimonial.initials} index={index} />
         <span>
           <span className="block text-sm font-semibold text-navy-900">{testimonial.name}</span>

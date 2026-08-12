@@ -165,7 +165,7 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
       <div ref={topRef} />
 
       {/* ---------- Top bar ---------- */}
-      <header className="border-b border-navy-100 bg-white/80 backdrop-blur">
+      <header className="border-b border-cream-300 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Logo className="h-8 w-auto" />
           <div className="flex items-center gap-2.5">
@@ -202,7 +202,7 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
               <p className="mb-3 text-sm font-semibold text-navy-800">What you'll cover</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {groups.map((g, i) => (
-                  <div key={g.section.id} className="flex items-start gap-3 rounded-xl border border-navy-100 bg-white p-3">
+                  <div key={g.section.id} className="flex items-start gap-3 rounded-xl border border-cream-300 bg-white p-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
                       {i + 1}
                     </span>
@@ -301,7 +301,7 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
                               className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 text-sm transition ${
                                 selected
                                   ? "border-brand-500 bg-brand-50 ring-2 ring-brand-200"
-                                  : "border-navy-200 bg-white hover:border-brand-300 hover:bg-brand-50/40"
+                                  : "border-cream-400 bg-white hover:border-brand-300 hover:bg-brand-50/40"
                               }`}
                             >
                               <input
@@ -375,7 +375,7 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
                           ? a !== "" ? q.options[Number(a)] : ""
                           : a.trim();
                       return (
-                        <div key={q.id} className="border-t border-navy-100 pt-3 first:border-t-0 first:pt-0">
+                        <div key={q.id} className="border-t border-cream-300 pt-3 first:border-t-0 first:pt-0">
                           <dt className="text-sm font-medium text-navy-700">
                             Q{questionNumber(q.id)}. {q.question}
                           </dt>
@@ -419,7 +419,7 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
               carefully review your answers and contact you regarding the next steps. We truly
               appreciate the time and effort you put into completing this assessment.
             </p>
-            <div className="mx-auto mt-6 max-w-sm rounded-xl border border-navy-100 bg-navy-50/50 p-4 text-sm text-navy-600">
+            <div className="mx-auto mt-6 max-w-sm rounded-xl border border-cream-300 bg-cream-200/60 p-4 text-sm text-navy-600">
               <p>You can now close this page. There is no need to submit again.</p>
             </div>
             <p className="mt-6 text-sm text-navy-400">— The {siteConfig.company.name} Recruitment Team</p>
@@ -436,7 +436,7 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
 
 function Stat({ label, value, icon }: { label: string; value: string; icon: IconName }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-3.5">
+    <div className="flex items-center gap-3 rounded-xl border border-cream-300 bg-white p-3.5">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
         <Icon name={icon} className="h-5 w-5" />
       </span>

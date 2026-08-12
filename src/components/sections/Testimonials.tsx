@@ -97,7 +97,7 @@ export function Testimonials() {
             <TestimonialCard testimonial={featured} index={0} featured />
           </div>
 
-          <div className="flex flex-col justify-between gap-6 rounded-3xl border border-navy-100 bg-navy-50/50 p-8">
+          <div className="flex flex-col justify-between gap-6 rounded-3xl border border-cream-300 bg-cream-200/60 p-8">
             <div>
               <div className="flex gap-0.5 text-amber-400" aria-hidden="true">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -131,7 +131,7 @@ export function Testimonials() {
                 onClick={() => scrollByPage(-1)}
                 disabled={atStart}
                 aria-label="Previous reviews"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-navy-200 disabled:hover:text-navy-700"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream-400 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-cream-400 disabled:hover:text-navy-700"
               >
                 <Icon name="arrowRight" className="h-5 w-5 rotate-180" />
               </button>
@@ -140,7 +140,7 @@ export function Testimonials() {
                 onClick={() => scrollByPage(1)}
                 disabled={atEnd}
                 aria-label="More reviews"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-navy-200 disabled:hover:text-navy-700"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream-400 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-cream-400 disabled:hover:text-navy-700"
               >
                 <Icon name="arrowRight" className="h-5 w-5" />
               </button>

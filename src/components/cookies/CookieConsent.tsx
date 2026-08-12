@@ -69,7 +69,7 @@ export function CookieConsent() {
           role="dialog"
           aria-label="Cookie consent"
           aria-describedby="cookie-consent-desc"
-          className="fixed inset-x-0 bottom-0 z-[70] border-t border-navy-200 bg-white p-4 shadow-card sm:p-6"
+          className="fixed inset-x-0 bottom-0 z-[70] border-t border-cream-400 bg-white p-4 shadow-card sm:p-6"
         >
           <div className="container-page flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <p id="cookie-consent-desc" className="max-w-2xl text-sm text-navy-600">
@@ -116,7 +116,7 @@ export function CookieConsent() {
               <button
                 type="button"
                 onClick={() => setShowPreferences(false)}
-                className="rounded-full p-2 text-navy-500 hover:bg-navy-50"
+                className="rounded-full p-2 text-navy-500 hover:bg-cream-200"
                 aria-label="Close cookie preferences"
               >
                 <Icon name="close" className="h-5 w-5" />
@@ -179,7 +179,7 @@ function PreferenceRow({
   onChange?: (value: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-navy-100 p-4">
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-cream-300 p-4">
       <div>
         <p className="text-sm font-semibold text-navy-900">{title}</p>
         <p className="mt-1 text-xs text-navy-500">{description}</p>

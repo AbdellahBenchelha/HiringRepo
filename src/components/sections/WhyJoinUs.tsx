@@ -6,7 +6,7 @@ import { ApplyButton } from "@/components/apply/ApplyButton";
 
 export function WhyJoinUs() {
   return (
-    <section id="why-join-us" className="section bg-navy-50/60">
+    <section id="why-join-us" className="section bg-cream-200/70">
       <div className="container-page">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-12">
           {/* Sticky intro */}
@@ -43,7 +43,7 @@ export function WhyJoinUs() {
             <div className="grid gap-4 sm:grid-cols-2">
               {benefits.map((benefit, i) => (
                 <Reveal key={benefit.title} delay={(i % 2) * 60}>
-                  <article className="group flex h-full gap-4 rounded-2xl border border-navy-100 bg-white p-5 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
+                  <article className="group flex h-full gap-4 rounded-2xl border border-cream-300 bg-white p-5 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition duration-200 group-hover:bg-gradient-to-br group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white group-hover:shadow-glow">
                       <Icon name={benefit.icon as IconName} className="h-5 w-5" />
                     </span>

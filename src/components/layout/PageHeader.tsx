@@ -12,7 +12,7 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="relative overflow-hidden border-b border-navy-100 bg-gradient-to-b from-navy-50 to-white">
+    <header className="relative overflow-hidden border-b border-cream-300 bg-gradient-to-b from-navy-50 to-white">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_60%_80%_at_30%_0%,black,transparent)]" />
         <div className="absolute -left-20 top-[-6rem] h-72 w-72 rounded-full bg-brand-200/30 blur-3xl" />

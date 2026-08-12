@@ -124,7 +124,7 @@ export function PhoneInput({
         className={`flex items-stretch overflow-hidden rounded-xl border bg-white shadow-sm transition focus-within:ring-2 ${
           error
             ? "border-red-400 focus-within:border-red-500 focus-within:ring-red-200"
-            : "border-navy-200 focus-within:border-brand-500 focus-within:ring-brand-200"
+            : "border-cream-400 focus-within:border-brand-500 focus-within:ring-brand-200"
         }`}
       >
         <button
@@ -133,7 +133,7 @@ export function PhoneInput({
           aria-expanded={open}
           aria-label={`Country calling code: ${country.name} ${country.dial}`}
           onClick={() => setOpen((v) => !v)}
-          className="flex shrink-0 items-center gap-1.5 border-r border-navy-200 px-3 text-navy-800 transition hover:bg-navy-50"
+          className="flex shrink-0 items-center gap-1.5 border-r border-cream-400 px-3 text-navy-800 transition hover:bg-cream-200"
         >
           <span className="text-lg leading-none">{flagEmoji(country.iso2)}</span>
           <span className="text-sm font-medium">{country.dial}</span>
@@ -163,8 +163,8 @@ export function PhoneInput({
       </div>
 
       {open ? (
-        <div className="absolute z-20 mt-1.5 w-full min-w-[18rem] overflow-hidden rounded-xl border border-navy-200 bg-white shadow-card">
-          <div className="border-b border-navy-100 p-2">
+        <div className="absolute z-20 mt-1.5 w-full min-w-[18rem] overflow-hidden rounded-xl border border-cream-400 bg-white shadow-card">
+          <div className="border-b border-cream-300 p-2">
             <input
               ref={searchRef}
               type="text"

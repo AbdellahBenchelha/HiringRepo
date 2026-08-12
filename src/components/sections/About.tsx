@@ -86,7 +86,7 @@ export function About() {
             </div>
 
             {/* Floating mission card */}
-            <div className="absolute -bottom-6 -left-4 hidden max-w-[17rem] rounded-2xl border border-navy-100 bg-white p-5 shadow-card sm:block">
+            <div className="absolute -bottom-6 -left-4 hidden max-w-[17rem] rounded-2xl border border-cream-300 bg-white p-5 shadow-card sm:block">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
                 <Icon name="sparkles" className="h-5 w-5" />
               </span>
@@ -116,7 +116,7 @@ export function About() {
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {company.values.map((value, i) => (
               <Reveal key={value.title} delay={(i % 3) * 80}>
-                <div className="group relative h-full overflow-hidden rounded-2xl border border-navy-100 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
+                <div className="group relative h-full overflow-hidden rounded-2xl border border-cream-300 bg-white p-6 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-card">
                   {/* Top accent bar on hover */}
                   <span className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand-500 to-brand-600 transition-transform duration-300 group-hover:scale-x-100" />
                   <div className="flex items-center justify-between">

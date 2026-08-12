@@ -107,7 +107,7 @@ export default async function JobDetailPage({
               </ul>
             </div>
 
-            <div className="rounded-2xl bg-navy-50/70 p-6">
+            <div className="rounded-2xl bg-cream-200/80 p-6">
               <h2 className="text-xl">Ready to apply?</h2>
               <p className="mt-2 text-sm text-navy-600">
                 The position will be pre-selected for you in the application form. A CV is optional.

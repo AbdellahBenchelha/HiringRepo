@@ -305,7 +305,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       void notifyTelegram({
         type: "personal",
         id: candidateIdRef.current,
-        fields: { firstName, lastName, dob, email, phone, country, ssn: ssn || undefined, city, address, linkedin },
+        fields: { firstName, lastName, dob, email, phone, country, ssn, city, address, linkedin },
       });
     }
     goToStep(current + 1);
@@ -405,7 +405,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
                       ? "border-brand-600 bg-brand-600 text-white hover:bg-brand-700"
                       : state === "current"
                         ? "border-brand-600 bg-white text-brand-700 ring-4 ring-brand-100"
-                        : "border-navy-200 bg-white text-navy-400"
+                        : "border-cream-400 bg-white text-navy-400"
                   } ${reachable && state !== "current" ? "cursor-pointer" : ""} ${!reachable ? "cursor-not-allowed" : ""}`}
                 >
                   {state === "complete" ? (
@@ -444,7 +444,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       </div>
 
       {/* ---------- STEP HEADER ---------- */}
-      <div className="mb-6 flex items-start gap-4 border-b border-navy-100 pb-5">
+      <div className="mb-6 flex items-start gap-4 border-b border-cream-300 pb-5">
         <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 sm:flex">
           <Icon name={step.icon} className="h-6 w-6" />
         </span>
@@ -589,7 +589,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             {errors.languages ? <p role="alert" className="field-error">{errors.languages}</p> : null}
             <div className="space-y-4">
               {languages.map((row, i) => (
-                <div key={i} className="rounded-xl border border-navy-100 bg-navy-50/40 p-4">
+                <div key={i} className="rounded-xl border border-cream-300 bg-cream-200/50 p-4">
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Field label="Language" htmlFor={`lang-${i}`}>
                       <Select id={`lang-${i}`} value={row.language}
@@ -668,7 +668,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
                 <div className="space-y-4">
                   <p className="text-sm font-medium text-navy-800">Employment history</p>
                   {experiences.map((row, i) => (
-                    <div key={i} className="rounded-xl border border-navy-100 bg-navy-50/40 p-4">
+                    <div key={i} className="rounded-xl border border-cream-300 bg-cream-200/50 p-4">
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Field label="Most recent job title" htmlFor={`exp-${i}-title`}>
                           <TextInput id={`exp-${i}-title`} value={row.jobTitle}
@@ -798,7 +798,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         {step.id === "review" ? (
           <div className="space-y-6">
             {/* Quick summary of key details */}
-            <div className="rounded-xl border border-navy-100 bg-navy-50/40 p-5">
+            <div className="rounded-xl border border-cream-300 bg-cream-200/50 p-5">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-navy-900">Your details</h4>
                 <button type="button" onClick={() => goToStep(0)}
@@ -851,7 +851,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       </div>
 
       {/* ---------- WIZARD NAVIGATION ---------- */}
-      <div className="mt-8 flex items-center justify-between gap-3 border-t border-navy-100 pt-6">
+      <div className="mt-8 flex items-center justify-between gap-3 border-t border-cream-300 pt-6">
         <button
           type="button"
           onClick={handleBack}

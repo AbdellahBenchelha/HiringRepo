@@ -6,7 +6,7 @@ import { Icon } from "@/components/Icon";
 
 export function Faq() {
   return (
-    <section id="faq" className="section bg-navy-50/60">
+    <section id="faq" className="section bg-cream-200/70">
       <div className="container-page">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           {/* Sticky intro */}
@@ -24,7 +24,7 @@ export function Faq() {
                 find what you need? We&apos;re happy to help.
               </p>
 
-              <div className="mt-8 rounded-2xl border border-navy-100 bg-white p-6 shadow-soft">
+              <div className="mt-8 rounded-2xl border border-cream-300 bg-white p-6 shadow-soft">
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
                   <Icon name="headset" className="h-6 w-6" />
                 </span>

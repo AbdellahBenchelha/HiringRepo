@@ -19,7 +19,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
             className={`overflow-hidden rounded-2xl border bg-white transition duration-200 ${
               isOpen
                 ? "border-brand-200 shadow-soft ring-1 ring-brand-100"
-                : "border-navy-100 hover:border-brand-200"
+                : "border-cream-300 hover:border-brand-200"
             }`}
           >
             <h3>
@@ -40,7 +40,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
                 </span>
                 <span
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition duration-200 ${
-                    isOpen ? "bg-brand-600 text-white" : "bg-navy-50 text-navy-500"
+                    isOpen ? "bg-brand-600 text-white" : "bg-cream-200 text-navy-500"
                   }`}
                 >
                   <Icon

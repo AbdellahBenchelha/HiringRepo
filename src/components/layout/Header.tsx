@@ -29,8 +29,10 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full transition-shadow ${
-        scrolled ? "bg-white/95 shadow-soft backdrop-blur" : "bg-white"
+      className={`sticky top-0 z-50 w-full border-b transition-all ${
+        scrolled
+          ? "border-cream-300 bg-white/90 shadow-soft backdrop-blur"
+          : "border-transparent bg-cream-100"
       }`}
     >
       <a href="#main" className="sr-only sr-only-focusable rounded bg-brand-600 text-white">
@@ -54,7 +56,7 @@ export function Header() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="rounded-full px-3 py-2 text-sm font-medium text-navy-700 transition hover:bg-navy-50 hover:text-navy-900"
+                className="rounded-full px-3.5 py-2 text-sm font-semibold text-navy-700 transition hover:bg-cream-200 hover:text-navy-900"
               >
                 {item.label}
               </Link>
@@ -68,7 +70,7 @@ export function Header() {
           </div>
           <button
             type="button"
-            className="rounded-full p-2.5 text-navy-700 transition hover:bg-navy-50 xl:hidden"
+            className="rounded-full p-2.5 text-navy-700 transition hover:bg-cream-200 xl:hidden"
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
@@ -81,14 +83,14 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileOpen ? (
-        <div id="mobile-menu" className="border-t border-navy-100 bg-white xl:hidden">
+        <div id="mobile-menu" className="border-t border-cream-300 bg-white xl:hidden">
           <ul className="container-page flex flex-col gap-1 py-4">
             {mainNav.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block rounded-xl px-4 py-3 text-base font-medium text-navy-800 transition hover:bg-navy-50"
+                  className="block rounded-xl px-4 py-3 text-base font-semibold text-navy-800 transition hover:bg-cream-200"
                 >
                   {item.label}
                 </Link>
