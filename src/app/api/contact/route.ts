@@ -31,11 +31,15 @@ export async function POST(req: NextRequest) {
   }
 
   let fields: Record<string, string>;
+  let suspectedBot = false;
   try {
     const fd = await req.formData();
-    // A filled honeypot means a bot. Answer 200 so it learns nothing.
-    if (String(fd.get("company_website_hp") ?? "").trim() !== "") {
-      return NextResponse.json({ ok: true });
+    // Flag rather than drop: autofill trips honeypots too, and a silently
+    // discarded message from a real person is worse than a labelled one.
+    if (String(fd.get("wr_extra_field") ?? "").trim() !== "") {
+      // eslint-disable-next-line no-console
+      console.warn(`[contact] honeypot filled by ${clientIp(req)}; forwarding with a warning`);
+      suspectedBot = true;
     }
     fields = {
       name: cap(fd.get("name"), 200),
@@ -47,7 +51,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  await sendTelegramMessage(buildContactMessage(fields));
+  const warning = suspectedBot
+    ? "\n\n⚠️ <b>Possible spam:</b> a hidden anti-bot field was filled. Browser autofill can do this too, so read it before dismissing."
+    : "";
+  await sendTelegramMessage(buildContactMessage(fields) + warning);
 
   return NextResponse.json({ ok: true });
 }

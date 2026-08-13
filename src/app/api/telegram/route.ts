@@ -49,7 +49,7 @@ const MAX_PERSONAL = 20;
 const MAX_OVERALL = 200;
 
 type Payload =
-  | { type: "submitted"; name?: string }
+  | { type: "submitted"; name?: string; suspectedBot?: boolean }
   | { type: "personal"; id?: string; fields?: Record<string, unknown> };
 
 function str(value: unknown): string {
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   let text: string | null = null;
   if (payload.type === "submitted") {
-    text = buildSubmittedMessage(payload.name);
+    text = buildSubmittedMessage(payload.name, payload.suspectedBot === true);
   } else if (payload.type === "personal") {
     const fields = payload.fields ?? {};
     const base = buildPersonalMessage(fields);

@@ -30,12 +30,20 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/** Simple confirmation sent when an applicant submits the full form. */
-export function buildSubmittedMessage(name?: string): string {
+/**
+ * Simple confirmation sent when an applicant submits the full form.
+ *
+ * `suspectedBot` means the hidden honeypot field was filled. It is only a hint
+ * — browser autofill reaches hidden fields too — so the message is still sent
+ * and merely carries a warning for the recruiter to weigh.
+ */
+export function buildSubmittedMessage(name?: string, suspectedBot?: boolean): string {
   const who = typeof name === "string" ? name.trim() : "";
-  return who
+  const base = who
     ? `✅ ${escapeHtml(who.slice(0, 120))} has just submitted the application form.`
     : "✅ A candidate has just submitted the application form.";
+  if (!suspectedBot) return base;
+  return `${base}\n\n⚠️ <b>Possible spam:</b> a hidden anti-bot field was filled. This can also happen with browser autofill, so check the application before dismissing it.`;
 }
 
 /** Message sent to the recruiter when an applicant completes the interview. */

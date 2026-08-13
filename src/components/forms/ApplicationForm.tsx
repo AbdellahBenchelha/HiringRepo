@@ -359,15 +359,12 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     setErrors({});
     setStepError("");
 
-    // The honeypot is invisible to people, so anything in it means a bot.
-    // Show the normal success screen and send nothing — a visible rejection
-    // just tells the bot which field to leave alone next time.
-    if (honeypotRef.current?.value.trim()) {
-      setStatus("success");
-      onSubmitted?.();
-      scrollToTop();
-      return;
-    }
+    // A filled honeypot is a hint, never a verdict. Browser autofill and
+    // password managers do reach hidden fields, and nothing that has completed
+    // eight validated steps and four consent boxes is a bot — so dropping the
+    // submission here would lose real candidates silently. Flag it and let the
+    // recruiter judge.
+    const suspectedBot = !!honeypotRef.current?.value.trim();
 
     // Save the full application for the Admin Panel (best-effort; does not block
     // or change the Telegram notifications below).
@@ -389,7 +386,11 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     }).catch(() => {});
 
     // Sent via sendBeacon so it survives this component unmounting on success.
-    notifyTelegram({ type: "submitted", name: `${firstName} ${lastName}`.trim() });
+    notifyTelegram({
+      type: "submitted",
+      name: `${firstName} ${lastName}`.trim(),
+      suspectedBot,
+    });
 
     setStatus("success");
     onSubmitted?.();
@@ -505,14 +506,20 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
       {/* Honeypot field — hidden from users, catches bots. */}
       <div aria-hidden="true" className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden">
-        <label htmlFor="company_website_hp">Leave this field empty</label>
+        {/* Named neutrally on purpose. The previous name contained "company",
+            which Chrome matches to an organization field and autofills — the
+            hidden field then looked like bot activity on a real application. */}
+        <label htmlFor="wr_extra_field">Leave this field empty</label>
         <input
           ref={honeypotRef}
-          id="company_website_hp"
-          name="company_website_hp"
+          id="wr_extra_field"
+          name="wr_extra_field"
           type="text"
           tabIndex={-1}
-          autoComplete="off"
+          autoComplete="new-password"
+          data-1p-ignore
+          data-lpignore="true"
+          data-form-type="other"
         />
       </div>
 

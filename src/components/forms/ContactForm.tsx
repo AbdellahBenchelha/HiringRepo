@@ -28,10 +28,10 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     if (status === "submitting") return;
-    if (honeypotRef.current?.value) {
-      setStatus("success");
-      return;
-    }
+    // A hint, not a verdict: autofill reaches hidden fields too. Send the
+    // message either way and let the server mark it, rather than dropping
+    // something a real person wrote.
+    const suspectedBot = !!honeypotRef.current?.value.trim();
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length > 0) return;
@@ -42,6 +42,7 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
     fd.append("email", email);
     fd.append("subject", subject);
     fd.append("message", message);
+    if (suspectedBot) fd.append("wr_extra_field", "1");
 
     try {
       const result = await submitContact(fd);
