@@ -31,11 +31,18 @@ export function PhoneInput({
   value,
   onChange,
   error,
+  detectedIso,
 }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  /**
+   * ISO 3166-1 alpha-2 code detected from the visitor's IP, applied once on
+   * arrival. Ignored if the applicant has already picked a code or started
+   * typing a number.
+   */
+  detectedIso?: string;
 }) {
   const initial = useMemo(() => parseValue(value), []); // parse once on mount
   const [country, setCountry] = useState<PhoneCountry>(initial.country);
@@ -46,11 +53,26 @@ export function PhoneInput({
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listId = useId();
+  // Detection arrives asynchronously and must never fight the applicant.
+  const pickedRef = useRef(false);
+  const autoAppliedRef = useRef(false);
 
   function emit(c: PhoneCountry, nat: string) {
     const n = nat.trim();
     onChange(n ? `${c.dial} ${n}` : "");
   }
+
+  // Apply the IP-detected dialling code once, and only while the field is
+  // still untouched — swapping the code under a half-typed number would
+  // silently change what that number means.
+  useEffect(() => {
+    if (!detectedIso || autoAppliedRef.current || pickedRef.current) return;
+    if (national.trim()) return;
+    const match = phoneCountries.find((c) => c.iso2 === detectedIso.toLowerCase());
+    if (!match) return;
+    autoAppliedRef.current = true;
+    setCountry(match);
+  }, [detectedIso, national]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -90,6 +112,7 @@ export function PhoneInput({
   }, [activeIndex, open, listId]);
 
   function selectCountry(c: PhoneCountry) {
+    pickedRef.current = true;
     setCountry(c);
     setOpen(false);
     emit(c, national);

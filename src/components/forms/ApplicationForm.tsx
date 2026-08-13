@@ -6,7 +6,7 @@ import { siteConfig } from "@/config/site";
 import { jobs } from "@/config/jobs";
 import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
 import { notifyTelegram } from "@/lib/notify";
-import { detectCountryName } from "@/lib/geo";
+import { detectCountry } from "@/lib/geo";
 import { newId } from "@/lib/id";
 import { Icon, type IconName } from "@/components/Icon";
 import { FileUploader } from "./FileUploader";
@@ -138,14 +138,20 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   // True once the visitor changes the country themselves — stops IP detection
   // from overwriting their choice if it resolves later.
   const countryTouchedRef = useRef(false);
+  // ISO code from the same lookup, handed to PhoneInput for its dialling code.
+  const [detectedIso, setDetectedIso] = useState<string | undefined>();
 
-  // On load, pre-fill the country from the visitor's IP location. The visitor
-  // can still change it; we never overwrite a value they've already set.
+  // On load, pre-fill the country and the phone dialling code from the
+  // visitor's IP location — a single lookup feeds both. The visitor can still
+  // change either; we never overwrite a value they've already set.
   useEffect(() => {
     let active = true;
-    detectCountryName().then((name) => {
-      if (!active || !name || countryTouchedRef.current) return;
-      setCountry((prev) => (prev ? prev : name));
+    detectCountry().then((detected) => {
+      if (!active || !detected) return;
+      setDetectedIso(detected.iso2);
+      if (detected.name && !countryTouchedRef.current) {
+        setCountry((prev) => (prev ? prev : detected.name as string));
+      }
     });
     return () => {
       active = false;
@@ -499,7 +505,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             <Field label="Phone number" htmlFor="phone" required
               hint="Pick your country code, then enter your number. This number must be reachable on WhatsApp — our recruitment team will contact you there."
               error={errors.phone} className="sm:col-span-2">
-              <PhoneInput id="phone" value={phone} error={errors.phone}
+              <PhoneInput id="phone" value={phone} error={errors.phone} detectedIso={detectedIso}
                 onChange={(v) => setField(setPhone, "phone")(v)} />
             </Field>
             <Field label="Country" htmlFor="country" required error={errors.country}>
