@@ -39,7 +39,16 @@ export const metadata: Metadata = {
     url: siteConfig.url,
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: siteConfig.company.name }],
   },
-  twitter: { card: "summary_large_image" },
+  // site/creator attribute shared links to the account on X, so the card
+  // carries the WorkRoute handle instead of appearing unattributed.
+  twitter: {
+    card: "summary_large_image",
+    site: "@WorkRouteCo",
+    creator: "@WorkRouteCo",
+    title: `${siteConfig.company.name} — Customer Support Careers`,
+    description: siteConfig.company.tagline,
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {
