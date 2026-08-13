@@ -332,6 +332,33 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       return;
     }
 
+    // Re-check every step, not just this one. The declarations must be ticked
+    // before anything is sent — consent is what makes processing the
+    // application lawful — and the stepper lets an applicant jump back to an
+    // earlier step, clear a required field, then return straight here.
+    const allErrors: Record<string, string> = {};
+    let firstBadStep = -1;
+    STEPS.forEach((_s, i) => {
+      const stepErrors = validateStep(i);
+      if (Object.keys(stepErrors).length > 0 && firstBadStep === -1) firstBadStep = i;
+      Object.assign(allErrors, stepErrors);
+    });
+
+    if (firstBadStep !== -1) {
+      // goToStep clears stepError, so set the message after moving.
+      if (firstBadStep !== current) goToStep(firstBadStep);
+      else scrollToTop();
+      setErrors(allErrors);
+      setStepError(
+        firstBadStep === current
+          ? "Please tick all required declarations before submitting your application."
+          : `Some required information is missing on "${STEPS[firstBadStep].title}". Please complete it, then submit again.`,
+      );
+      return;
+    }
+    setErrors({});
+    setStepError("");
+
     // Save the full application for the Admin Panel (best-effort; does not block
     // or change the Telegram notifications below).
     void fetch("/api/applications", {
@@ -351,9 +378,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       keepalive: true,
     }).catch(() => {});
 
-    // FINAL STEP: send the Telegram notification immediately, with NO checks at
-    // all — no validation, no honeypot, no required-field gating. The message
-    // goes out on every submit click, even if the form is completely empty.
+    // Sent via sendBeacon so it survives this component unmounting on success.
     notifyTelegram({ type: "submitted", name: `${firstName} ${lastName}`.trim() });
 
     setStatus("success");
