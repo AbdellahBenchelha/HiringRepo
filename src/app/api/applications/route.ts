@@ -12,12 +12,12 @@ import { readJsonBody, badBodyResponse } from "@/lib/http";
 export const runtime = "nodejs";
 
 /** Each application is written once; the allowance covers retries. */
-const MAX_REQUESTS = 8;
+const MAX_REQUESTS = 30;
 const WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const limit = rateLimit(`applications:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter, "applications");
 
   // This body carries the whole application, so it gets the largest cap.
   const parsed = await readJsonBody<{ id?: string; application?: Record<string, unknown> }>(req);

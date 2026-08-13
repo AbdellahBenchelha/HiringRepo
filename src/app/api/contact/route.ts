@@ -9,8 +9,11 @@ import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
-/** Contact is the easiest endpoint to abuse for spam, so it is the tightest. */
-const MAX_REQUESTS = 5;
+/**
+ * Contact is the easiest endpoint to abuse, so it stays the tightest of the
+ * public routes — but still sized for many people sharing one carrier IP.
+ */
+const MAX_REQUESTS = 15;
 const WINDOW_MS = 15 * 60 * 1000;
 
 /** Trim before the message is built so an oversized field can't be relayed. */
@@ -20,7 +23,7 @@ function cap(value: FormDataEntryValue | null, max: number): string {
 
 export async function POST(req: NextRequest) {
   const limit = rateLimit(`contact:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter, "contact");
 
   const declared = Number(req.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > 64 * 1024) {

@@ -16,12 +16,12 @@ import { readJsonBody, badBodyResponse } from "@/lib/http";
 export const runtime = "nodejs";
 
 /** Each candidate submits once; the allowance covers retries and typos. */
-const MAX_REQUESTS = 10;
+const MAX_REQUESTS = 30;
 const WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const limit = rateLimit(`interview:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter, "interview");
 
   const parsed = await readJsonBody<{
     id?: string;

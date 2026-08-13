@@ -20,12 +20,33 @@ import { readJsonBody, badBodyResponse } from "@/lib/http";
 export const runtime = "nodejs";
 
 /**
- * A genuine applicant triggers this twice (personal step, then submit). The
- * budget is deliberately loose enough for a shared office IP but tight enough
- * that nobody can flood the recruiter's phone or fill the candidate store.
+ * Budgets are per IP and per notification type, because the two are not
+ * equally cheap to trigger and are not equally important.
+ *
+ * Sizing assumes shared addresses: mobile carriers and offices put many real
+ * applicants behind one IP, so a tight limit silently drops genuine
+ * applications — a far worse outcome than the spam it prevents. A sustained
+ * flood still gets stopped.
+ *
+ * "submitted" only fires after a full form with every consent ticked, so it is
+ * both the hardest to trigger and the one the recruiter must never miss. It
+ * gets the larger allowance. "personal" fires at step one, which is cheap to
+ * reach, so it is held tighter.
  */
-const MAX_REQUESTS = 12;
 const WINDOW_MS = 10 * 60 * 1000;
+const MAX_SUBMITTED = 40;
+const MAX_PERSONAL = 20;
+
+/**
+ * Backstop against a raw flood, checked before the body is parsed.
+ *
+ * It must sit far above the per-type budgets rather than level with them. A
+ * shared bucket sized at their sum would let heavy "personal" traffic exhaust
+ * it and block a legitimate "submitted" — reintroducing the cross-type
+ * starvation the split budgets exist to prevent. At this height the per-type
+ * limits always bind first, and this only catches genuine abuse.
+ */
+const MAX_OVERALL = 200;
 
 type Payload =
   | { type: "submitted"; name?: string }
@@ -44,12 +65,24 @@ function baseUrl(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
-  const limit = rateLimit(`telegram:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+  // Coarse guard before any parsing, so a raw flood costs almost nothing.
+  const ipEarly = clientIp(req);
+  const overall = rateLimit(`telegram:all:${ipEarly}`, MAX_OVERALL, WINDOW_MS);
+  if (!overall.ok) return tooManyRequests(overall.retryAfter, `telegram/all from ${ipEarly}`);
 
+  // Then read the body so the budget can be chosen by notification type.
   const parsed = await readJsonBody<Payload>(req, 32 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const payload = parsed.data;
+
+  const ip = clientIp(req);
+  const isSubmitted = payload.type === "submitted";
+  const limit = rateLimit(
+    `telegram:${payload.type}:${ip}`,
+    isSubmitted ? MAX_SUBMITTED : MAX_PERSONAL,
+    WINDOW_MS,
+  );
+  if (!limit.ok) return tooManyRequests(limit.retryAfter, `telegram/${payload.type} from ${ip}`);
 
   let text: string | null = null;
   if (payload.type === "submitted") {

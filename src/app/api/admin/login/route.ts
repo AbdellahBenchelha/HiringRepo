@@ -19,7 +19,7 @@ const WINDOW_MS = 15 * 60 * 1000;
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
   const limit = rateLimit(`login:${ip}`, MAX_ATTEMPTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter, "admin-login");
 
   // Refuse before touching credentials. The reason is logged, never returned:
   // telling an anonymous caller "the signing secret is the public default"

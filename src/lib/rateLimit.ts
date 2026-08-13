@@ -67,8 +67,18 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   return { ok: true, retryAfter: 0 };
 }
 
-/** Standard 429 response carrying Retry-After. */
-export function tooManyRequests(retryAfter: number): Response {
+/**
+ * Standard 429 response carrying Retry-After.
+ *
+ * Always logs. Some callers reach these routes through navigator.sendBeacon,
+ * which discards the response — without a server-side line, a dropped request
+ * is invisible from both ends.
+ */
+export function tooManyRequests(retryAfter: number, label?: string): Response {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[ratelimit] rejected${label ? ` ${label}` : ""}; retry in ${retryAfter}s`,
+  );
   return new Response(JSON.stringify({ ok: false, error: "rate_limited" }), {
     status: 429,
     headers: {
