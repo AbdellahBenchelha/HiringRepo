@@ -22,7 +22,7 @@
 
 export const siteConfig = {
   /** Public site URL — used for canonical URLs, sitemap and Open Graph. */
-  url: "https://www.workroute.example", // PLACEHOLDER — set your real domain
+  url: "https://workroute.work",
 
   company: {
     name: "WorkRoute",
@@ -73,8 +73,8 @@ export const siteConfig = {
   /** ----------------------------------------------------------------------- */
   contact: {
     recruitmentEmail: "careers@workroute.work",
-    supportEmail: "support@workroute.example", // PLACEHOLDER
-    privacyEmail: "privacy@workroute.example", // PLACEHOLDER
+    supportEmail: "support@workroute.work",
+    privacyEmail: "privacy@workroute.work",
     phone: "+44 78 3130 4534",
     address: {
       line1: "65 Stroude Road",
