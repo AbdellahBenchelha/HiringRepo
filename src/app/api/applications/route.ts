@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { saveApplication } from "@/lib/store";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
+import { readJsonBody, badBodyResponse } from "@/lib/http";
 
 /**
  * Saves the full application for the Admin Panel when a candidate submits the
@@ -9,13 +11,18 @@ import { saveApplication } from "@/lib/store";
 
 export const runtime = "nodejs";
 
+/** Each application is written once; the allowance covers retries. */
+const MAX_REQUESTS = 8;
+const WINDOW_MS = 10 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
-  let body: { id?: string; application?: Record<string, unknown> };
-  try {
-    body = (await req.json()) as typeof body;
-  } catch {
-    return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
-  }
+  const limit = rateLimit(`applications:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
+  // This body carries the whole application, so it gets the largest cap.
+  const parsed = await readJsonBody<{ id?: string; application?: Record<string, unknown> }>(req);
+  if (!parsed.ok) return badBodyResponse(parsed.reason);
+  const body = parsed.data;
 
   const id = typeof body.id === "string" ? body.id : "";
   const application = body.application && typeof body.application === "object" ? body.application : {};

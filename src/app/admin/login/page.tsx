@@ -9,7 +9,9 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "submitting" | "error" | "rate_limited" | "misconfigured"
+  >("idle");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +24,9 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
-        setStatus("error");
+        if (res.status === 429) setStatus("rate_limited");
+        else if (res.status === 503) setStatus("misconfigured");
+        else setStatus("error");
         return;
       }
       router.replace("/admin");
@@ -72,6 +76,19 @@ export default function AdminLoginPage() {
           {status === "error" ? (
             <p role="alert" className="text-sm font-medium text-red-600">
               Invalid username or password.
+            </p>
+          ) : null}
+
+          {status === "rate_limited" ? (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              Too many sign-in attempts. Please wait a few minutes and try again.
+            </p>
+          ) : null}
+
+          {status === "misconfigured" ? (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              Admin access is disabled until the server is configured. See the server logs for
+              the required environment variables.
             </p>
           ) : null}
 

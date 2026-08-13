@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildPersonalMessage, buildSubmittedMessage, sendTelegramMessage } from "@/lib/telegram";
 import { createInterviewToken } from "@/lib/token";
 import { upsertPersonal } from "@/lib/store";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
+import { readJsonBody, badBodyResponse } from "@/lib/http";
 
 /**
  * Telegram notification endpoint used by the application form.
@@ -16,6 +18,14 @@ import { upsertPersonal } from "@/lib/store";
  */
 
 export const runtime = "nodejs";
+
+/**
+ * A genuine applicant triggers this twice (personal step, then submit). The
+ * budget is deliberately loose enough for a shared office IP but tight enough
+ * that nobody can flood the recruiter's phone or fill the candidate store.
+ */
+const MAX_REQUESTS = 12;
+const WINDOW_MS = 10 * 60 * 1000;
 
 type Payload =
   | { type: "submitted"; name?: string }
@@ -34,12 +44,12 @@ function baseUrl(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
-  let payload: Payload;
-  try {
-    payload = (await req.json()) as Payload;
-  } catch {
-    return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
-  }
+  const limit = rateLimit(`telegram:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
+  const parsed = await readJsonBody<Payload>(req, 32 * 1024);
+  if (!parsed.ok) return badBodyResponse(parsed.reason);
+  const payload = parsed.data;
 
   let text: string | null = null;
   if (payload.type === "submitted") {

@@ -3,6 +3,8 @@ import { readInterviewToken } from "@/lib/token";
 import { interviewQuestions, scoreAnswers } from "@/config/interviewQuestions";
 import { buildInterviewResultMessage, sendTelegramMessage } from "@/lib/telegram";
 import { recordInterview, getCandidate } from "@/lib/store";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
+import { readJsonBody, badBodyResponse } from "@/lib/http";
 
 /**
  * Receives an applicant's interview answers, scores the multiple-choice ones,
@@ -13,13 +15,21 @@ import { recordInterview, getCandidate } from "@/lib/store";
 
 export const runtime = "nodejs";
 
+/** Each candidate submits once; the allowance covers retries and typos. */
+const MAX_REQUESTS = 10;
+const WINDOW_MS = 15 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
-  let body: { id?: string; token?: string; answers?: Record<string, string> };
-  try {
-    body = (await req.json()) as typeof body;
-  } catch {
-    return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
-  }
+  const limit = rateLimit(`interview:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
+  const parsed = await readJsonBody<{
+    id?: string;
+    token?: string;
+    answers?: Record<string, string>;
+  }>(req, 64 * 1024);
+  if (!parsed.ok) return badBodyResponse(parsed.reason);
+  const body = parsed.data;
 
   let identity: { id?: string; name: string; email?: string } | null = null;
   let alreadyCompleted = false;

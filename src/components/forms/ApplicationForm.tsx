@@ -359,6 +359,16 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     setErrors({});
     setStepError("");
 
+    // The honeypot is invisible to people, so anything in it means a bot.
+    // Show the normal success screen and send nothing — a visible rejection
+    // just tells the bot which field to leave alone next time.
+    if (honeypotRef.current?.value.trim()) {
+      setStatus("success");
+      onSubmitted?.();
+      scrollToTop();
+      return;
+    }
+
     // Save the full application for the Admin Panel (best-effort; does not block
     // or change the Telegram notifications below).
     void fetch("/api/applications", {
