@@ -14,6 +14,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
+  // Emit a canonical URL on every route. The site answers on more than one
+  // hostname (the Railway subdomain as well as the real domain), and without
+  // this a search engine can index each as a separate site and split the
+  // ranking between them. "./" resolves per-route against metadataBase.
+  alternates: { canonical: "./" },
   title: {
     default: `${siteConfig.company.name} — Customer Support & Call-Center Careers`,
     template: `%s | ${siteConfig.company.name}`,
