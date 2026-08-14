@@ -403,11 +403,49 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
           <Icon name="checkCircle" className="h-9 w-9 text-green-600" />
         </div>
-        <h3 className="mt-6 text-2xl font-semibold">Application Submitted Successfully</h3>
+        <h3 className="mt-6 text-2xl font-bold text-navy-900 sm:text-3xl">
+          Application Submitted Successfully
+        </h3>
         <p className="mt-4 leading-relaxed text-navy-600">
-          Thank you for applying to {siteConfig.company.name}. Our recruitment team will review your
-          application. Candidates whose qualifications match our current requirements may be
-          contacted for the next stage.
+          Thank you for applying to {siteConfig.company.name}
+          {firstName ? `, ${firstName}` : ""}. Your application has been received.
+        </p>
+
+        {/* The assessment link goes out by email. Showing the address back is
+            also the last chance to notice a typo in it. */}
+        <div className="mt-8 rounded-3xl border border-cream-300 bg-white p-6 text-left shadow-soft">
+          <div className="flex items-start gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-navy-900">
+              <Icon name="mail" className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-base font-bold text-navy-900">Check your email</p>
+              <p className="mt-1.5 leading-relaxed text-navy-600">
+                We&apos;ve sent your online assessment link to{" "}
+                <strong className="break-all text-navy-900">{email}</strong>. It usually arrives
+                within a few minutes.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-cream-300 pt-5">
+            <p className="text-sm leading-relaxed text-navy-500">
+              <strong className="text-navy-700">Can&apos;t find it?</strong> Check your spam or
+              promotions folder. If nothing arrives within 15 minutes, email us at{" "}
+              <a
+                href={`mailto:${siteConfig.contact.recruitmentEmail}`}
+                className="font-medium text-brand-700 underline underline-offset-2"
+              >
+                {siteConfig.contact.recruitmentEmail}
+              </a>{" "}
+              and we&apos;ll resend it.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-6 text-sm leading-relaxed text-navy-500">
+          Once you complete the assessment, our recruitment team will review your answers and
+          contact you about the next steps.
         </p>
       </div>
     );
