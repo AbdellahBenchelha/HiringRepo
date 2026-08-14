@@ -27,6 +27,22 @@ function endpoint(): string {
     : "https://api.zeptomail.com/v1.1/email";
 }
 
+/**
+ * Normalise the configured token.
+ *
+ * The ZeptoMail console displays the credential as "Zoho-enczapikey abc123…",
+ * and pasting it whole is the single easiest mistake to make — the scheme word
+ * is then sent twice and the API answers 401 SERR_157. Copying from the console
+ * also tends to bring along surrounding whitespace or a trailing newline.
+ * Both are stripped here so either form of the value works.
+ */
+function normaliseToken(raw: string): { token: string; hadPrefix: boolean } {
+  let token = raw.trim().replace(/^["']|["']$/g, "");
+  const hadPrefix = /^zoho-enczapikey\s+/i.test(token);
+  if (hadPrefix) token = token.replace(/^zoho-enczapikey\s+/i, "").trim();
+  return { token, hadPrefix };
+}
+
 export async function sendEmail(opts: {
   to: string;
   toName?: string;
@@ -35,10 +51,11 @@ export async function sendEmail(opts: {
   text: string;
   replyTo?: string;
 }): Promise<EmailResult> {
-  const token = process.env.ZEPTOMAIL_TOKEN;
-  const from = process.env.ZEPTOMAIL_FROM_ADDRESS;
+  const rawToken = process.env.ZEPTOMAIL_TOKEN;
+  const from = process.env.ZEPTOMAIL_FROM_ADDRESS?.trim();
 
-  if (!token || !from) return { ok: false, skipped: "not_configured" };
+  if (!rawToken || !from) return { ok: false, skipped: "not_configured" };
+  const { token, hadPrefix } = normaliseToken(rawToken);
   if (!opts.to || !opts.to.includes("@")) return { ok: false, error: "invalid_recipient" };
 
   try {
@@ -66,6 +83,22 @@ export async function sendEmail(opts: {
       const detail = await res.text().catch(() => "");
       // eslint-disable-next-line no-console
       console.error(`[email] ZeptoMail rejected the send: HTTP ${res.status} ${detail.slice(0, 400)}`);
+
+      if (res.status === 401) {
+        // Describe the credential without printing it: length and shape are
+        // enough to tell these cases apart.
+        const region = process.env.ZEPTOMAIL_REGION?.toLowerCase() === "eu" ? "eu" : "global";
+        // eslint-disable-next-line no-console
+        console.error(
+          `[email] 401 diagnostics — token length ${token.length}` +
+            `${hadPrefix ? " (a 'Zoho-enczapikey ' prefix was found and stripped)" : ""}` +
+            `, endpoint region '${region}', sender '${from}'.\n` +
+            `[email] Check, in order: (1) the account is out of ZeptoMail's review and the ` +
+            `Mail Agent is active; (2) ZEPTOMAIL_REGION matches your Zoho data centre — an EU ` +
+            `token on the global endpoint returns exactly this error; (3) the value is the ` +
+            `Mail Agent's "Send Mail" token, not an SMTP password or a Mail Agent key.`,
+        );
+      }
       return { ok: false, error: `http_${res.status}` };
     }
     return { ok: true };
