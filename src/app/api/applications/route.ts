@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
   const email = str(application.email);
   const fullName = `${str(application.firstName)} ${str(application.lastName)}`.trim();
 
+  if (!email.includes("@")) {
+    // eslint-disable-next-line no-console
+    console.warn(`[applications] no usable email on application ${id}; nothing sent`);
+  }
+
   if (email.includes("@")) {
     // Claim first. The flag is written inside the same serialized store write
     // that checks it, so a double submit cannot produce two emails.
@@ -71,6 +76,11 @@ export async function POST(req: NextRequest) {
       claimed = await claimInterviewEmail(id);
     } catch {
       /* storage is best-effort */
+    }
+
+    if (!claimed) {
+      // eslint-disable-next-line no-console
+      console.log(`[applications] assessment email already sent for ${id}; not resending`);
     }
 
     if (claimed) {
@@ -86,6 +96,13 @@ export async function POST(req: NextRequest) {
         text: interviewInviteText(invite),
         replyTo: siteConfig.contact.recruitmentEmail,
       });
+
+      if (result.ok) {
+        // Logged on success too: without this, an email that never arrives
+        // leaves no trace either way and there is nothing to diagnose from.
+        // eslint-disable-next-line no-console
+        console.log(`[applications] assessment email accepted by ZeptoMail for ${email}`);
+      }
 
       if (!result.ok) {
         // Give the claim back so a retry — or the recruiter resending from the
