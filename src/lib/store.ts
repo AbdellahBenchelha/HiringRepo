@@ -60,6 +60,9 @@ export interface Candidate {
   successMessageSentAt?: string;
   voiceRequestedAt?: string;
   voiceStatus?: VoiceStatus;
+  /** Set once the assessment invitation email has gone out, so a resubmit
+   *  or a retried request cannot send the candidate a second copy. */
+  interviewEmailSentAt?: string;
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -250,6 +253,31 @@ export function recordSuccessMessage(id: string): Promise<Candidate | null> {
     if (!c) return { list, result: null };
     c.successMessageSentAt = new Date().toISOString();
     return { list, result: c };
+  });
+}
+
+/**
+ * Claim the right to send the assessment invitation.
+ *
+ * Returns true only for the first caller; the timestamp is written inside the
+ * same serialized write that checks it, so two concurrent submits cannot both
+ * be told to send.
+ */
+export function claimInterviewEmail(id: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || c.interviewEmailSentAt) return { list, result: false };
+    c.interviewEmailSentAt = new Date().toISOString();
+    return { list, result: true };
+  });
+}
+
+/** Release the claim if the send failed, so a later retry can try again. */
+export function releaseInterviewEmail(id: string): Promise<void> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (c) delete c.interviewEmailSentAt;
+    return { list, result: undefined };
   });
 }
 
