@@ -336,10 +336,9 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
           // error on the email field. Naming it would tell the applicant
           // exactly what to change to get past the check.
           setStepError(
-            `Our records show that you have already applied to ${siteConfig.company.name}. ` +
-              `Our recruitment team has your application on file and will be in touch — please ` +
-              `contact ${siteConfig.contact.recruitmentEmail} if you need to update your details ` +
-              `or ask about your status.`,
+            `You have already applied to ${siteConfig.company.name}. ` +
+              `Our team has your application on file — please contact ` +
+              `${siteConfig.contact.recruitmentEmail} if you need to update it.`,
           );
           scrollToTop();
           return;
