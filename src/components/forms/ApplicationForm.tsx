@@ -332,10 +332,14 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
         if (data.emailTaken) {
           setChecking(false);
-          setErrors({ email: "This email address has already been used to apply." });
+          // Deliberately says nothing about which detail matched, and puts no
+          // error on the email field. Naming it would tell the applicant
+          // exactly what to change to get past the check.
           setStepError(
-            `You have already applied to ${siteConfig.company.name} with this email address. ` +
-              `Our team has your application on file — please contact ${siteConfig.contact.recruitmentEmail} if you need to update it.`,
+            `Our records show that you have already applied to ${siteConfig.company.name}. ` +
+              `Our recruitment team has your application on file and will be in touch — please ` +
+              `contact ${siteConfig.contact.recruitmentEmail} if you need to update your details ` +
+              `or ask about your status.`,
           );
           scrollToTop();
           return;
