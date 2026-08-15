@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveApplication, claimInterviewEmail, releaseInterviewEmail } from "@/lib/store";
+import {
+  saveApplication,
+  claimInterviewEmail,
+  releaseInterviewEmail,
+  getCandidate,
+} from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { sendEmail } from "@/lib/email";
@@ -66,6 +71,24 @@ export async function POST(req: NextRequest) {
   if (!email.includes("@")) {
     // eslint-disable-next-line no-console
     console.warn(`[applications] no usable email on application ${id}; nothing sent`);
+  }
+
+  // A flagged application is held back deliberately: its phone matched an
+  // earlier candidate, and a recruiter compares the two before the assessment
+  // goes out. Released from the Admin Panel with "Send assessment link".
+  let flagged = false;
+  try {
+    flagged = !!(await getCandidate(id))?.duplicateFlag;
+  } catch {
+    /* storage is best-effort */
+  }
+  if (flagged) {
+    // eslint-disable-next-line no-console
+    console.log(`[applications] ${id} flagged as a possible duplicate; assessment email withheld`);
+  }
+
+  if (flagged) {
+    return NextResponse.json({ ok: true, flagged: true });
   }
 
   if (email.includes("@")) {

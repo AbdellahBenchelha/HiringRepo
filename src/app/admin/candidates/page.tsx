@@ -41,6 +41,9 @@ export default async function AdminCandidatesPage() {
       score: c.interview?.score,
       total: c.interview?.total,
       interviewLink: `${base}/interview?c=${c.id}`,
+      duplicateFlag: c.duplicateFlag,
+      duplicateOfName: c.duplicateOfName,
+      interviewEmailSentAt: c.interviewEmailSentAt,
     };
   });
 

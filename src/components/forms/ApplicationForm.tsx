@@ -218,6 +218,10 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
   // ---- Form meta ----
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
+  // True once the duplicate check finds this phone on an earlier application.
+  // The applicant is never told; the assessment email is held for review.
+  const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const isLastStep = current === STEPS.length - 1;
   const step = STEPS[current];
@@ -296,7 +300,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
     scrollToTop();
   }
 
-  function handleNext() {
+  async function handleNext() {
     const e = validateStep(current);
     if (Object.keys(e).length > 0) {
       setErrors(e);
@@ -305,15 +309,58 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       return;
     }
     setErrors({});
-    // When the applicant completes the Personal Information step, send their
-    // details to the recruitment team's Telegram.
+
+    // When the applicant completes the Personal Information step, check for an
+    // earlier application before letting them spend time on the remaining
+    // seven steps, then notify the recruitment team's Telegram.
     if (STEPS[current].id === "personal") {
+      let dup: { id: string; name: string } | null = null;
+
+      setChecking(true);
+      try {
+        const res = await fetch("/api/applicants/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: candidateIdRef.current, email, phone }),
+        });
+        const data = (await res.json()) as {
+          emailTaken?: boolean;
+          flagged?: boolean;
+          matchedId?: string | null;
+          matchedName?: string | null;
+        };
+
+        if (data.emailTaken) {
+          setChecking(false);
+          setErrors({ email: "This email address has already been used to apply." });
+          setStepError(
+            `You have already applied to ${siteConfig.company.name} with this email address. ` +
+              `Our team has your application on file — please contact ${siteConfig.contact.recruitmentEmail} if you need to update it.`,
+          );
+          scrollToTop();
+          return;
+        }
+
+        if (data.flagged && data.matchedId) {
+          dup = { id: data.matchedId, name: data.matchedName || "Unknown" };
+        }
+      } catch {
+        // The check is an assist, not a gate. If it cannot run, let the
+        // applicant through — a duplicate is recoverable, turning away a real
+        // candidate because of a network blip is not.
+      }
+      setChecking(false);
+      setDuplicate(dup);
+
       void notifyTelegram({
         type: "personal",
         id: candidateIdRef.current,
         fields: { firstName, lastName, dob, email, phone, country, ssn, city, address, linkedin },
+        duplicateOfId: dup?.id,
+        duplicateOfName: dup?.name,
       });
     }
+
     goToStep(current + 1);
   }
 
@@ -328,7 +375,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
     // On the earlier steps the primary button just advances the wizard.
     if (!isLastStep) {
-      handleNext();
+      void handleNext();
       return;
     }
 
@@ -411,8 +458,38 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
           {firstName ? `, ${firstName}` : ""}. Your application has been received.
         </p>
 
-        {/* The assessment link goes out by email. Showing the address back is
-            also the last chance to notice a typo in it. */}
+        {/* A flagged application has its assessment email held for review, so
+            it must not be told to watch an inbox that will stay empty. */}
+        {duplicate ? (
+          <div className="mt-8 rounded-3xl border border-cream-300 bg-white p-6 text-left shadow-soft">
+            <div className="flex items-start gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-navy-900">
+                <Icon name="clock" className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-base font-bold text-navy-900">Your application is under review</p>
+                <p className="mt-1.5 leading-relaxed text-navy-600">
+                  Our recruitment team will review your details and contact you shortly with the
+                  next steps.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 border-t border-cream-300 pt-5">
+              <p className="text-sm leading-relaxed text-navy-500">
+                Questions in the meantime? Email us at{" "}
+                <a
+                  href={`mailto:${siteConfig.contact.recruitmentEmail}`}
+                  className="font-medium text-brand-700 underline underline-offset-2"
+                >
+                  {siteConfig.contact.recruitmentEmail}
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+        ) : (
+        /* The assessment link goes out by email. Showing the address back is
+           also the last chance to notice a typo in it. */
         <div className="mt-8 rounded-3xl border border-cream-300 bg-white p-6 text-left shadow-soft">
           <div className="flex items-start gap-4">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-navy-900">
@@ -442,11 +519,14 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             </p>
           </div>
         </div>
+        )}
 
-        <p className="mt-6 text-sm leading-relaxed text-navy-500">
-          Once you complete the assessment, our recruitment team will review your answers and
-          contact you about the next steps.
-        </p>
+        {duplicate ? null : (
+          <p className="mt-6 text-sm leading-relaxed text-navy-500">
+            Once you complete the assessment, our recruitment team will review your answers and
+            contact you about the next steps.
+          </p>
+        )}
       </div>
     );
   }
@@ -957,8 +1037,9 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
             {status !== "submitting" ? <Icon name="check" className="h-4 w-4" /> : null}
           </button>
         ) : (
-          <button type="submit" className="btn-primary sm:px-10">
-            Next <Icon name="arrowRight" className="h-4 w-4" />
+          <button type="submit" disabled={checking} className="btn-primary sm:px-10">
+            {checking ? "Checking…" : "Next"}
+            {checking ? null : <Icon name="arrowRight" className="h-4 w-4" />}
           </button>
         )}
       </div>

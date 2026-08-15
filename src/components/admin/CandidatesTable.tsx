@@ -7,6 +7,7 @@ import { StatusBadge, InterviewBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { siteConfig } from "@/config/site";
 import { adminPost } from "@/lib/adminClient";
+import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
 
 export interface CandidateView {
   id: string;
@@ -28,6 +29,9 @@ export interface CandidateView {
   score?: number;
   total?: number;
   interviewLink: string;
+  duplicateFlag?: boolean;
+  duplicateOfName?: string;
+  interviewEmailSentAt?: string;
 }
 
 function fmt(iso?: string) {
@@ -159,6 +163,15 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   <td className="px-4 py-3">
                     <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                     <p className="text-xs text-navy-500">{c.email || "—"}</p>
+                    {c.duplicateFlag ? (
+                      <span
+                        title={`Same phone number as ${c.duplicateOfName ?? "an earlier applicant"}`}
+                        className="mt-1 inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-bold text-brand-800"
+                      >
+                        <Icon name="shield" className="h-3 w-3" />
+                        Duplicate · {c.duplicateOfName ?? "unknown"}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-navy-700">{c.phone || "—"}</td>
                   <td className="px-4 py-3 text-navy-600">{c.languages.length ? c.languages.join(", ") : "—"}</td>
@@ -198,6 +211,15 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                         View
                       </button>
                     </div>
+                    {c.duplicateFlag || c.interviewEmailSentAt ? (
+                      <div className="mt-2">
+                        <SendAssessmentButton
+                          id={c.id}
+                          sentAt={c.interviewEmailSentAt}
+                          hasEmail={!!c.email}
+                        />
+                      </div>
+                    ) : null}
                   </td>
                 </tr>
               ))

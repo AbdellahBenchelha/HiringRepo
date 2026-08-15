@@ -13,7 +13,14 @@
  */
 export type TelegramNotification =
   | { type: "submitted"; name?: string; suspectedBot?: boolean }
-  | { type: "personal"; id?: string; fields: Record<string, string> };
+  | {
+      type: "personal";
+      id?: string;
+      fields: Record<string, string>;
+      /** Phone matched an earlier application; recruiter should compare. */
+      duplicateOfId?: string;
+      duplicateOfName?: string;
+    };
 
 export function notifyTelegram(payload: TelegramNotification): void {
   const url = "/api/telegram";

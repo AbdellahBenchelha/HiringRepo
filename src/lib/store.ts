@@ -17,6 +17,7 @@ import {
   type CandidateStatus,
   type VoiceStatus,
 } from "@/lib/candidateStatus";
+import { normaliseEmail, normalisePhone } from "@/lib/identity";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
@@ -63,6 +64,16 @@ export interface Candidate {
   /** Set once the assessment invitation email has gone out, so a resubmit
    *  or a retried request cannot send the candidate a second copy. */
   interviewEmailSentAt?: string;
+  /**
+   * Set when this application's phone number matches an earlier candidate.
+   * A flagged application is stored and notified as normal, but the assessment
+   * email is withheld until a recruiter releases it from the Admin Panel.
+   */
+  duplicateFlag?: boolean;
+  /** Id of the earlier candidate whose phone matched. */
+  duplicateOfId?: string;
+  /** Name of that candidate, kept so the Admin Panel needs no second lookup. */
+  duplicateOfName?: string;
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -106,6 +117,60 @@ export async function listCandidates(): Promise<Candidate[]> {
 export async function getCandidate(id: string): Promise<Candidate | null> {
   const list = await readAll();
   return list.find((c) => c.id === id) ?? null;
+}
+
+export interface DuplicateCheck {
+  /** An earlier candidate already used this email address. */
+  emailTaken: boolean;
+  /** An earlier candidate already used this phone number. */
+  phoneMatch: { id: string; name: string; createdAt: string } | null;
+}
+
+/**
+ * Look for an earlier application from the same person.
+ *
+ * `selfId` is the id of the application being filled in right now, so a
+ * candidate revisiting their own Personal Information step does not match
+ * themselves.
+ */
+export async function findDuplicates(
+  email: string,
+  phone: string,
+  selfId: string,
+): Promise<DuplicateCheck> {
+  const list = await readAll();
+  const wantEmail = normaliseEmail(email);
+  const wantPhone = normalisePhone(phone);
+
+  const others = list.filter((c) => c.id !== selfId);
+
+  const emailTaken = wantEmail
+    ? others.some((c) => normaliseEmail(c.email) === wantEmail)
+    : false;
+
+  let phoneMatch: DuplicateCheck["phoneMatch"] = null;
+  if (wantPhone) {
+    // Oldest first, so the flag names the original application.
+    const hit = [...others]
+      .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))
+      .find((c) => normalisePhone(c.phone) === wantPhone);
+    if (hit) phoneMatch = { id: hit.id, name: hit.fullName || "Unknown", createdAt: hit.createdAt };
+  }
+
+  return { emailTaken, phoneMatch };
+}
+
+/** Mark an application as a possible duplicate of an earlier one. */
+export function flagDuplicate(id: string, ofId: string, ofName: string): Promise<void> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (c) {
+      c.duplicateFlag = true;
+      c.duplicateOfId = ofId;
+      c.duplicateOfName = ofName;
+    }
+    return { list, result: undefined };
+  });
 }
 
 interface PersonalInput {

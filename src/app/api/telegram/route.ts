@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildPersonalMessage, buildSubmittedMessage, sendTelegramMessage } from "@/lib/telegram";
+import {
+  buildPersonalMessage,
+  buildSubmittedMessage,
+  escapeHtml,
+  sendTelegramMessage,
+} from "@/lib/telegram";
 import { createInterviewToken } from "@/lib/token";
-import { upsertPersonal } from "@/lib/store";
+import { upsertPersonal, flagDuplicate } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 
@@ -50,7 +55,13 @@ const MAX_OVERALL = 200;
 
 type Payload =
   | { type: "submitted"; name?: string; suspectedBot?: boolean }
-  | { type: "personal"; id?: string; fields?: Record<string, unknown> };
+  | {
+      type: "personal";
+      id?: string;
+      fields?: Record<string, unknown>;
+      duplicateOfId?: string;
+      duplicateOfName?: string;
+    };
 
 function str(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -112,6 +123,16 @@ export async function POST(req: NextRequest) {
         } catch {
           /* storage is best-effort */
         }
+
+        // Record the duplicate flag after the upsert, so it is not overwritten
+        // by the object assignment above.
+        if (payload.duplicateOfId) {
+          try {
+            await flagDuplicate(id, payload.duplicateOfId, payload.duplicateOfName || "Unknown");
+          } catch {
+            /* storage is best-effort */
+          }
+        }
       }
 
       // Short link using the candidate's unguessable id; fall back to a signed
@@ -119,7 +140,15 @@ export async function POST(req: NextRequest) {
       const link = id
         ? `${baseUrl(req)}/interview?c=${id}`
         : `${baseUrl(req)}/interview?id=${createInterviewToken({ name: fullName, email: str(fields.email) || undefined })}`;
-      text = `${base}\n\n📝 <b>Interview link — send this to the applicant:</b>\n${link}`;
+
+      // A flagged application gets no automatic assessment email, so the
+      // recruiter has to be told — otherwise the candidate waits on an inbox
+      // that will stay empty and nobody knows why.
+      const warning = payload.duplicateOfName
+        ? `\n\n⚠️ <b>Possible duplicate</b> — same phone number as <b>${escapeHtml(payload.duplicateOfName)}</b>.\nThe assessment email was <b>not</b> sent automatically. Compare both in the Admin Panel, then use “Send assessment link” to release it.`
+        : "";
+
+      text = `${base}\n\n📝 <b>Interview link — send this to the applicant:</b>\n${link}${warning}`;
     }
   }
 
