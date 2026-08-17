@@ -98,7 +98,24 @@ export const siteConfig = {
    * listing. Add every country you genuinely recruit from; leaving one out
    * hides your jobs from candidates there.
    */
-  hiringCountries: ["United Kingdom"], // REVIEW — add every country you hire from
+  hiringCountries: [
+    // --- Europe ---
+    "Albania", "Andorra", "Austria", "Belgium", "Bosnia and Herzegovina",
+    "Bulgaria", "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia",
+    "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland",
+    "Italy", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta",
+    "Moldova", "Monaco", "Montenegro", "Netherlands", "North Macedonia",
+    "Norway", "Poland", "Portugal", "Romania", "San Marino", "Serbia",
+    "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", "Ukraine",
+    "United Kingdom",
+    // --- North America ---
+    "United States", "Canada",
+    // --- Türkiye ---
+    "Turkey",
+    // --- Middle East ---
+    "Bahrain", "Egypt", "Israel", "Jordan", "Kuwait", "Lebanon", "Oman",
+    "Qatar", "Saudi Arabia", "United Arab Emirates",
+  ] as string[],
 
   /** How long a listing stays valid, in days, from its datePosted. */
   jobValidityDays: 90,
