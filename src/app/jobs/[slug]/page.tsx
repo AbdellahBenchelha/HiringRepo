@@ -27,9 +27,25 @@ export async function generateMetadata({
   });
 }
 
+/**
+ * JobPosting structured data — this is what makes a listing eligible for the
+ * Google Jobs box above the normal results.
+ *
+ * Two details Google is strict about:
+ *   validThrough — a posting with no end date is treated as indefinitely open
+ *     and gets deprioritised, so it is derived from datePosted.
+ *   applicantLocationRequirements — for a TELECOMMUTE role this must name real
+ *     countries. A placeholder is rejected, and the values decide which
+ *     candidates are shown the listing at all.
+ */
 function jobPostingJsonLd(slug: string) {
   const job = getJobBySlug(slug);
   if (!job) return null;
+
+  const posted = new Date(job.datePosted);
+  const validThrough = new Date(posted);
+  validThrough.setDate(validThrough.getDate() + siteConfig.jobValidityDays);
+
   return {
     "@context": "https://schema.org",
     "@type": "JobPosting",
@@ -37,14 +53,24 @@ function jobPostingJsonLd(slug: string) {
     description: `${job.shortDescription} Responsibilities include: ${job.responsibilities.join(
       "; "
     )}. Requirements: ${job.requirements.join("; ")}.`,
+    identifier: {
+      "@type": "PropertyValue",
+      name: siteConfig.company.name,
+      value: job.slug,
+    },
     datePosted: job.datePosted,
+    validThrough: validThrough.toISOString().slice(0, 10),
     employmentType: job.employmentType,
     hiringOrganization: {
       "@type": "Organization",
       name: siteConfig.company.name,
       sameAs: siteConfig.url,
+      logo: `${siteConfig.url}/logo-mark.svg`,
     },
-    applicantLocationRequirements: { "@type": "Country", name: "Multiple" },
+    applicantLocationRequirements: siteConfig.hiringCountries.map((name) => ({
+      "@type": "Country",
+      name,
+    })),
     jobLocationType: "TELECOMMUTE",
     directApply: true,
   };

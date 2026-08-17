@@ -89,6 +89,20 @@ export const siteConfig = {
     mapEmbedUrl: "", // PLACEHOLDER — paste a Google Maps embed URL if available
   },
 
+  /**
+   * Countries you accept applicants from, used by the JobPosting structured
+   * data that feeds the Google Jobs listing.
+   *
+   * Google requires real country names here for a fully remote role — it will
+   * not accept a placeholder — and it uses them to decide who sees the
+   * listing. Add every country you genuinely recruit from; leaving one out
+   * hides your jobs from candidates there.
+   */
+  hiringCountries: ["United Kingdom"], // REVIEW — add every country you hire from
+
+  /** How long a listing stays valid, in days, from its datePosted. */
+  jobValidityDays: 90,
+
   social: [
     { label: "LinkedIn", href: "https://www.linkedin.com/company/workroute-services-private-limited/", icon: "linkedin" },
     { label: "Facebook", href: "https://www.facebook.com/WorkRouteService/", icon: "facebook" },
