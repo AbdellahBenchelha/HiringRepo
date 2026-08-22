@@ -10,17 +10,22 @@ export const metadata = buildMetadata({
 
 export default function LegalNoticePage() {
   const { legal, contact } = siteConfig;
-  const rows: { label: string; value: string }[] = [
-    { label: "Registered company name", value: legal.registeredName },
-    { label: "Legal business type", value: legal.businessType },
-    { label: "Registration number", value: legal.registrationNumber },
-    { label: "Tax number", value: legal.taxNumber },
-    { label: "Registered address", value: legal.registeredAddress },
-    { label: "Email", value: contact.recruitmentEmail },
-    { label: "Phone number", value: contact.phone },
-    { label: "Website owner", value: legal.websiteOwner },
-    { label: "Hosting provider", value: legal.hostingProvider },
-  ];
+  // Blank rows are dropped rather than rendered empty. Registration and tax
+  // numbers are left unset until the real values are known — omitting a
+  // company number is honest, inventing one is not.
+  const rows = (
+    [
+      { label: "Registered company name", value: legal.registeredName },
+      { label: "Legal business type", value: legal.businessType },
+      { label: "Registration number", value: legal.registrationNumber },
+      { label: "Tax number", value: legal.taxNumber },
+      { label: "Registered address", value: legal.registeredAddress },
+      { label: "Email", value: contact.recruitmentEmail },
+      { label: "Phone number", value: contact.phone },
+      { label: "Website owner", value: legal.websiteOwner },
+      { label: "Hosting provider", value: legal.hostingProvider },
+    ] as { label: string; value: string }[]
+  ).filter((row) => row.value.trim() !== "");
 
   return (
     <LegalPageLayout
