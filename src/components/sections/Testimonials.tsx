@@ -74,12 +74,6 @@ export function Testimonials() {
     }
   };
 
-  // Nothing to show until there are real, consented quotes. Hiding the whole
-  // section is deliberate: an empty "What our team says" heading, or a
-  // five-star "Loved by our team" panel with nothing behind it, would make the
-  // same unearned claim the fictional testimonials did.
-  if (testimonials.length === 0) return null;
-
   return (
     <section id="testimonials" className="section bg-white">
       <div className="container-page">

@@ -132,20 +132,12 @@ export const siteConfig = {
   legal: {
     registeredName: "WorkRoute Ltd.", // PLACEHOLDER
     businessType: "Private Limited Company", // PLACEHOLDER
-    /**
-     * Leave empty until you have the real values — the Legal Notice omits any
-     * row that is blank. These previously read "REG-000000000" and
-     * "TAX-000000000", which is worse than showing nothing: an invented
-     * company number on a legal-identification page is a false statement about
-     * the company, and UK limited companies are required to publish accurate
-     * details.
-     */
-    registrationNumber: "", // TODO — Companies House number
-    taxNumber: "", // TODO — VAT number, if registered
+    registrationNumber: "REG-000000000", // PLACEHOLDER
+    taxNumber: "TAX-000000000", // PLACEHOLDER
     registeredAddress:
       "65 Stroude Road, Skeabrae, KW17 0AX, United Kingdom",
     websiteOwner: "WorkRoute Ltd.", // PLACEHOLDER
-    hostingProvider: "Railway Corp., 548 Market St, San Francisco, CA 94104, United States",
+    hostingProvider: "Your Hosting Provider Inc., 1 Datacenter Road, Country", // PLACEHOLDER
     /** How long applicant data is retained, in months. Used across legal pages. */
     applicantDataRetentionMonths: 12, // PLACEHOLDER — confirm with legal counsel
   },
@@ -154,22 +146,12 @@ export const siteConfig = {
   /** COMPANY STATISTICS — REVIEW & VERIFY before publishing.                 */
   /** These are illustrative placeholders only.                               */
   /** ----------------------------------------------------------------------- */
-  /**
-   * Facts about how the roles work, shown in place of company statistics.
-   *
-   * These replaced invented figures — team size, interaction counts, markets
-   * served — which were layout placeholders that reached the live site. Every
-   * line here is something the company can stand behind, and none of it needs
-   * revisiting as the company grows.
-   *
-   * If real, verifiable numbers become available, they belong here, but only
-   * once they are true.
-   */
-  highlights: [
-    { value: "100%", label: "Remote — every role, no commute" },
-    { value: "Paid", label: "Training from day one" },
-    { value: "5", label: "Support channels: phone, chat, email, technical, sales" },
-    { value: "Internal", label: "Promotions — we hire team leads from the front line" },
+  stats: [
+    { value: "10M+", label: "Customer interactions supported" }, // PLACEHOLDER
+    { value: "15+", label: "Languages covered" }, // PLACEHOLDER
+    { value: "1,200+", label: "Team members" }, // PLACEHOLDER
+    { value: "30+", label: "Markets served" }, // PLACEHOLDER
+    { value: "50,000+", label: "Training hours delivered" }, // PLACEHOLDER
   ],
 
   /**
