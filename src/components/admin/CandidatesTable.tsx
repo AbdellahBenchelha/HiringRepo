@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { StatusBadge, InterviewBadge } from "@/components/admin/StatusBadge";
+import { StatusBadge, InterviewBadge, IncompleteFormBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { siteConfig } from "@/config/site";
 import { adminPost, adminDelete } from "@/lib/adminClient";
@@ -34,6 +34,7 @@ export interface CandidateView {
   interviewLink: string;
   notes?: string;
   interviewOpenedAt?: string;
+  formCompleted: boolean;
   reminderEmailSentAt?: string;
   reminderEmailCount?: number;
   reminderWhatsAppSentAt?: string;
@@ -63,7 +64,7 @@ function buildWhatsAppMessage(name: string, link: string): string {
 export function CandidatesTable({ candidates }: { candidates: CandidateView[] }) {
   const [rows, setRows] = useState(candidates);
   const [search, setSearch] = useState("");
-  const [interviewFilter, setInterviewFilter] = useState<"all" | "completed" | "opened" | "notopened">("all");
+  const [interviewFilter, setInterviewFilter] = useState<"all" | "completed" | "opened" | "notopened" | "noform">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | CandidateStatus>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [profile, setProfile] = useState<CandidateView | null>(null);
@@ -98,6 +99,9 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       // these two groups are the ones worth chasing, and differently.
       if (interviewFilter === "opened" && (c.interviewCompleted || !c.interviewOpenedAt)) return false;
       if (interviewFilter === "notopened" && (c.interviewCompleted || c.interviewOpenedAt)) return false;
+      // Reached step one, never submitted, and has not done the assessment
+      // either — the group worth chasing back into the form.
+      if (interviewFilter === "noform" && (c.formCompleted || c.interviewCompleted)) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
@@ -214,6 +218,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
             <option value="completed">Completed</option>
             <option value="opened">Opened, not submitted</option>
             <option value="notopened">Not opened</option>
+            <option value="noform">Form not completed</option>
           </select>
         </div>
         <div>
@@ -281,6 +286,11 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   <td className="px-4 py-3">
                     <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                     <p className="text-xs text-navy-500">{c.email || "—"}</p>
+                    {!c.formCompleted && !c.interviewCompleted ? (
+                      <div className="mt-1">
+                        <IncompleteFormBadge />
+                      </div>
+                    ) : null}
                     {c.duplicateFlag ? (
                       <span
                         title={`Same phone number as ${c.duplicateOfName ?? "an earlier applicant"}`}
@@ -343,7 +353,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                         <Icon name="trash" className="h-4 w-4" />
                       </button>
                     </div>
-                    {c.duplicateFlag || c.interviewEmailSentAt ? (
+                    {c.duplicateFlag || c.interviewEmailSentAt || !c.formCompleted ? (
                       <div className="mt-2">
                         <SendAssessmentButton
                           id={c.id}
@@ -360,6 +370,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                       interviewLink={c.interviewLink}
                       interviewCompleted={c.interviewCompleted}
                       interviewEmailSentAt={c.interviewEmailSentAt}
+                      formCompleted={c.formCompleted}
                       hasEmail={!!c.email}
                       reminderEmailSentAt={c.reminderEmailSentAt}
                       reminderEmailCount={c.reminderEmailCount}

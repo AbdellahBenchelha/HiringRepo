@@ -46,6 +46,7 @@ export default async function AdminCandidatesPage() {
       interviewEmailSentAt: c.interviewEmailSentAt,
       notes: c.notes,
       interviewOpenedAt: c.interviewOpenedAt,
+      formCompleted: !!c.submittedAt,
       reminderEmailSentAt: c.reminderEmailSentAt,
       reminderEmailCount: c.reminderEmailCount,
       reminderWhatsAppSentAt: c.reminderWhatsAppSentAt,

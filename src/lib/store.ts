@@ -141,6 +141,12 @@ export interface DuplicateCheck {
   emailTaken: boolean;
   /** An earlier candidate already used this phone number. */
   phoneMatch: { id: string; name: string; createdAt: string } | null;
+  /**
+   * Id of this person's own unfinished attempt, if they have one. The form
+   * adopts it so a restart updates that record rather than leaving a second
+   * one behind.
+   */
+  resumeId: string | null;
 }
 
 /**
@@ -161,20 +167,46 @@ export async function findDuplicates(
 
   const others = list.filter((c) => c.id !== selfId);
 
+  /**
+   * Only a finished application counts as having applied.
+   *
+   * A record is created at step one so the recruiter gets the notification and
+   * the interview link straight away, but that is an attempt, not an
+   * application. Counting it meant someone who filled in their details and
+   * closed the tab was permanently locked out by their own abandoned record —
+   * and told to contact us about an application they never made.
+   *
+   * Completing the assessment counts too: at that point we have what matters,
+   * whatever happened to the rest of the form.
+   */
+  const applied = others.filter((c) => c.submittedAt || c.interview);
+
   const emailTaken = wantEmail
-    ? others.some((c) => normaliseEmail(c.email) === wantEmail)
+    ? applied.some((c) => normaliseEmail(c.email) === wantEmail)
     : false;
 
   let phoneMatch: DuplicateCheck["phoneMatch"] = null;
   if (wantPhone) {
     // Oldest first, so the flag names the original application.
-    const hit = [...others]
+    const hit = [...applied]
       .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))
       .find((c) => normalisePhone(c.phone) === wantPhone);
     if (hit) phoneMatch = { id: hit.id, name: hit.fullName || "Unknown", createdAt: hit.createdAt };
   }
 
-  return { emailTaken, phoneMatch };
+  // An unfinished attempt from the same person, so the form can carry on with
+  // that record instead of leaving a second one behind. Matched on email only:
+  // a phone is shared by families and offices, and merging two people because
+  // they use one handset is far worse than keeping a duplicate.
+  let resumeId: string | null = null;
+  if (wantEmail) {
+    const open = others
+      .filter((c) => !c.submittedAt && !c.interview && normaliseEmail(c.email) === wantEmail)
+      .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    if (open[0]) resumeId = open[0].id;
+  }
+
+  return { emailTaken, phoneMatch, resumeId };
 }
 
 /**

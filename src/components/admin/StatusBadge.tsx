@@ -27,6 +27,24 @@ export function StatusBadge({ status }: { status: CandidateStatus }) {
  * delivery or attention problem, the second is the assessment itself — and
  * they need opposite responses, so the badge has to tell them apart.
  */
+/**
+ * Shown when someone reached step one of the form and never submitted it.
+ *
+ * They are a real lead — you have their name, email and phone — but no
+ * position, languages or experience, and no consent. Worth telling apart from
+ * a complete application at a glance.
+ */
+export function IncompleteFormBadge() {
+  return (
+    <span
+      title="Reached the first step but never submitted the application"
+      className="inline-flex items-center whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800"
+    >
+      Form not completed
+    </span>
+  );
+}
+
 export function InterviewBadge({ completed, opened }: { completed: boolean; opened?: boolean }) {
   if (completed) {
     return (

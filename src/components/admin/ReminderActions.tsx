@@ -46,6 +46,8 @@ export interface ReminderActionsProps {
   interviewLink: string;
   interviewCompleted: boolean;
   interviewEmailSentAt?: string;
+  /** False when they reached step one but never submitted the application. */
+  formCompleted?: boolean;
   hasEmail: boolean;
   reminderEmailSentAt?: string;
   reminderEmailCount?: number;
@@ -61,8 +63,10 @@ export function ReminderActions(props: ReminderActionsProps) {
   const [busy, setBusy] = useState<"email" | "whatsapp" | null>(null);
   const [error, setError] = useState("");
 
-  // Nothing to chase: they finished, or they were never invited.
-  if (props.interviewCompleted || !props.interviewEmailSentAt) return null;
+  // Nothing to chase once the assessment is done. Otherwise there is a reason
+  // to chase if they were invited, or if they never finished the form at all.
+  if (props.interviewCompleted) return null;
+  if (!props.interviewEmailSentAt && props.formCompleted !== false) return null;
 
   const digits = props.phone.replace(/\D/g, "");
   const phoneValid = digits.length >= 8;

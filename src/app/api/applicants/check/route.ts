@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const phone = typeof parsed.data.phone === "string" ? parsed.data.phone : "";
 
   try {
-    const { emailTaken, phoneMatch } = await findDuplicates(email, phone, id);
+    const { emailTaken, phoneMatch, resumeId } = await findDuplicates(email, phone, id);
     return NextResponse.json({
       ok: true,
       emailTaken,
@@ -44,10 +44,13 @@ export async function POST(req: NextRequest) {
       // Never shown to the applicant — that would leak another person's data.
       matchedName: phoneMatch?.name ?? null,
       matchedId: phoneMatch?.id ?? null,
+      // This person's own unfinished attempt. The form switches to it so a
+      // restart updates that record instead of creating another one.
+      resumeId,
     });
   } catch {
     // Storage trouble must not strand someone mid-application. Let them
     // through; a duplicate is recoverable, a blocked real candidate is not.
-    return NextResponse.json({ ok: true, emailTaken: false, flagged: false });
+    return NextResponse.json({ ok: true, emailTaken: false, flagged: false, resumeId: null });
   }
 }

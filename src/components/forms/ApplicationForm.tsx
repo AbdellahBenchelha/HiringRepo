@@ -328,7 +328,14 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
           flagged?: boolean;
           matchedId?: string | null;
           matchedName?: string | null;
+          resumeId?: string | null;
         };
+
+        // This person already has an unfinished attempt. Adopt its id so the
+        // restart updates that record rather than leaving a second one behind.
+        // Done before the Telegram notification so the interview link in the
+        // message points at the record that actually exists.
+        if (data.resumeId) candidateIdRef.current = data.resumeId;
 
         if (data.emailTaken) {
           setChecking(false);

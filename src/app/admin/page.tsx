@@ -25,6 +25,7 @@ export default async function AdminDashboard() {
   // dashboard should not report them as one number.
   const openedNotDone = candidates.filter((c) => !c.interview && c.interviewOpenedAt).length;
   const notOpened = candidates.filter((c) => !c.interview && !c.interviewOpenedAt).length;
+  const noForm = candidates.filter((c) => !c.submittedAt && !c.interview).length;
   const accepted = candidates.filter((c) => c.status === "Accepted").length;
 
   const byStatus = CANDIDATE_STATUSES.map((s) => ({
@@ -48,6 +49,7 @@ export default async function AdminDashboard() {
         <StatCard label="Completed interviews" value={completed} icon="checkCircle" tone="green" />
         <StatCard label="Opened, not submitted" value={openedNotDone} icon="clock" tone="amber" />
         <StatCard label="Never opened the link" value={notOpened} icon="mail" tone="brand" />
+        <StatCard label="Form not completed" value={noForm} icon="clock" tone="amber" />
         <StatCard label="Accepted" value={accepted} icon="trophy" tone="teal" />
       </div>
 
