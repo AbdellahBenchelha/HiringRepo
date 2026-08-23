@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 /**
  * Releases a withheld assessment email.
@@ -15,17 +16,23 @@ export function SendAssessmentButton({
   id,
   sentAt,
   hasEmail,
+  fullName,
+  email,
 }: {
   id: string;
   sentAt?: string;
   hasEmail: boolean;
+  fullName?: string;
+  email?: string;
 }) {
   const [at, setAt] = useState(sentAt);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
   async function send() {
     if (busy) return;
+    setConfirming(false);
     setBusy(true);
     setError("");
     try {
@@ -61,7 +68,7 @@ export function SendAssessmentButton({
     <div>
       <button
         type="button"
-        onClick={send}
+        onClick={() => setConfirming(true)}
         disabled={busy || !hasEmail}
         title={hasEmail ? undefined : "No email address on this application"}
         className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-bold text-navy-900 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50"
@@ -70,6 +77,23 @@ export function SendAssessmentButton({
         {busy ? "Sending…" : "Send assessment link"}
       </button>
       {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+
+      <ConfirmDialog
+        open={confirming}
+        icon="mail"
+        title="Send the assessment link?"
+        confirmLabel="Send assessment"
+        busy={busy}
+        onCancel={() => setConfirming(false)}
+        onConfirm={send}
+        body={
+          <>
+            <strong className="text-navy-900">{fullName || "This candidate"}</strong> will be
+            emailed their personal assessment link at{" "}
+            <strong className="break-all text-navy-900">{email}</strong>.
+          </>
+        }
+      />
     </div>
   );
 }

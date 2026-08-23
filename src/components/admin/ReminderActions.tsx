@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { siteConfig } from "@/config/site";
 
 /**
@@ -49,6 +50,7 @@ export interface ReminderActionsProps {
   /** False when they reached step one but never submitted the application. */
   formCompleted?: boolean;
   hasEmail: boolean;
+  email?: string;
   reminderEmailSentAt?: string;
   reminderEmailCount?: number;
   reminderWhatsAppSentAt?: string;
@@ -62,6 +64,7 @@ export function ReminderActions(props: ReminderActionsProps) {
   const [waCount, setWaCount] = useState(props.reminderWhatsAppCount ?? 0);
   const [busy, setBusy] = useState<"email" | "whatsapp" | null>(null);
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState<"email" | "whatsapp" | null>(null);
 
   // Nothing to chase once the assessment is done. Otherwise there is a reason
   // to chase if they were invited, or if they never finished the form at all.
@@ -79,7 +82,7 @@ export function ReminderActions(props: ReminderActionsProps) {
 
   async function sendEmailReminder() {
     if (busy) return;
-    if (tooSoon(emailAt) && !window.confirm("You already emailed a reminder today. Send another?")) return;
+    setConfirming(null);
     setBusy("email");
     setError("");
     try {
@@ -110,7 +113,7 @@ export function ReminderActions(props: ReminderActionsProps) {
 
   async function sendWhatsAppReminder() {
     if (busy) return;
-    if (tooSoon(waAt) && !window.confirm("You already sent a WhatsApp reminder today. Send another?")) return;
+    setConfirming(null);
     setBusy("whatsapp");
     setError("");
     // Log first, then open WhatsApp. The browser blocks a popup opened after
@@ -142,7 +145,7 @@ export function ReminderActions(props: ReminderActionsProps) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={sendEmailReminder}
+          onClick={() => setConfirming("email")}
           disabled={busy !== null || !props.hasEmail}
           title={props.hasEmail ? "Email a reminder" : "No email address on file"}
           className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-brand-50 px-2.5 py-1.5 text-xs font-bold text-brand-800 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -153,7 +156,7 @@ export function ReminderActions(props: ReminderActionsProps) {
 
         <button
           type="button"
-          onClick={sendWhatsAppReminder}
+          onClick={() => setConfirming("whatsapp")}
           disabled={busy !== null || !phoneValid}
           title={phoneValid ? "Send a reminder on WhatsApp" : "No usable phone number"}
           className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-2.5 py-1.5 text-xs font-bold text-green-800 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -172,6 +175,44 @@ export function ReminderActions(props: ReminderActionsProps) {
       ) : null}
 
       {error ? <p className="mt-1 text-[11px] text-red-600">{error}</p> : null}
+
+      <ConfirmDialog
+        open={confirming === "email"}
+        icon="mail"
+        title="Send a reminder email?"
+        confirmLabel="Send reminder"
+        busy={busy === "email"}
+        warning={tooSoon(emailAt) ? "You already emailed this candidate a reminder today." : undefined}
+        onCancel={() => setConfirming(null)}
+        onConfirm={sendEmailReminder}
+        body={
+          <>
+            A reminder will be emailed to{" "}
+            <strong className="text-navy-900">{props.fullName || "this candidate"}</strong> at{" "}
+            <strong className="break-all text-navy-900">{props.email}</strong>, with their
+            assessment link.
+          </>
+        }
+      />
+
+      <ConfirmDialog
+        open={confirming === "whatsapp"}
+        icon="chat"
+        title="Send a reminder on WhatsApp?"
+        confirmLabel="Open WhatsApp"
+        busy={busy === "whatsapp"}
+        warning={tooSoon(waAt) ? "You already sent this candidate a WhatsApp reminder today." : undefined}
+        onCancel={() => setConfirming(null)}
+        onConfirm={sendWhatsAppReminder}
+        body={
+          <>
+            WhatsApp will open with a prepared reminder for{" "}
+            <strong className="text-navy-900">{props.fullName || "this candidate"}</strong> on{" "}
+            <strong className="text-navy-900">{props.phone}</strong>. You still have to press send
+            in WhatsApp.
+          </>
+        }
+      />
     </div>
   );
 }

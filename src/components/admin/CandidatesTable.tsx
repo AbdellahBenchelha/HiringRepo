@@ -8,6 +8,7 @@ import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus"
 import { siteConfig } from "@/config/site";
 import { adminPost, adminDelete } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ReminderActions } from "@/components/admin/ReminderActions";
 
 type SortKey = "applied" | "name" | "country" | "position" | "score";
@@ -69,6 +70,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [dateFrom, setDateFrom] = useState("");
   const [profile, setProfile] = useState<CandidateView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<CandidateView | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "applied",
@@ -181,13 +183,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   }
 
   async function removeCandidate(c: CandidateView) {
-    // Deleting personal data has no undo, so the name has to be in the prompt
-    // — "are you sure?" on the wrong row is how the wrong person gets erased.
-    const ok = window.confirm(
-      `Permanently delete ${c.fullName || "this candidate"}?\n\n` +
-        `Their application, interview answers and notes will be erased. This cannot be undone.`,
-    );
-    if (!ok) return;
+    setPendingDelete(null);
     setBusy(c.id);
     try {
       const res = await adminDelete(`/api/admin/candidates/${c.id}`);
@@ -348,7 +344,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                       </button>
                       <button
                         type="button"
-                        onClick={() => removeCandidate(c)}
+                        onClick={() => setPendingDelete(c)}
                         disabled={busy === c.id}
                         title="Delete this candidate permanently"
                         aria-label={`Delete ${c.fullName || "candidate"}`}
@@ -363,6 +359,8 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                           id={c.id}
                           sentAt={c.interviewEmailSentAt}
                           hasEmail={!!c.email}
+                          fullName={c.fullName}
+                          email={c.email}
                         />
                       </div>
                     ) : null}
@@ -376,6 +374,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                       interviewEmailSentAt={c.interviewEmailSentAt}
                       formCompleted={c.formCompleted}
                       hasEmail={!!c.email}
+                      email={c.email}
                       reminderEmailSentAt={c.reminderEmailSentAt}
                       reminderEmailCount={c.reminderEmailCount}
                       reminderWhatsAppSentAt={c.reminderWhatsAppSentAt}
@@ -390,6 +389,32 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       </div>
 
       {/* Profile modal */}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        tone="danger"
+        icon="trash"
+        title="Delete this candidate?"
+        confirmLabel="Delete permanently"
+        busy={busy === pendingDelete?.id}
+        warning="This cannot be undone."
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => pendingDelete && removeCandidate(pendingDelete)}
+        body={
+          <>
+            <strong className="text-navy-900">
+              {pendingDelete?.fullName || "This candidate"}
+            </strong>
+            {pendingDelete?.email ? (
+              <>
+                {" "}
+                (<span className="break-all">{pendingDelete.email}</span>)
+              </>
+            ) : null}{" "}
+            will be erased, along with their application, interview answers and notes.
+          </>
+        }
+      />
+
       {profile ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4" onClick={() => setProfile(null)}>
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
