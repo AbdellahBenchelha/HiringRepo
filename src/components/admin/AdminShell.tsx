@@ -74,7 +74,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <div className="mx-auto flex max-w-7xl">
+      {/* Full width on purpose. This was capped at max-w-7xl, a reading width
+          borrowed from the marketing pages, which left the candidates table
+          scrolling sideways while several hundred pixels sat empty either
+          side. An admin table should use the screen it is given. */}
+      <div className="flex w-full">
         {/* Desktop sidebar */}
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-navy-100 bg-white p-5 lg:flex">
           <div className="px-2 pb-6">
