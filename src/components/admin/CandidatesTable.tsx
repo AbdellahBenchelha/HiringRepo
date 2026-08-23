@@ -101,7 +101,11 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       if (interviewFilter === "notopened" && (c.interviewCompleted || c.interviewOpenedAt)) return false;
       // Reached step one, never submitted, and has not done the assessment
       // either — the group worth chasing back into the form.
-      if (interviewFilter === "noform" && (c.formCompleted || c.interviewCompleted)) return false;
+      if (
+        interviewFilter === "noform" &&
+        (c.formCompleted || c.interviewCompleted || c.interviewOpenedAt)
+      )
+        return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
@@ -286,7 +290,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   <td className="px-4 py-3">
                     <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                     <p className="text-xs text-navy-500">{c.email || "—"}</p>
-                    {!c.formCompleted && !c.interviewCompleted ? (
+                    {!c.formCompleted && !c.interviewCompleted && !c.interviewOpenedAt ? (
                       <div className="mt-1">
                         <IncompleteFormBadge />
                       </div>

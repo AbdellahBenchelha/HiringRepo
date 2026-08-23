@@ -25,7 +25,9 @@ export default async function AdminDashboard() {
   // dashboard should not report them as one number.
   const openedNotDone = candidates.filter((c) => !c.interview && c.interviewOpenedAt).length;
   const notOpened = candidates.filter((c) => !c.interview && !c.interviewOpenedAt).length;
-  const noForm = candidates.filter((c) => !c.submittedAt && !c.interview).length;
+  const noForm = candidates.filter(
+    (c) => !c.submittedAt && !c.interview && !c.interviewOpenedAt,
+  ).length;
   const accepted = candidates.filter((c) => c.status === "Accepted").length;
 
   const byStatus = CANDIDATE_STATUSES.map((s) => ({

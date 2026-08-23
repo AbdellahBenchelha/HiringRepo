@@ -168,18 +168,24 @@ export async function findDuplicates(
   const others = list.filter((c) => c.id !== selfId);
 
   /**
-   * Only a finished application counts as having applied.
+   * What counts as having applied.
    *
    * A record is created at step one so the recruiter gets the notification and
-   * the interview link straight away, but that is an attempt, not an
-   * application. Counting it meant someone who filled in their details and
+   * the interview link straight away, but reaching step one is an attempt, not
+   * an application. Counting it meant someone who filled in their details and
    * closed the tab was permanently locked out by their own abandoned record —
    * and told to contact us about an application they never made.
    *
-   * Completing the assessment counts too: at that point we have what matters,
-   * whatever happened to the rest of the form.
+   * Three things do count, because each means the person is already moving
+   * through the process rather than starting out:
+   *   submittedAt        — they finished the form.
+   *   interview          — they finished the assessment.
+   *   interviewOpenedAt  — they opened their assessment link. The recruiter has
+   *                        already sent it and is waiting on them, so a second
+   *                        application would fork the same person into two
+   *                        records at the point where that is most confusing.
    */
-  const applied = others.filter((c) => c.submittedAt || c.interview);
+  const applied = others.filter((c) => c.submittedAt || c.interview || c.interviewOpenedAt);
 
   const emailTaken = wantEmail
     ? applied.some((c) => normaliseEmail(c.email) === wantEmail)
@@ -201,7 +207,13 @@ export async function findDuplicates(
   let resumeId: string | null = null;
   if (wantEmail) {
     const open = others
-      .filter((c) => !c.submittedAt && !c.interview && normaliseEmail(c.email) === wantEmail)
+      .filter(
+        (c) =>
+          !c.submittedAt &&
+          !c.interview &&
+          !c.interviewOpenedAt &&
+          normaliseEmail(c.email) === wantEmail,
+      )
       .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
     if (open[0]) resumeId = open[0].id;
   }
