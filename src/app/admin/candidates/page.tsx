@@ -44,6 +44,7 @@ export default async function AdminCandidatesPage() {
       duplicateFlag: c.duplicateFlag,
       duplicateOfName: c.duplicateOfName,
       interviewEmailSentAt: c.interviewEmailSentAt,
+      notes: c.notes,
     };
   });
 

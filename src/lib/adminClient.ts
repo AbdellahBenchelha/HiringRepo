@@ -19,3 +19,11 @@ export async function adminPost(url: string, body: unknown): Promise<Response> {
     body: JSON.stringify(body ?? {}),
   });
 }
+
+/** DELETE an admin resource with the CSRF header attached. */
+export async function adminDelete(url: string): Promise<Response> {
+  return fetch(url, {
+    method: "DELETE",
+    headers: { "x-csrf-token": csrfToken() },
+  });
+}

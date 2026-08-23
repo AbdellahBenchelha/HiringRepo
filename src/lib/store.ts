@@ -74,6 +74,9 @@ export interface Candidate {
   duplicateOfId?: string;
   /** Name of that candidate, kept so the Admin Panel needs no second lookup. */
   duplicateOfName?: string;
+  /** Free-text recruiter notes — call outcomes, availability, anything. */
+  notes?: string;
+  notesUpdatedAt?: string;
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -158,6 +161,32 @@ export async function findDuplicates(
   }
 
   return { emailTaken, phoneMatch };
+}
+
+/** Save recruiter notes against a candidate. */
+export function setNotes(id: string, notes: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.notes = notes.slice(0, 5000);
+    c.notesUpdatedAt = new Date().toISOString();
+    return { list, result: c };
+  });
+}
+
+/**
+ * Permanently remove a candidate.
+ *
+ * There is no undo and no soft-delete: the record holds personal data, and a
+ * deletion request under GDPR means the data goes, not that it is hidden.
+ */
+export function deleteCandidate(id: string): Promise<boolean> {
+  return withWrite((list) => {
+    const i = list.findIndex((x) => x.id === id);
+    if (i === -1) return { list, result: false };
+    list.splice(i, 1);
+    return { list, result: true };
+  });
 }
 
 /** Mark an application as a possible duplicate of an earlier one. */
