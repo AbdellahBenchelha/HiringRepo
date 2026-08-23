@@ -20,6 +20,23 @@
  * =============================================================================
  */
 
+import { countries } from "@/config/countries";
+
+/**
+ * Countries left out of the Google Jobs listing.
+ *
+ * Empty on purpose: WorkRoute recruits worldwide. Add a country name here —
+ * spelled exactly as it appears in config/countries.ts — if one ever has to
+ * come off, and it disappears from every job's structured data at once.
+ *
+ * The usual reason is not preference but practicality: a handful of countries
+ * are under sanctions that make paying a resident there unlawful for a
+ * UK-registered company, and no payment provider will route money to them.
+ * Advertising a job you could not actually pay someone for wastes their time
+ * and yours. Worth a word with an accountant before hiring in one.
+ */
+const notHiringFrom: string[] = [];
+
 export const siteConfig = {
   /** Public site URL — used for canonical URLs, sitemap and Open Graph. */
   url: "https://workroute.work",
@@ -95,27 +112,14 @@ export const siteConfig = {
    *
    * Google requires real country names here for a fully remote role — it will
    * not accept a placeholder — and it uses them to decide who sees the
-   * listing. Add every country you genuinely recruit from; leaving one out
-   * hides your jobs from candidates there.
+   * listing. Leaving a country out hides your jobs from candidates there.
+   *
+   * WorkRoute recruits worldwide, so this is the same master list the
+   * application form's country picker uses. Deriving it rather than keeping a
+   * second copy means the two can never disagree — a country you accept
+   * applications from is always a country Google shows your jobs in.
    */
-  hiringCountries: [
-    // --- Europe ---
-    "Albania", "Andorra", "Austria", "Belgium", "Bosnia and Herzegovina",
-    "Bulgaria", "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia",
-    "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland",
-    "Italy", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta",
-    "Moldova", "Monaco", "Montenegro", "Netherlands", "North Macedonia",
-    "Norway", "Poland", "Portugal", "Romania", "San Marino", "Serbia",
-    "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", "Ukraine",
-    "United Kingdom",
-    // --- North America ---
-    "United States", "Canada",
-    // --- Türkiye ---
-    "Turkey",
-    // --- Middle East ---
-    "Bahrain", "Egypt", "Israel", "Jordan", "Kuwait", "Lebanon", "Oman",
-    "Qatar", "Saudi Arabia", "United Arab Emirates",
-  ] as string[],
+  hiringCountries: countries.filter((name) => !notHiringFrom.includes(name)),
 
   /** How long a listing stays valid, in days, from its datePosted. */
   jobValidityDays: 90,
