@@ -36,11 +36,20 @@ export interface InterviewInvite {
   position?: string;
 }
 
-/** Subject line for the assessment invitation. */
-export function interviewInviteSubject(position?: string): string {
-  return position
-    ? `Your ${position} assessment — ${siteConfig.company.name}`
-    : `Your online assessment — ${siteConfig.company.name}`;
+/**
+ * Subject line for the assessment invitation.
+ *
+ * Deliberately does not name the role. "Customer Support Representative" is 31
+ * characters on its own, which pushed the subject past 55 and got it cut off
+ * on a phone — where most candidates read it. The role is named in the first
+ * line of the email instead, where there is room for it.
+ *
+ * Leads with the verb so the inbox line says what to do, and carries the
+ * company name so it is recognisable next to every other application they have
+ * open.
+ */
+export function interviewInviteSubject(_position?: string): string {
+  return `Complete your ${siteConfig.company.name} online assessment`;
 }
 
 /** Plain-text part. Kept readable on its own, not a stripped-tag afterthought. */
@@ -209,11 +218,15 @@ export function interviewInviteHtml({ fullName, interviewUrl, position }: Interv
 </html>`;
 }
 
-/** Subject for the reminder chasing an unfinished assessment. */
-export function reminderSubject(position?: string): string {
-  return position
-    ? `Reminder: your ${position} assessment is waiting`
-    : `Reminder: your assessment is waiting`;
+/**
+ * Subject for the reminder chasing an unfinished assessment.
+ *
+ * Deliberately echoes the invitation — same verb, same company, prefixed with
+ * "Reminder" — so the two read as one thread rather than two unrelated emails.
+ * The role is left out for the same reason as the invitation: it does not fit.
+ */
+export function reminderSubject(_position?: string): string {
+  return `Reminder: complete your ${siteConfig.company.name} assessment`;
 }
 
 /** Plain-text part of the reminder. */
