@@ -45,6 +45,11 @@ export default async function AdminCandidatesPage() {
       duplicateOfName: c.duplicateOfName,
       interviewEmailSentAt: c.interviewEmailSentAt,
       notes: c.notes,
+      interviewOpenedAt: c.interviewOpenedAt,
+      reminderEmailSentAt: c.reminderEmailSentAt,
+      reminderEmailCount: c.reminderEmailCount,
+      reminderWhatsAppSentAt: c.reminderWhatsAppSentAt,
+      reminderWhatsAppCount: c.reminderWhatsAppCount,
     };
   });
 

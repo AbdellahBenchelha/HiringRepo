@@ -20,7 +20,11 @@ export default async function AdminDashboard() {
 
   const total = candidates.length;
   const completed = candidates.filter((c) => c.interview).length;
-  const pending = total - completed;
+  // Split the old single "pending" figure: someone who never opened the link
+  // and someone who opened it and stopped need opposite follow-ups, so the
+  // dashboard should not report them as one number.
+  const openedNotDone = candidates.filter((c) => !c.interview && c.interviewOpenedAt).length;
+  const notOpened = candidates.filter((c) => !c.interview && !c.interviewOpenedAt).length;
   const accepted = candidates.filter((c) => c.status === "Accepted").length;
 
   const byStatus = CANDIDATE_STATUSES.map((s) => ({
@@ -42,7 +46,8 @@ export default async function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total candidates" value={total} icon="users" tone="brand" />
         <StatCard label="Completed interviews" value={completed} icon="checkCircle" tone="green" />
-        <StatCard label="Interview not completed" value={pending} icon="clock" tone="amber" />
+        <StatCard label="Opened, not submitted" value={openedNotDone} icon="clock" tone="amber" />
+        <StatCard label="Never opened the link" value={notOpened} icon="mail" tone="brand" />
         <StatCard label="Accepted" value={accepted} icon="trophy" tone="teal" />
       </div>
 
@@ -91,7 +96,7 @@ export default async function AdminDashboard() {
                     <tr key={c.id}>
                       <td className="py-2.5 pr-3 font-medium text-navy-900">{c.fullName || "—"}</td>
                       <td className="py-2.5 pr-3 text-navy-500">{fmt(c.submittedAt || c.createdAt)}</td>
-                      <td className="py-2.5 pr-3"><InterviewBadge completed={!!c.interview} /></td>
+                      <td className="py-2.5 pr-3"><InterviewBadge completed={!!c.interview} opened={!!c.interviewOpenedAt} /></td>
                       <td className="py-2.5"><StatusBadge status={c.status} /></td>
                     </tr>
                   ))}

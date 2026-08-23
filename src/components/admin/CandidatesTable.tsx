@@ -8,6 +8,7 @@ import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus"
 import { siteConfig } from "@/config/site";
 import { adminPost, adminDelete } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
+import { ReminderActions } from "@/components/admin/ReminderActions";
 
 type SortKey = "applied" | "name" | "country" | "position" | "score";
 
@@ -32,6 +33,11 @@ export interface CandidateView {
   total?: number;
   interviewLink: string;
   notes?: string;
+  interviewOpenedAt?: string;
+  reminderEmailSentAt?: string;
+  reminderEmailCount?: number;
+  reminderWhatsAppSentAt?: string;
+  reminderWhatsAppCount?: number;
   duplicateFlag?: boolean;
   duplicateOfName?: string;
   interviewEmailSentAt?: string;
@@ -57,7 +63,7 @@ function buildWhatsAppMessage(name: string, link: string): string {
 export function CandidatesTable({ candidates }: { candidates: CandidateView[] }) {
   const [rows, setRows] = useState(candidates);
   const [search, setSearch] = useState("");
-  const [interviewFilter, setInterviewFilter] = useState<"all" | "completed" | "pending">("all");
+  const [interviewFilter, setInterviewFilter] = useState<"all" | "completed" | "opened" | "notopened">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | CandidateStatus>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [profile, setProfile] = useState<CandidateView | null>(null);
@@ -88,7 +94,10 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
         return false;
       if (countryFilter !== "all" && c.country !== countryFilter) return false;
       if (interviewFilter === "completed" && !c.interviewCompleted) return false;
-      if (interviewFilter === "pending" && c.interviewCompleted) return false;
+      // "Opened, not submitted" and "Not opened" both exclude finishers —
+      // these two groups are the ones worth chasing, and differently.
+      if (interviewFilter === "opened" && (c.interviewCompleted || !c.interviewOpenedAt)) return false;
+      if (interviewFilter === "notopened" && (c.interviewCompleted || c.interviewOpenedAt)) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
@@ -203,7 +212,8 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           <select id="interview" className="select" value={interviewFilter} onChange={(e) => setInterviewFilter(e.target.value as typeof interviewFilter)}>
             <option value="all">All</option>
             <option value="completed">Completed</option>
-            <option value="pending">Not completed</option>
+            <option value="opened">Opened, not submitted</option>
+            <option value="notopened">Not opened</option>
           </select>
         </div>
         <div>
@@ -289,7 +299,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   <td className="px-4 py-3 text-navy-700">{c.phone || "—"}</td>
                   <td className="px-4 py-3 text-navy-500">{fmt(c.submittedAt || c.createdAt)}</td>
                   <td className="px-4 py-3">
-                    <InterviewBadge completed={c.interviewCompleted} />
+                    <InterviewBadge completed={c.interviewCompleted} opened={!!c.interviewOpenedAt} />
                     {c.interviewCompleted && c.total ? (
                       <span className="ml-2 text-xs font-semibold text-navy-600">{c.score}/{c.total}</span>
                     ) : null}
@@ -342,6 +352,20 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                         />
                       </div>
                     ) : null}
+                    <ReminderActions
+                      id={c.id}
+                      fullName={c.fullName}
+                      phone={c.phone}
+                      position={c.position}
+                      interviewLink={c.interviewLink}
+                      interviewCompleted={c.interviewCompleted}
+                      interviewEmailSentAt={c.interviewEmailSentAt}
+                      hasEmail={!!c.email}
+                      reminderEmailSentAt={c.reminderEmailSentAt}
+                      reminderEmailCount={c.reminderEmailCount}
+                      reminderWhatsAppSentAt={c.reminderWhatsAppSentAt}
+                      reminderWhatsAppCount={c.reminderWhatsAppCount}
+                    />
                   </td>
                 </tr>
               ))
@@ -359,7 +383,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                 <h3 className="text-xl font-bold text-navy-900">{profile.fullName || "Candidate"}</h3>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <StatusBadge status={profile.status} />
-                  <InterviewBadge completed={profile.interviewCompleted} />
+                  <InterviewBadge completed={profile.interviewCompleted} opened={!!profile.interviewOpenedAt} />
                 </div>
               </div>
               <button type="button" onClick={() => setProfile(null)} className="rounded-lg p-2 text-navy-500 hover:bg-navy-100" aria-label="Close">

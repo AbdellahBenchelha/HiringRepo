@@ -56,6 +56,21 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
   const [hint, setHint] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 
+  // Tell the Admin Panel the candidate reached this page. Fired from the
+  // browser on purpose: link-preview bots (WhatsApp, Telegram) fetch the URL
+  // when the recruiter pastes it, and a server-side record would count that as
+  // the candidate opening it. Bots do not run JavaScript. Failures are ignored
+  // — this is bookkeeping and must never interrupt the assessment.
+  useEffect(() => {
+    if (!candidateId) return;
+    void fetch("/api/interview/opened", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: candidateId }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [candidateId]);
+
   // Restore saved progress.
   useEffect(() => {
     try {

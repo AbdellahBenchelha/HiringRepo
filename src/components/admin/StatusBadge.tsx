@@ -19,14 +19,38 @@ export function StatusBadge({ status }: { status: CandidateStatus }) {
   );
 }
 
-export function InterviewBadge({ completed }: { completed: boolean }) {
+/**
+ * Three states, not two.
+ *
+ * "Not completed" lumped together two very different candidates: one who never
+ * opened the link at all, and one who opened it and stopped. The first is a
+ * delivery or attention problem, the second is the assessment itself — and
+ * they need opposite responses, so the badge has to tell them apart.
+ */
+export function InterviewBadge({ completed, opened }: { completed: boolean; opened?: boolean }) {
+  if (completed) {
+    return (
+      <span className="inline-flex items-center whitespace-nowrap rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+        Completed
+      </span>
+    );
+  }
+  if (opened) {
+    return (
+      <span
+        title="They opened the assessment but did not submit it"
+        className="inline-flex items-center whitespace-nowrap rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-800"
+      >
+        Opened, not submitted
+      </span>
+    );
+  }
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-        completed ? "bg-green-50 text-green-700 border-green-200" : "bg-navy-50 text-navy-500 border-navy-200"
-      }`}
+      title="They have not opened the assessment link"
+      className="inline-flex items-center whitespace-nowrap rounded-full border border-navy-200 bg-navy-50 px-2.5 py-0.5 text-xs font-semibold text-navy-500"
     >
-      {completed ? "Completed" : "Not completed"}
+      Not opened
     </span>
   );
 }

@@ -77,6 +77,20 @@ export interface Candidate {
   /** Free-text recruiter notes — call outcomes, availability, anything. */
   notes?: string;
   notesUpdatedAt?: string;
+  /**
+   * First time the candidate actually opened their assessment page.
+   *
+   * Recorded from the browser, not the server render: pasting a link into
+   * WhatsApp makes it fetch the URL to build a preview, which would otherwise
+   * mark the assessment opened before the candidate ever saw it. Written once
+   * — every write rewrites the whole file, so refreshes must not cost anything.
+   */
+  interviewOpenedAt?: string;
+  /** Reminder chasing an unfinished assessment, per channel. */
+  reminderEmailSentAt?: string;
+  reminderEmailCount?: number;
+  reminderWhatsAppSentAt?: string;
+  reminderWhatsAppCount?: number;
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -161,6 +175,38 @@ export async function findDuplicates(
   }
 
   return { emailTaken, phoneMatch };
+}
+
+/**
+ * Record that the candidate opened their assessment, the first time only.
+ *
+ * Returns false when it was already recorded, so the common case — a refresh,
+ * or coming back to the tab — costs a read and no write at all.
+ */
+export function recordInterviewOpened(id: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || c.interviewOpenedAt) return { list, result: false };
+    c.interviewOpenedAt = new Date().toISOString();
+    return { list, result: true };
+  });
+}
+
+/** Log a reminder sent about an unfinished assessment. */
+export function recordReminder(id: string, channel: "email" | "whatsapp"): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    if (channel === "email") {
+      c.reminderEmailSentAt = now;
+      c.reminderEmailCount = (c.reminderEmailCount ?? 0) + 1;
+    } else {
+      c.reminderWhatsAppSentAt = now;
+      c.reminderWhatsAppCount = (c.reminderWhatsAppCount ?? 0) + 1;
+    }
+    return { list, result: c };
+  });
 }
 
 /** Save recruiter notes against a candidate. */
