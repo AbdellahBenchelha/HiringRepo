@@ -22,6 +22,8 @@ export function ConfirmDialog({
   tone = "default",
   icon,
   busy,
+  size = "sm",
+  footer,
   onConfirm,
   onCancel,
 }: {
@@ -34,17 +36,29 @@ export function ConfirmDialog({
   tone?: "default" | "danger";
   icon?: IconName;
   busy?: boolean;
+  /** "lg" for dialogs that show a full message the recruiter needs to read. */
+  size?: "sm" | "lg";
+  /** Controls placed on the left of the button row, e.g. an edit toggle. */
+  footer?: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   const confirmRef = useRef<HTMLButtonElement>(null);
 
-  // Escape closes, and the confirm button takes focus so the dialog can be
-  // completed from the keyboard.
+  // Read through a ref so onCancel is not an effect dependency. Callers pass an
+  // inline arrow, which is a new function on every render, and depending on it
+  // re-ran this effect constantly — stealing focus back to the confirm button
+  // between keystrokes in any dialog that contains a field, where the next
+  // space bar then activated it.
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+
+  // Escape closes, and the confirm button takes focus once, on open, so the
+  // dialog can be completed from the keyboard.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") cancelRef.current();
     };
     document.addEventListener("keydown", onKey);
     const t = window.setTimeout(() => confirmRef.current?.focus(), 0);
@@ -52,7 +66,7 @@ export function ConfirmDialog({
       document.removeEventListener("keydown", onKey);
       window.clearTimeout(t);
     };
-  }, [open, onCancel]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -68,7 +82,9 @@ export function ConfirmDialog({
       aria-label={title}
     >
       <div
-        className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-card sm:rounded-2xl"
+        className={`flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-2xl bg-white p-6 shadow-card sm:rounded-2xl ${
+          size === "lg" ? "max-w-2xl" : "max-w-md"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
@@ -91,7 +107,8 @@ export function ConfirmDialog({
           </p>
         ) : null}
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+          {footer ? <div className="mr-auto">{footer}</div> : null}
           <button
             type="button"
             onClick={onCancel}

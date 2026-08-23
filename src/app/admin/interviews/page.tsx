@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
+import { getMessageTemplates } from "@/lib/messageStore";
+import { buildVars, TEMPLATE_KEYS, type TemplateKey } from "@/lib/messageTemplates";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { InterviewActions } from "@/components/admin/InterviewActions";
@@ -21,13 +23,25 @@ function pct(score: number, total: number) {
 
 export default async function AdminInterviewsPage() {
   await requireAdmin();
-  const completed = (await listCandidates()).filter((c) => c.interview);
+  const [all, saved] = await Promise.all([listCandidates(), getMessageTemplates()]);
+  const completed = all.filter((c) => c.interview);
+
+  // Flatten to bodies once for the whole table rather than per row.
+  const templates = Object.fromEntries(TEMPLATE_KEYS.map((k) => [k, saved[k].body])) as Record<
+    TemplateKey,
+    string
+  >;
 
   return (
     <AdminShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">Interviews</h1>
-        <p className="mt-1 text-sm text-navy-500">{completed.length} completed interview{completed.length === 1 ? "" : "s"}.</p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">Interviews</h1>
+          <p className="mt-1 text-sm text-navy-500">{completed.length} completed interview{completed.length === 1 ? "" : "s"}.</p>
+        </div>
+        <Link href="/admin/settings/messages" className="btn-secondary !px-4 !py-2 text-sm">
+          Edit WhatsApp messages
+        </Link>
       </header>
 
       <div className="card overflow-x-auto p-0">
@@ -69,6 +83,8 @@ export default async function AdminInterviewsPage() {
                         successMessageSentAt={c.successMessageSentAt}
                         voiceRequestedAt={c.voiceRequestedAt}
                         voiceStatus={c.voiceStatus}
+                        templates={templates}
+                        vars={buildVars(c)}
                       />
                     </td>
                     <td className="px-4 py-3">

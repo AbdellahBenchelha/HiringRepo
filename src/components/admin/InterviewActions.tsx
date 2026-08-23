@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { SuccessMessageBadge, VoiceBadge } from "@/components/admin/StatusBadge";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { VOICE_STATUSES, type VoiceStatus } from "@/lib/candidateStatus";
 import { adminPost } from "@/lib/adminClient";
+import {
+  LENGTH_HARD_LIMIT,
+  LENGTH_MAX,
+  renderTemplate,
+  type TemplateKey,
+  type TemplateVars,
+} from "@/lib/messageTemplates";
 
 export interface InterviewActionsProps {
   id: string;
@@ -13,6 +21,10 @@ export interface InterviewActionsProps {
   successMessageSentAt?: string;
   voiceRequestedAt?: string;
   voiceStatus?: VoiceStatus;
+  /** Saved wording for both messages, resolved on the server. */
+  templates: Record<TemplateKey, string>;
+  /** This candidate's substitution values. */
+  vars: TemplateVars;
 }
 
 function fmt(iso?: string) {
@@ -22,31 +34,20 @@ function fmt(iso?: string) {
   });
 }
 
-function successMessage(name: string): string {
-  return (
-    `Hello ${name},\n\n` +
-    `Congratulations! You have successfully completed the online interview, and you performed very well.\n\n` +
-    `Thank you for taking the time to answer all the interview questions. We are pleased to inform you that you have passed this stage of our recruitment process.\n\n` +
-    `The next step will be a short voice assessment. We will send you the instructions shortly.\n\n` +
-    `Best regards,\nRecruitment Team`
-  );
-}
-
-function voiceMessage(name: string): string {
-  return (
-    `Hello ${name},\n\n` +
-    `You have now reached the voice-assessment stage of our recruitment process.\n\n` +
-    `To help us evaluate your pronunciation, communication skills, fluency, and voice clarity, please record a voice message while reading the text below.\n\n` +
-    `Please read slowly, clearly, and naturally:\n\n` +
-    `"Hello, my name is ${name}. I am interested in joining your customer-support team. I enjoy communicating with customers, listening carefully to their concerns, and helping them find the best possible solution. I understand that professional customer service requires patience, respect, clear communication, and a positive attitude. I am comfortable working as part of a team, following company procedures, and learning new skills. I am motivated to provide customers with a helpful and professional experience."\n\n` +
-    `After reading the complete text, please send the audio recording directly to us through WhatsApp.\n\n` +
-    `Please record the message in a quiet environment and make sure your voice is clear.\n\n` +
-    `Best regards,\nRecruitment Team`
-  );
-}
+const DIALOG: Record<TemplateKey, { title: string; confirmLabel: string; endpoint: string }> = {
+  interviewSuccess: {
+    title: "Send the interview success message?",
+    confirmLabel: "Open WhatsApp",
+    endpoint: "success-message",
+  },
+  voiceAssessment: {
+    title: "Send the voice assessment request?",
+    confirmLabel: "Open WhatsApp",
+    endpoint: "voice-request",
+  },
+};
 
 export function InterviewActions(props: InterviewActionsProps) {
-  const name = props.fullName || "there";
   const [successAt, setSuccessAt] = useState(props.successMessageSentAt);
   const [voiceAt, setVoiceAt] = useState(props.voiceRequestedAt);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>(
@@ -54,42 +55,64 @@ export function InterviewActions(props: InterviewActionsProps) {
   );
   const [error, setError] = useState("");
 
+  // Which message is being confirmed, the text as it currently stands, and
+  // whether the recruiter has opened it up for a one-off edit.
+  const [confirming, setConfirming] = useState<TemplateKey | null>(null);
+  const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const draftRef = useRef<HTMLTextAreaElement>(null);
+
+  // Opening the editor should land the caret at the end, ready to add a line.
+  useEffect(() => {
+    if (!editing) return;
+    const el = draftRef.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [editing]);
+
   const digits = props.phone.replace(/[^\d]/g, "");
   const phoneValid = digits.length >= 8;
 
-  function openWhatsApp(text: string) {
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  function ask(key: TemplateKey) {
+    setError("");
+    setDraft(renderTemplate(props.templates[key], props.vars));
+    setEditing(false);
+    setConfirming(key);
   }
 
-  async function sendSuccess() {
-    if (!phoneValid) {
-      setError("No valid WhatsApp number for this candidate.");
-      return;
-    }
-    setError("");
-    try {
-      await adminPost(`/api/admin/candidates/${props.id}/success-message`, {});
-      setSuccessAt(new Date().toISOString());
-    } catch {
-      /* optimistic */
-    }
-    openWhatsApp(successMessage(name));
-  }
+  /**
+   * Open WhatsApp, then log the send.
+   *
+   * window.open has to run before the first await or the popup blocker
+   * suppresses it — a window opened after an await is no longer attributable
+   * to the click that started it.
+   */
+  function send(key: TemplateKey) {
+    if (busy || !phoneValid) return;
+    setBusy(true);
+    const win = window.open(
+      `https://wa.me/${digits}?text=${encodeURIComponent(draft)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    setConfirming(null);
+    if (!win) setError("Pop-up blocked — allow pop-ups to open WhatsApp.");
 
-  async function sendVoice() {
-    if (!phoneValid) {
-      setError("No valid WhatsApp number for this candidate.");
-      return;
-    }
-    setError("");
-    try {
-      await adminPost(`/api/admin/candidates/${props.id}/voice-request`, {});
-      setVoiceAt(new Date().toISOString());
-      setVoiceStatus((s) => (s === "Voice Assessment Not Requested" ? "Voice Assessment Requested" : s));
-    } catch {
-      /* optimistic */
-    }
-    openWhatsApp(voiceMessage(name));
+    void adminPost(`/api/admin/candidates/${props.id}/${DIALOG[key].endpoint}`, {})
+      .then(() => {
+        if (key === "interviewSuccess") {
+          setSuccessAt(new Date().toISOString());
+        } else {
+          setVoiceAt(new Date().toISOString());
+          setVoiceStatus((s) => (s === "Voice Assessment Not Requested" ? "Voice Assessment Requested" : s));
+        }
+      })
+      .catch(() => {
+        /* the message still opened; the log is secondary */
+      })
+      .finally(() => setBusy(false));
   }
 
   async function changeVoiceStatus(status: VoiceStatus) {
@@ -101,6 +124,8 @@ export function InterviewActions(props: InterviewActionsProps) {
     }
   }
 
+  const tooLong = draft.length > LENGTH_HARD_LIMIT;
+
   return (
     <div className="space-y-2.5">
       {/* Success message */}
@@ -108,7 +133,7 @@ export function InterviewActions(props: InterviewActionsProps) {
         <SuccessMessageBadge sent={!!successAt} />
         <button
           type="button"
-          onClick={sendSuccess}
+          onClick={() => ask("interviewSuccess")}
           disabled={!phoneValid}
           title="Send interview success message via WhatsApp"
           className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
@@ -123,7 +148,7 @@ export function InterviewActions(props: InterviewActionsProps) {
         <VoiceBadge status={voiceStatus} />
         <button
           type="button"
-          onClick={sendVoice}
+          onClick={() => ask("voiceAssessment")}
           disabled={!phoneValid}
           title="Send voice assessment request via WhatsApp"
           className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
@@ -149,6 +174,63 @@ export function InterviewActions(props: InterviewActionsProps) {
         <p className="text-[11px] font-medium text-red-500">No valid WhatsApp number.</p>
       ) : null}
       {error ? <p className="text-[11px] font-medium text-red-500">{error}</p> : null}
+
+      <ConfirmDialog
+        open={confirming !== null}
+        size="lg"
+        icon="chat"
+        title={confirming ? DIALOG[confirming].title : ""}
+        confirmLabel={confirming ? DIALOG[confirming].confirmLabel : "Send"}
+        busy={busy}
+        warning={tooLong ? "This message may be too long for WhatsApp to accept in one link." : undefined}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => confirming && send(confirming)}
+        footer={
+          <button
+            type="button"
+            onClick={() => setEditing((e) => !e)}
+            className="rounded-full border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-600 transition hover:bg-navy-50"
+          >
+            {editing ? "Done editing" : "Edit for this candidate"}
+          </button>
+        }
+        body={
+          <div className="mt-1">
+            <p className="mb-2.5">
+              WhatsApp will open with this message to{" "}
+              <strong className="text-navy-900">{props.fullName || "this candidate"}</strong> on{" "}
+              <strong className="text-navy-900">{props.phone}</strong>. You still have to press send in
+              WhatsApp.
+            </p>
+
+            {editing ? (
+              <>
+                <textarea
+                  ref={draftRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  maxLength={LENGTH_MAX}
+                  rows={14}
+                  aria-label="Message text"
+                  className="w-full rounded-xl border border-navy-200 bg-white p-3 font-mono text-[12.5px] leading-relaxed text-navy-900 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                />
+                <p className="mt-1.5 text-xs text-navy-400">
+                  {draft.length} characters · this edit applies to this one message only and does not change
+                  your saved wording.
+                </p>
+              </>
+            ) : (
+              <div className="max-h-80 overflow-y-auto rounded-2xl bg-[#e5ddd5] p-3.5">
+                <div className="rounded-xl rounded-tr-sm bg-[#dcf8c6] px-3.5 py-2.5 shadow-sm">
+                  <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-navy-900">
+                    {draft}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        }
+      />
     </div>
   );
 }
