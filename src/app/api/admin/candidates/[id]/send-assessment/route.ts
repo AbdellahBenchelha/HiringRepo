@@ -8,6 +8,7 @@ import {
   interviewInviteText,
 } from "@/lib/emailTemplates";
 import { siteConfig } from "@/config/site";
+import { withSource } from "@/lib/followUp";
 
 /**
  * Send a candidate their assessment link by hand.
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const position = candidate.position || undefined;
   const invite = {
     fullName: candidate.fullName || "Candidate",
-    interviewUrl: `${baseUrl(req)}/interview?c=${id}`,
+    interviewUrl: withSource(`${baseUrl(req)}/interview?c=${id}`, "invite-email"),
     position,
   };
 

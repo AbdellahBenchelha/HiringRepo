@@ -51,6 +51,9 @@ export default async function AdminCandidatesPage() {
       reminderEmailCount: c.reminderEmailCount,
       reminderWhatsAppSentAt: c.reminderWhatsAppSentAt,
       reminderWhatsAppCount: c.reminderWhatsAppCount,
+      lastOpenedAt: c.lastOpenedAt,
+      openCount: c.openCount,
+      lastOpenSource: c.lastOpenSource,
     };
   });
 

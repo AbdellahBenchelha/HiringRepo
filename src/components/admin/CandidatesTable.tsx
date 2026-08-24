@@ -10,8 +10,15 @@ import { adminPost, adminDelete } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ReminderActions } from "@/components/admin/ReminderActions";
+import {
+  followUpState,
+  withSource,
+  FOLLOW_UP_FILTERS,
+  type FollowUpFilter,
+  type FollowUpState,
+} from "@/lib/followUp";
 
-type SortKey = "applied" | "name" | "country" | "position" | "score";
+type SortKey = "applied" | "name" | "country" | "position" | "score" | "followup";
 
 export interface CandidateView {
   id: string;
@@ -43,6 +50,9 @@ export interface CandidateView {
   duplicateFlag?: boolean;
   duplicateOfName?: string;
   interviewEmailSentAt?: string;
+  lastOpenedAt?: string;
+  openCount?: number;
+  lastOpenSource?: string;
 }
 
 function fmt(iso?: string) {
@@ -72,6 +82,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [busy, setBusy] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CandidateView | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
+  const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "applied",
     dir: "desc",
@@ -83,6 +94,13 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
     () => [...new Set(rows.map((c) => c.country).filter(Boolean))].sort(),
     [rows],
   );
+
+  // One clock for the whole table, so every row's "6d ago" is measured from
+  // the same instant and the sort cannot flip mid-render.
+  const followUps = useMemo(() => {
+    const now = Date.now();
+    return new Map(rows.map((c) => [c.id, followUpState(c, now)]));
+  }, [rows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -109,13 +127,14 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       )
         return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (followUpFilter !== "all" && followUps.get(c.id)?.kind !== followUpFilter) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
         if (applied < from) return false;
       }
       return true;
     });
-  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter]);
+  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -127,6 +146,15 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           return (a.country || "").localeCompare(b.country || "") * dir;
         case "position":
           return (a.position || "").localeCompare(b.position || "") * dir;
+        case "followup": {
+          // Ordered by how much attention each row needs, not by how far the
+          // candidate has got: never reminded first, then the longest wait.
+          const rank = { needs: 0, waiting: 1, responded: 2, done: 3, none: 4 };
+          const fa = followUps.get(a.id)!;
+          const fb = followUps.get(b.id)!;
+          if (rank[fa.kind] !== rank[fb.kind]) return (rank[fa.kind] - rank[fb.kind]) * dir;
+          return ((fb.daysWaiting ?? -1) - (fa.daysWaiting ?? -1)) * dir;
+        }
         case "score": {
           // Candidates with no interview sort last regardless of direction —
           // an absent score is not a low score.
@@ -145,7 +173,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           );
       }
     });
-  }, [filtered, sort]);
+  }, [filtered, sort, followUps]);
 
   async function changeStatus(id: string, status: CandidateStatus) {
     setRows((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
@@ -160,7 +188,9 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   async function sendWhatsApp(c: CandidateView) {
     setBusy(c.id);
     const phone = c.phone.replace(/[^\d]/g, "");
-    const text = encodeURIComponent(buildWhatsAppMessage(c.fullName || "there", c.interviewLink));
+    const text = encodeURIComponent(
+      buildWhatsAppMessage(c.fullName || "there", withSource(c.interviewLink, "invite-whatsapp")),
+    );
     // Record the invitation (and bump status) before opening WhatsApp.
     try {
       await adminPost(`/api/admin/candidates/${c.id}/invite`, {});
@@ -236,6 +266,12 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           </select>
         </div>
         <div>
+          <label className="label" htmlFor="followup">Follow-up</label>
+          <select id="followup" className="select" value={followUpFilter} onChange={(e) => setFollowUpFilter(e.target.value as FollowUpFilter)}>
+            {FOLLOW_UP_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </div>
+        <div>
           <label className="label" htmlFor="datefrom">Applied on or after</label>
           <input id="datefrom" type="date" className="input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </div>
@@ -259,7 +295,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
 
       {/* Table */}
       <div className="card overflow-x-auto p-0">
-        <table className="w-full min-w-[1120px] text-left text-sm">
+        <table className="w-full min-w-[1280px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
               <SortHeader label="Candidate" k="name" sort={sort} onSort={toggleSort} />
@@ -268,6 +304,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
               <th className="px-4 py-3 font-semibold">WhatsApp</th>
               <SortHeader label="Applied" k="applied" sort={sort} onSort={toggleSort} />
               <SortHeader label="Interview" k="score" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Follow-up" k="followup" sort={sort} onSort={toggleSort} />
               <th className="px-4 py-3 font-semibold">Status</th>
               {/* Pinned right: with Country and Position added the table is wider
                   than most screens, and the primary actions must stay reachable
@@ -279,7 +316,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           </thead>
           <tbody className="divide-y divide-navy-50">
             {sorted.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
             ) : (
               sorted.map((c) => (
                 <tr key={c.id} className="group hover:bg-cream-100">
@@ -313,6 +350,9 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                     {c.interviewCompleted && c.total ? (
                       <span className="ml-2 text-xs font-semibold text-navy-600">{c.score}/{c.total}</span>
                     ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    <FollowUpCell state={followUps.get(c.id)!} />
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -505,6 +545,42 @@ function Field({ label, value, full }: { label: string; value: React.ReactNode; 
 }
 
 /** Column header that toggles sorting, with the active direction shown. */
+/**
+ * One candidate's follow-up state.
+ *
+ * Colour carries the urgency so the column can be read without stopping on any
+ * single row: grey needs nothing, amber is waiting on you, red has been waiting
+ * too long, green worked. The exact wording is in the tooltip.
+ */
+function FollowUpCell({ state }: { state: FollowUpState }) {
+  if (state.kind === "none" || state.kind === "done") {
+    return <span className="text-xs text-navy-300">—</span>;
+  }
+
+  // A single ignored reminder is a nudge; several, or one left for a week, is
+  // a candidate going cold.
+  const stale = state.kind === "waiting" && ((state.daysWaiting ?? 0) >= 7 || state.reminderCount >= 3);
+
+  const style =
+    state.kind === "needs"
+      ? "bg-navy-50 text-navy-600 border-navy-200"
+      : state.kind === "responded"
+        ? "bg-green-50 text-green-700 border-green-200"
+        : stale
+          ? "bg-red-50 text-red-700 border-red-200"
+          : "bg-amber-50 text-amber-700 border-amber-200";
+
+  return (
+    <span
+      title={state.detail}
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${style}`}
+    >
+      {state.kind === "responded" ? <Icon name="checkCircle" className="h-3 w-3" /> : null}
+      {state.label}
+    </span>
+  );
+}
+
 function SortHeader({
   label,
   k,

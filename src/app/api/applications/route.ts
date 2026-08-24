@@ -14,6 +14,7 @@ import {
   interviewInviteText,
 } from "@/lib/emailTemplates";
 import { siteConfig } from "@/config/site";
+import { withSource } from "@/lib/followUp";
 
 /**
  * Saves the full application for the Admin Panel when a candidate submits the
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (claimed) {
-      const interviewUrl = `${baseUrl(req)}/interview?c=${id}`;
+      const interviewUrl = withSource(`${baseUrl(req)}/interview?c=${id}`, "invite-email");
       const position = str(application.position) || undefined;
       const invite = { fullName: fullName || "Candidate", interviewUrl, position };
 

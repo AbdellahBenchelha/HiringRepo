@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { siteConfig } from "@/config/site";
+import { withSource } from "@/lib/followUp";
 
 /**
  * Chase a candidate who has not finished their assessment.
@@ -119,7 +120,11 @@ export function ReminderActions(props: ReminderActionsProps) {
     // Log first, then open WhatsApp. The browser blocks a popup opened after
     // an await, so the window is opened synchronously below.
     const text = encodeURIComponent(
-      buildReminderWhatsApp(props.fullName || "there", props.interviewLink, props.position),
+      buildReminderWhatsApp(
+        props.fullName || "there",
+        withSource(props.interviewLink, "reminder-whatsapp"),
+        props.position,
+      ),
     );
     const win = window.open(`https://wa.me/${digits}?text=${text}`, "_blank", "noopener,noreferrer");
     if (!win) setError("Pop-up blocked — allow pop-ups to open WhatsApp.");

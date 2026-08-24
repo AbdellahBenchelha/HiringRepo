@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { reminderHtml, reminderSubject, reminderText } from "@/lib/emailTemplates";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { siteConfig } from "@/config/site";
+import { withSource } from "@/lib/followUp";
 
 /**
  * Chase a candidate who has not finished their assessment.
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const position = candidate.position || undefined;
   const invite = {
     fullName: candidate.fullName || "Candidate",
-    interviewUrl: `${baseUrl(req)}/interview?c=${id}`,
+    interviewUrl: withSource(`${baseUrl(req)}/interview?c=${id}`, "reminder-email"),
     position,
   };
 

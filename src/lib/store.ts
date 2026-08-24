@@ -18,6 +18,7 @@ import {
   type VoiceStatus,
 } from "@/lib/candidateStatus";
 import { normaliseEmail, normalisePhone } from "@/lib/identity";
+import { isCandidateOpen, type OpenSource } from "@/lib/followUp";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
@@ -86,6 +87,15 @@ export interface Candidate {
    * — every write rewrites the whole file, so refreshes must not cost anything.
    */
   interviewOpenedAt?: string;
+  /**
+   * Most recent open, how many there have been, and which link brought them.
+   *
+   * interviewOpenedAt alone cannot tell you whether a reminder worked — it is
+   * frozen at the first visit, which is usually before you ever chased them.
+   */
+  lastOpenedAt?: string;
+  openCount?: number;
+  lastOpenSource?: OpenSource;
   /** Reminder chasing an unfinished assessment, per channel. */
   reminderEmailSentAt?: string;
   reminderEmailCount?: number;
@@ -224,14 +234,34 @@ export async function findDuplicates(
 /**
  * Record that the candidate opened their assessment, the first time only.
  *
- * Returns false when it was already recorded, so the common case — a refresh,
- * or coming back to the tab — costs a read and no write at all.
+ * Repeat opens are recorded too, because "did they come back after we chased
+ * them" is the question the follow-up column answers, and the first open alone
+ * cannot answer it. They are throttled to one write per REOPEN_THROTTLE_MS,
+ * though: every write rewrites the whole file, so a refresh must stay free.
+ *
+ * Returns false when nothing was written.
  */
-export function recordInterviewOpened(id: string): Promise<boolean> {
+const REOPEN_THROTTLE_MS = 10 * 60 * 1000;
+
+export function recordInterviewOpened(id: string, source?: OpenSource): Promise<boolean> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
-    if (!c || c.interviewOpenedAt) return { list, result: false };
-    c.interviewOpenedAt = new Date().toISOString();
+    if (!c) return { list, result: false };
+    // A recruiter checking the link is not the candidate opening it.
+    if (!isCandidateOpen(source)) return { list, result: false };
+
+    const now = Date.now();
+    const last = c.lastOpenedAt ?? c.interviewOpenedAt;
+    const recent = last && now - new Date(last).getTime() < REOPEN_THROTTLE_MS;
+    // A refresh within the window is free unless it came in through a link we
+    // have not credited yet — the attribution is the point.
+    if (recent && (!source || source === c.lastOpenSource)) return { list, result: false };
+
+    const iso = new Date(now).toISOString();
+    if (!c.interviewOpenedAt) c.interviewOpenedAt = iso;
+    c.lastOpenedAt = iso;
+    c.openCount = (c.openCount ?? 0) + 1;
+    if (source) c.lastOpenSource = source;
     return { list, result: true };
   });
 }

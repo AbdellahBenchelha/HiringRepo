@@ -9,6 +9,7 @@ import { createInterviewToken } from "@/lib/token";
 import { upsertPersonal, flagDuplicate } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
+import { withSource } from "@/lib/followUp";
 
 /**
  * Telegram notification endpoint used by the application form.
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
       // Short link using the candidate's unguessable id; fall back to a signed
       // token if no id is available.
       const link = id
-        ? `${baseUrl(req)}/interview?c=${id}`
+        ? withSource(`${baseUrl(req)}/interview?c=${id}`, "recruiter")
         : `${baseUrl(req)}/interview?id=${createInterviewToken({ name: fullName, email: str(fields.email) || undefined })}`;
 
       // A flagged application gets no automatic assessment email, so the

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { readInterviewToken } from "@/lib/token";
+import { isOpenSource } from "@/lib/followUp";
 import { getCandidate } from "@/lib/store";
 import { publicQuestions, sections } from "@/config/interviewQuestions";
 import { siteConfig } from "@/config/site";
@@ -24,6 +25,7 @@ export default async function InterviewPage({
   const params = await searchParams;
   const candidateId = one(params.c); // short link: /interview?c=<id>
   const tokenParam = one(params.id); // legacy signed-token link
+  const sourceParam = one(params.s); // which message brought them: ?s=reminder-email
 
   // Prefer the short candidate-id link (looked up in storage); fall back to the
   // legacy signed token so old links keep working.
@@ -93,6 +95,7 @@ export default async function InterviewPage({
       fullName={identity.name}
       candidateId={identity.id}
       token={identity.id ? undefined : tokenParam}
+      source={isOpenSource(sourceParam) ? sourceParam : "direct"}
       questions={publicQuestions()}
       sections={sections}
     />

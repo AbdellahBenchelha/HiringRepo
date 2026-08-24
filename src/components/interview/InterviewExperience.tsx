@@ -5,6 +5,7 @@ import { siteConfig } from "@/config/site";
 import { Icon, type IconName } from "@/components/Icon";
 import { Logo } from "@/components/layout/Logo";
 import type { Difficulty, PublicQuestion, Section } from "@/config/interviewQuestions";
+import type { OpenSource } from "@/lib/followUp";
 
 interface Props {
   fullName: string;
@@ -12,6 +13,8 @@ interface Props {
   candidateId?: string;
   /** Legacy signed token (used when there's no candidateId). */
   token?: string;
+  /** Which link brought them here, from ?s= — reported with the open. */
+  source?: OpenSource;
   questions: PublicQuestion[];
   sections: Section[];
 }
@@ -31,7 +34,7 @@ const DIFFICULTY_STYLES: Record<Difficulty, string> = {
   Advanced: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
-export function InterviewExperience({ fullName, candidateId, token, questions, sections }: Props) {
+export function InterviewExperience({ fullName, candidateId, token, source, questions, sections }: Props) {
   const storageKey = `wr-interview:${candidateId || token}`;
 
   // Group questions by section (preserving section + question order).
@@ -66,10 +69,10 @@ export function InterviewExperience({ fullName, candidateId, token, questions, s
     void fetch("/api/interview/opened", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: candidateId }),
+      body: JSON.stringify({ id: candidateId, source }),
       keepalive: true,
     }).catch(() => {});
-  }, [candidateId]);
+  }, [candidateId, source]);
 
   // Restore saved progress.
   useEffect(() => {
