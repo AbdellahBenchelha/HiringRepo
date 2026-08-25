@@ -46,30 +46,31 @@ export function buildSubmittedMessage(name?: string, suspectedBot?: boolean): st
   return `${base}\n\n⚠️ <b>Possible spam:</b> a hidden anti-bot field was filled. This can also happen with browser autofill, so check the application before dismissing it.`;
 }
 
-/** Message sent to the recruiter when an applicant completes the interview. */
+/**
+ * Message sent to the recruiter when an applicant completes the interview.
+ *
+ * Deliberately short: who finished, and how they scored. The written answers
+ * used to be included here, which made every notification long enough to need
+ * scrolling and put a candidate's answers into a chat history that is easy to
+ * forward. They are all in the Admin Panel, which is where they are read
+ * properly and where access is controlled.
+ */
 export function buildInterviewResultMessage(
   name: string,
   email: string | undefined,
+  country: string | undefined,
   correct: number,
   total: number,
-  written: { question: string; answer: string }[],
 ): string {
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
   const lines = [
     "📩 <b>Interview completed</b>",
     "",
     `<b>Name:</b> ${escapeHtml(name)}`,
   ];
   if (email) lines.push(`<b>Email:</b> ${escapeHtml(email)}`);
-  lines.push(`<b>Score:</b> ${correct} / ${total}`);
-
-  const answered = written.filter((w) => w.answer.trim() !== "");
-  if (answered.length) {
-    lines.push("", "<b>Written answers</b>");
-    for (const w of answered) {
-      const q = w.question.length > 90 ? `${w.question.slice(0, 90)}…` : w.question;
-      lines.push("", `• ${escapeHtml(q)}`, escapeHtml(w.answer.slice(0, 350)));
-    }
-  }
+  if (country) lines.push(`<b>Country:</b> ${escapeHtml(country)}`);
+  lines.push(`<b>Score:</b> ${correct} / ${total} (${pct}%)`);
   return lines.join("\n");
 }
 
@@ -122,7 +123,11 @@ export async function sendTelegramMessage(text: string): Promise<TelegramSendRes
   }
 
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    // TELEGRAM_API_BASE exists so a test can point this at a local stub and
+    // read the exact message that would have been sent. Unset everywhere
+    // else, which is the real API.
+    const base = process.env.TELEGRAM_API_BASE?.trim() || "https://api.telegram.org";
+    const res = await fetch(`${base}/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readInterviewToken } from "@/lib/token";
-import { interviewQuestions, scoreAnswers } from "@/config/interviewQuestions";
+import { scoreAnswers } from "@/config/interviewQuestions";
 import { buildInterviewResultMessage, sendTelegramMessage } from "@/lib/telegram";
 import { recordInterview, getCandidate } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
@@ -8,8 +8,9 @@ import { readJsonBody, badBodyResponse } from "@/lib/http";
 
 /**
  * Receives an applicant's interview answers, scores the multiple-choice ones,
- * and notifies the recruiter on Telegram with the name + score (+ written
- * answers). The identity comes from the short candidate id (preferred) or a
+ * and notifies the recruiter on Telegram with the name, email, country and
+ * score. The answers themselves are saved for the Admin Panel and are not sent
+ * to Telegram. The identity comes from the short candidate id (preferred) or a
  * legacy signed token.
  */
 
@@ -31,12 +32,17 @@ export async function POST(req: NextRequest) {
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const body = parsed.data;
 
-  let identity: { id?: string; name: string; email?: string } | null = null;
+  let identity: { id?: string; name: string; email?: string; country?: string } | null = null;
   let alreadyCompleted = false;
   if (body.id) {
     const cand = await getCandidate(body.id);
     if (cand) {
-      identity = { id: cand.id, name: cand.fullName, email: cand.email || undefined };
+      identity = {
+        id: cand.id,
+        name: cand.fullName,
+        email: cand.email || undefined,
+        country: cand.country || undefined,
+      };
       alreadyCompleted = !!cand.interview;
     }
   }
@@ -45,6 +51,8 @@ export async function POST(req: NextRequest) {
     if (identity?.id) {
       const cand = await getCandidate(identity.id);
       if (cand?.interview) alreadyCompleted = true;
+      // The token carries no country; take it from the record when there is one.
+      if (cand?.country) identity = { ...identity, country: cand.country };
     }
   }
   if (!identity) {
@@ -68,12 +76,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const written = interviewQuestions
-    .filter((q) => q.type === "text")
-    .map((q) => ({ question: q.question, answer: String(answers[q.id] ?? "").trim() }));
-
   await sendTelegramMessage(
-    buildInterviewResultMessage(identity.name, identity.email, correct, total, written),
+    buildInterviewResultMessage(
+      identity.name,
+      identity.email,
+      identity.country,
+      correct,
+      total,
+    ),
   );
 
   return NextResponse.json({ ok: true, score: { correct, total } });
