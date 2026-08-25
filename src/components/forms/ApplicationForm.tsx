@@ -145,23 +145,41 @@ async function uploadDocuments(
           contentType: file.type || "application/octet-stream",
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; url?: string; key?: string };
-      if (!data.ok || !data.url || !data.key) continue;
+      const data = (await res.json()) as {
+        ok?: boolean;
+        url?: string;
+        key?: string;
+        error?: string;
+      };
+      if (!data.ok || !data.url || !data.key) {
+        // eslint-disable-next-line no-console
+        console.warn(`[documents] ${kind}: no upload URL (${data.error ?? res.status})`);
+        continue;
+      }
 
       const put = await fetch(data.url, {
         method: "PUT",
         headers: { "Content-Type": file.type || "application/octet-stream" },
         body: file,
       });
-      if (!put.ok) continue;
+      if (!put.ok) {
+        // eslint-disable-next-line no-console
+        console.warn(`[documents] ${kind}: storage refused the upload (HTTP ${put.status})`);
+        continue;
+      }
 
       await fetch("/api/applications/documents/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, kind, key: data.key, filename: file.name }),
       });
-    } catch {
-      /* the application still stands */
+    } catch (err) {
+      // A silent failure here is how these files went missing in the first
+      // place. The application still stands, but the reason is now visible in
+      // the console instead of nowhere at all — a CSP block and a CORS refusal
+      // look identical from the outside otherwise.
+      // eslint-disable-next-line no-console
+      console.warn(`[documents] ${kind}: upload failed`, err);
     }
   }
 }

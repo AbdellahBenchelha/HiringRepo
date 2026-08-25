@@ -7,16 +7,27 @@
  * that matter most here — third-party script hosts, framing, and exfiltration
  * to arbitrary origins.
  *
- * connect-src must allow https://ipwho.is: that is the IP lookup that
- * pre-fills the applicant's country and phone dialling code.
+ * connect-src must allow two external origins:
+ *   https://ipwho.is                     the IP lookup that pre-fills the
+ *                                        applicant's country and dialling code;
+ *   <account>.r2.cloudflarestorage.com   object storage, which the browser
+ *                                        uploads documents to directly.
+ *
+ * The storage origin is pinned to the configured account when R2_ACCOUNT_ID is
+ * available at build time. Without it the policy has to fall back to a wildcard
+ * — still only R2, but any R2 account. Set the variable so it stays pinned.
  */
+const r2Origin = process.env.R2_ACCOUNT_ID?.trim()
+  ? `https://${process.env.R2_ACCOUNT_ID.trim()}.r2.cloudflarestorage.com`
+  : "https://*.r2.cloudflarestorage.com";
+
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' https://ipwho.is",
+  `connect-src 'self' https://ipwho.is ${r2Origin}`,
   "form-action 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
