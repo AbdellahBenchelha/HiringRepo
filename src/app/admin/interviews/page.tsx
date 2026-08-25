@@ -45,10 +45,11 @@ export default async function AdminInterviewsPage() {
       </header>
 
       <div className="card overflow-x-auto p-0">
-        <table className="w-full min-w-[1040px] text-left text-sm">
+        <table className="w-full min-w-[1160px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
               <th className="px-4 py-3 font-semibold">Candidate</th>
+              <th className="px-4 py-3 font-semibold">Country</th>
               <th className="px-4 py-3 font-semibold">Completed</th>
               <th className="px-4 py-3 font-semibold">Score</th>
               <th className="px-4 py-3 font-semibold">%</th>
@@ -59,7 +60,7 @@ export default async function AdminInterviewsPage() {
           </thead>
           <tbody className="divide-y divide-navy-50">
             {completed.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-navy-400">No completed interviews yet.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-navy-400">No completed interviews yet.</td></tr>
             ) : (
               completed.map((c) => {
                 const p = pct(c.interview!.score, c.interview!.total);
@@ -68,6 +69,12 @@ export default async function AdminInterviewsPage() {
                     <td className="px-4 py-3 font-medium text-navy-900">
                       {c.fullName || "—"}
                       <span className="mt-0.5 block text-xs font-normal text-navy-500">{c.phone || "no number"}</span>
+                    </td>
+                    {/* Same shape as the Candidates table: country above, city
+                        beneath it in small text. */}
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-navy-800">{c.country || "—"}</p>
+                      {c.city ? <p className="text-xs text-navy-500">{c.city}</p> : null}
                     </td>
                     <td className="px-4 py-3 text-navy-500">{fmt(c.interview!.completedAt)}</td>
                     <td className="px-4 py-3 font-semibold text-navy-800">{c.interview!.score}/{c.interview!.total}</td>
