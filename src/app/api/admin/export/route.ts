@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
+import { DOCUMENT_SHORT } from "@/lib/documents";
 
 /**
  * CSV export of every candidate.
@@ -43,7 +44,7 @@ export async function GET(_req: NextRequest) {
     "id", "First name", "Last name", "Date of birth", "Email", "Phone",
     "Country", "City", "Address", "LinkedIn", "Position", "Languages",
     "Status", "Applied", "Submitted", "Interview completed", "Score", "Total",
-    "Assessment email sent", "Possible duplicate", "Duplicate of", "Notes",
+    "Assessment email sent", "Possible duplicate", "Duplicate of", "Documents", "Notes",
   ];
 
   const rows = candidates.map((c) =>
@@ -56,6 +57,11 @@ export async function GET(_req: NextRequest) {
       c.interview?.score ?? "", c.interview?.total ?? "",
       c.interviewEmailSentAt ?? "",
       c.duplicateFlag ? "Yes" : "No", c.duplicateOfName ?? "",
+      // Which documents exist, not links: a signed URL expires in minutes and
+      // would be dead long before anyone opened the spreadsheet.
+      (c.documents ?? [])
+        .map((d) => `${DOCUMENT_SHORT[d.kind]}${d.status === "clean" ? "" : ` (${d.status})`}`)
+        .join(" / "),
       c.notes ?? "",
     ].map(csv).join(","),
   );

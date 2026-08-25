@@ -19,6 +19,7 @@ import {
 } from "@/lib/candidateStatus";
 import { normaliseEmail, normalisePhone } from "@/lib/identity";
 import { isCandidateOpen, type OpenSource } from "@/lib/followUp";
+import type { CandidateDocument, DocumentKind } from "@/lib/documents";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
@@ -96,6 +97,14 @@ export interface Candidate {
   lastOpenedAt?: string;
   openCount?: number;
   lastOpenSource?: OpenSource;
+  /**
+   * Uploaded CV, cover letter and certificate.
+   *
+   * Only metadata lives here — the files themselves are in R2. A blocked
+   * document keeps its entry with no key, so the recruiter can see that
+   * something was sent and what happened to it.
+   */
+  documents?: CandidateDocument[];
   /** Reminder chasing an unfinished assessment, per channel. */
   reminderEmailSentAt?: string;
   reminderEmailCount?: number;
@@ -300,13 +309,56 @@ export function setNotes(id: string, notes: string): Promise<Candidate | null> {
  * There is no undo and no soft-delete: the record holds personal data, and a
  * deletion request under GDPR means the data goes, not that it is hidden.
  */
-export function deleteCandidate(id: string): Promise<boolean> {
+/**
+ * Remove a candidate, returning the record that was removed.
+ *
+ * The record rather than a boolean, because their documents have to be deleted
+ * from R2 as well and the keys only exist here. Storage is cleaned up by the
+ * caller: this module owns the file, not the network.
+ */
+export function deleteCandidate(id: string): Promise<Candidate | null> {
   return withWrite((list) => {
     const i = list.findIndex((x) => x.id === id);
-    if (i === -1) return { list, result: false };
-    list.splice(i, 1);
-    return { list, result: true };
+    if (i === -1) return { list, result: null };
+    const [removed] = list.splice(i, 1);
+    return { list, result: removed };
   });
+}
+
+/**
+ * Record an uploaded document, replacing any earlier one of the same kind.
+ *
+ * Returns the key of the document it replaced, if any, so the caller can
+ * delete the orphan from R2 — re-uploading a CV should not quietly leave the
+ * old one paid for and unreachable forever.
+ */
+export function addDocument(
+  id: string,
+  doc: CandidateDocument,
+): Promise<{ ok: boolean; replacedKey?: string }> {
+  type Result = { ok: boolean; replacedKey?: string };
+  return withWrite<Result>((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: { ok: false } };
+    const docs = c.documents ?? [];
+    const previous = docs.find((d) => d.kind === doc.kind);
+    c.documents = [...docs.filter((d) => d.kind !== doc.kind), doc];
+    return { list, result: { ok: true, replacedKey: previous?.key } };
+  });
+}
+
+/** One stored document, or null. Used by the admin download route. */
+export async function getDocument(
+  id: string,
+  kind: DocumentKind,
+): Promise<CandidateDocument | null> {
+  const c = await getCandidate(id);
+  return c?.documents?.find((d) => d.kind === kind) ?? null;
+}
+
+/** Every R2 key a candidate owns, for cleanup. */
+export function documentKeys(c: Candidate | null): string[] {
+  return (c?.documents ?? []).map((d) => d.key).filter((k): k is string => !!k);
 }
 
 /** Mark an application as a possible duplicate of an earlier one. */

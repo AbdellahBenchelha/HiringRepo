@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
+import type { DocumentKind } from "@/lib/documents";
 import { jobs } from "@/config/jobs";
 import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
 import { notifyTelegram } from "@/lib/notify";
@@ -112,6 +113,58 @@ const STEPS: { id: string; label: string; title: string; description?: string; i
     icon: "checkCircle",
   },
 ];
+
+/**
+ * Send the attached documents to storage.
+ *
+ * Runs before the success screen, not after: the browser uploads straight to
+ * R2 and a 2 MB PUT cannot ride on keepalive, so a request started here would
+ * be cancelled the moment this component unmounts. That is precisely how these
+ * three files used to disappear — they were held in state, shown on the review
+ * step, and never sent anywhere at all.
+ *
+ * Every failure is swallowed. A CV is optional and the application is already
+ * saved; refusing to finish because a file would not upload would cost us the
+ * candidate to save the attachment.
+ */
+async function uploadDocuments(
+  id: string,
+  files: { kind: DocumentKind; file: File | null }[],
+): Promise<void> {
+  for (const { kind, file } of files) {
+    if (!file) continue;
+    try {
+      const res = await fetch("/api/applications/documents/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          kind,
+          filename: file.name,
+          size: file.size,
+          contentType: file.type || "application/octet-stream",
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; url?: string; key?: string };
+      if (!data.ok || !data.url || !data.key) continue;
+
+      const put = await fetch(data.url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      if (!put.ok) continue;
+
+      await fetch("/api/applications/documents/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, kind, key: data.key, filename: file.name }),
+      });
+    } catch {
+      /* the application still stands */
+    }
+  }
+}
 
 export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFormProps) {
   const positionOptions = useMemo(() => jobs.map((j) => j.title), []);
@@ -425,7 +478,9 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
     // Save the full application for the Admin Panel (best-effort; does not block
     // or change the Telegram notifications below).
-    void fetch("/api/applications", {
+    setStatus("submitting");
+
+    const saved = fetch("/api/applications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -441,6 +496,17 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       }),
       keepalive: true,
     }).catch(() => {});
+
+    // The record was created at step one, so the documents can go up alongside
+    // the application rather than waiting on it.
+    await Promise.all([
+      saved,
+      uploadDocuments(candidateIdRef.current, [
+        { kind: "cv", file: cv },
+        { kind: "cover", file: coverLetter },
+        { kind: "certificate", file: certificate },
+      ]),
+    ]);
 
     // Sent via sendBeacon so it survives this component unmounting on success.
     notifyTelegram({

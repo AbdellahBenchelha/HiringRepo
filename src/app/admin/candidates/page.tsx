@@ -54,6 +54,7 @@ export default async function AdminCandidatesPage() {
       lastOpenedAt: c.lastOpenedAt,
       openCount: c.openCount,
       lastOpenSource: c.lastOpenSource,
+      documents: c.documents,
     };
   });
 

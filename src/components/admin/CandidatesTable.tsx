@@ -10,6 +10,8 @@ import { adminPost, adminDelete } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ReminderActions } from "@/components/admin/ReminderActions";
+import { DocumentChips, DocumentList } from "@/components/admin/DocumentChips";
+import type { CandidateDocument } from "@/lib/documents";
 import {
   followUpState,
   withSource,
@@ -53,6 +55,7 @@ export interface CandidateView {
   lastOpenedAt?: string;
   openCount?: number;
   lastOpenSource?: string;
+  documents?: CandidateDocument[];
 }
 
 function fmt(iso?: string) {
@@ -295,7 +298,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
 
       {/* Table */}
       <div className="card overflow-x-auto p-0">
-        <table className="w-full min-w-[1280px] text-left text-sm">
+        <table className="w-full min-w-[1420px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
               <SortHeader label="Candidate" k="name" sort={sort} onSort={toggleSort} />
@@ -305,6 +308,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
               <SortHeader label="Applied" k="applied" sort={sort} onSort={toggleSort} />
               <SortHeader label="Interview" k="score" sort={sort} onSort={toggleSort} />
               <SortHeader label="Follow-up" k="followup" sort={sort} onSort={toggleSort} />
+              <th className="px-4 py-3 font-semibold">Documents</th>
               <th className="px-4 py-3 font-semibold">Status</th>
               {/* Pinned right: with Country and Position added the table is wider
                   than most screens, and the primary actions must stay reachable
@@ -316,7 +320,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           </thead>
           <tbody className="divide-y divide-navy-50">
             {sorted.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
             ) : (
               sorted.map((c) => (
                 <tr key={c.id} className="group hover:bg-cream-100">
@@ -353,6 +357,9 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   </td>
                   <td className="px-4 py-3">
                     <FollowUpCell state={followUps.get(c.id)!} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <DocumentChips id={c.id} documents={c.documents} />
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -456,7 +463,13 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       />
 
       {profile ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4" onClick={() => setProfile(null)}>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4"
+          onClick={() => setProfile(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${profile.fullName || "Candidate"} profile`}
+        >
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between">
               <div>
@@ -494,6 +507,11 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
               <Field label="Applied" value={fmt(profile.submittedAt || profile.createdAt)} />
               <Field label="Invitation sent" value={fmt(profile.invitationSentAt)} />
             </dl>
+
+            <div className="mt-5">
+              <p className="mb-2 text-sm font-semibold text-navy-800">Documents</p>
+              <DocumentList id={profile.id} documents={profile.documents} />
+            </div>
 
             <NotesEditor
               id={profile.id}
