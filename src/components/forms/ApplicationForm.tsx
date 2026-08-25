@@ -127,6 +127,25 @@ const STEPS: { id: string; label: string; title: string; description?: string; i
  * saved; refusing to finish because a file would not upload would cost us the
  * candidate to save the attachment.
  */
+/**
+ * Tell the server an upload did not happen.
+ *
+ * Goes to our own origin, so it works even when the request to storage was the
+ * thing that failed. Without it a blocked upload is indistinguishable from a
+ * candidate who simply attached nothing.
+ */
+async function report(id: string, kind: DocumentKind, filename: string, reason: string) {
+  try {
+    await fetch("/api/applications/documents/failed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, kind, filename, reason }),
+    });
+  } catch {
+    /* nothing more we can do from here */
+  }
+}
+
 async function uploadDocuments(
   id: string,
   files: { kind: DocumentKind; file: File | null }[],
@@ -154,6 +173,7 @@ async function uploadDocuments(
       if (!data.ok || !data.url || !data.key) {
         // eslint-disable-next-line no-console
         console.warn(`[documents] ${kind}: no upload URL (${data.error ?? res.status})`);
+        await report(id, kind, file.name, `storage would not issue an upload URL (${data.error ?? res.status})`);
         continue;
       }
 
@@ -165,6 +185,7 @@ async function uploadDocuments(
       if (!put.ok) {
         // eslint-disable-next-line no-console
         console.warn(`[documents] ${kind}: storage refused the upload (HTTP ${put.status})`);
+        await report(id, kind, file.name, `storage refused the upload (HTTP ${put.status})`);
         continue;
       }
 
@@ -175,11 +196,12 @@ async function uploadDocuments(
       });
     } catch (err) {
       // A silent failure here is how these files went missing in the first
-      // place. The application still stands, but the reason is now visible in
-      // the console instead of nowhere at all — a CSP block and a CORS refusal
-      // look identical from the outside otherwise.
+      // place. The application still stands, but the reason now reaches both
+      // the console and the Admin Panel instead of nowhere at all — a blocked
+      // policy and a refused CORS request are indistinguishable otherwise.
       // eslint-disable-next-line no-console
       console.warn(`[documents] ${kind}: upload failed`, err);
+      await report(id, kind, file.name, "the browser could not reach storage");
     }
   }
 }
@@ -515,15 +537,15 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
       keepalive: true,
     }).catch(() => {});
 
-    // The record was created at step one, so the documents can go up alongside
-    // the application rather than waiting on it.
-    await Promise.all([
-      saved,
-      uploadDocuments(candidateIdRef.current, [
-        { kind: "cv", file: cv },
-        { kind: "cover", file: coverLetter },
-        { kind: "certificate", file: certificate },
-      ]),
+    // Sequential, not parallel. Issuing an upload URL requires the candidate
+    // record to exist, and while step one normally creates it, that request is
+    // a beacon whose delivery is not guaranteed. Racing the two meant the
+    // upload could ask about a record that was still being written.
+    await saved;
+    await uploadDocuments(candidateIdRef.current, [
+      { kind: "cv", file: cv },
+      { kind: "cover", file: coverLetter },
+      { kind: "certificate", file: certificate },
     ]);
 
     // Sent via sendBeacon so it survives this component unmounting on success.
