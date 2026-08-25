@@ -46,8 +46,18 @@ export async function GET() {
 
   const bucket = process.env.R2_BUCKET?.trim();
   const accountId = process.env.R2_ACCOUNT_ID?.trim() ?? "";
+  const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
   const key = `diagnostics/storage-check-${Date.now()}.txt`;
   const payload = "workroute storage check";
+
+  // The account id and the access key id are both 32 hex characters, which
+  // makes them easy to swap. A wrong one produces a hostname that does not
+  // exist, and the only symptom is a connection failure much later.
+  const idLooksWrong = accountId.includes("/")
+    ? "R2_ACCOUNT_ID contains a slash — it should be only the id from the endpoint, not the whole URL."
+    : !/^[0-9a-f]{32}$/i.test(accountId)
+      ? `R2_ACCOUNT_ID is ${accountId.length} characters; an account id is 32 hexadecimal characters.`
+      : null;
 
   try {
     const url = await presignUpload(key, "text/plain");
@@ -107,20 +117,34 @@ export async function GET() {
       bucket,
       // The endpoint the browser is told to upload to, so it can be compared
       // against the CSP and the bucket's CORS rule.
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      endpoint,
       steps,
       diagnosis: roundTripped
         ? "Storage works from the server. If candidate uploads still fail, the problem is in the browser: check the bucket's CORS rule allows PUT from your site's exact address, and that the deployed build has the storage origin in its Content-Security-Policy."
         : "The object was stored but came back different.",
     });
   } catch (err) {
+    // node's fetch reports every connection problem as "fetch failed" and puts
+    // the real reason underneath. Unwrapped, that is the difference between a
+    // hostname that does not exist and one that refused the connection.
+    const cause = (err as { cause?: { code?: string; message?: string } })?.cause;
+    const code = cause?.code ?? "";
+    const unresolved = code === "ENOTFOUND" || code === "EAI_AGAIN";
+
     return NextResponse.json({
       ok: false,
       configured: true,
       bucket,
+      endpoint,
       steps,
       error: err instanceof Error ? err.message : String(err),
-      diagnosis: "Could not reach storage at all. Check R2_ACCOUNT_ID and that the endpoint resolves.",
+      cause: code || cause?.message || undefined,
+      accountIdWarning: idLooksWrong ?? undefined,
+      diagnosis: idLooksWrong
+        ? idLooksWrong
+        : unresolved
+          ? `The host ${endpoint} could not be resolved. Cloudflare answers for every well-formed account id, so this means R2_ACCOUNT_ID is malformed rather than merely wrong — most often the whole endpoint URL pasted in where only the id belongs, or a stray space or newline inside it.`
+          : "Could not reach storage. The cause field has the underlying network error.",
     });
   }
 }
