@@ -21,7 +21,16 @@ function sizeLabel(bytes: number): string {
  * reads down the table: the same shape appears on every row and a missing CV is
  * a gap in a known place rather than something you have to notice is absent.
  */
-export function DocumentChips({ id, documents }: { id: string; documents?: CandidateDocument[] }) {
+export function DocumentChips({
+  id,
+  documents,
+  onOpen,
+}: {
+  id: string;
+  documents?: CandidateDocument[];
+  /** Opens the viewer. Without it the chip falls back to downloading. */
+  onOpen?: (doc: CandidateDocument) => void;
+}) {
   const byKind = new Map((documents ?? []).map((d) => [d.kind, d]));
 
   return (
@@ -56,17 +65,32 @@ export function DocumentChips({ id, documents }: { id: string; documents?: Candi
         }
 
         const unscanned = doc.status === "unscanned";
-        return (
-          <a
+        const style = `inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold transition ${
+          unscanned
+            ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+            : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+        }`;
+        const title = `${doc.filename} · ${sizeLabel(doc.size)}${unscanned ? " · could not be scanned" : ""}`;
+
+        // A button that opens the reader, not a link that saves a file. The
+        // download is still one click away inside it, but reading a CV should
+        // not require putting it on disk first.
+        return onOpen ? (
+          <button
             key={kind}
-            href={`/api/admin/documents/${id}/${kind}`}
-            title={`${doc.filename} · ${sizeLabel(doc.size)}${unscanned ? " · could not be scanned" : ""}`}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold transition ${
-              unscanned
-                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-            }`}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(doc);
+            }}
+            title={title}
+            className={style}
           >
+            <Icon name="search" className="h-3 w-3" />
+            {short}
+          </button>
+        ) : (
+          <a key={kind} href={`/api/admin/documents/${id}/${kind}`} title={title} className={style}>
             <Icon name="upload" className="h-3 w-3 rotate-180" />
             {short}
           </a>
@@ -77,7 +101,15 @@ export function DocumentChips({ id, documents }: { id: string; documents?: Candi
 }
 
 /** The fuller listing, for the candidate profile. */
-export function DocumentList({ id, documents }: { id: string; documents?: CandidateDocument[] }) {
+export function DocumentList({
+  id,
+  documents,
+  onOpen,
+}: {
+  id: string;
+  documents?: CandidateDocument[];
+  onOpen?: (doc: CandidateDocument) => void;
+}) {
   const docs = documents ?? [];
   if (docs.length === 0) {
     return <p className="text-sm text-navy-400">No documents were attached to this application.</p>;
@@ -118,13 +150,25 @@ export function DocumentList({ id, documents }: { id: string; documents?: Candid
                 Deleted
               </span>
             ) : (
-              <a
-                href={`/api/admin/documents/${id}/${kind}`}
-                className="inline-flex items-center gap-1.5 rounded-full bg-navy-900 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-navy-800"
-              >
-                <Icon name="upload" className="h-3.5 w-3.5 rotate-180" />
-                Download
-              </a>
+              <div className="flex shrink-0 items-center gap-2">
+                {onOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpen(doc)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-navy-900 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-navy-800"
+                  >
+                    <Icon name="search" className="h-3.5 w-3.5" />
+                    View
+                  </button>
+                ) : null}
+                <a
+                  href={`/api/admin/documents/${id}/${kind}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 px-3.5 py-1.5 text-xs font-bold text-navy-700 transition hover:bg-navy-50"
+                >
+                  <Icon name="upload" className="h-3.5 w-3.5 rotate-180" />
+                  Download
+                </a>
+              </div>
             )}
           </li>
         );

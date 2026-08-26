@@ -28,6 +28,9 @@ const csp = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   `connect-src 'self' https://ipwho.is ${r2Origin}`,
+  // The Admin Panel previews candidate PDFs in an iframe pointed at storage.
+  // Without this, default-src refuses the frame and the preview is blank.
+  `frame-src 'self' ${r2Origin}`,
   "form-action 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",

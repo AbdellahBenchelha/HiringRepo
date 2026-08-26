@@ -11,6 +11,7 @@ import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ReminderActions } from "@/components/admin/ReminderActions";
 import { DocumentChips, DocumentList } from "@/components/admin/DocumentChips";
+import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import type { CandidateDocument } from "@/lib/documents";
 import {
   followUpState,
@@ -86,6 +87,8 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [pendingDelete, setPendingDelete] = useState<CandidateView | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
+  // Which document is open in the reader, and whose it is.
+  const [viewing, setViewing] = useState<{ c: CandidateView; doc: CandidateDocument } | null>(null);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "applied",
     dir: "desc",
@@ -359,7 +362,11 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                     <FollowUpCell state={followUps.get(c.id)!} />
                   </td>
                   <td className="px-4 py-3">
-                    <DocumentChips id={c.id} documents={c.documents} />
+                    <DocumentChips
+                      id={c.id}
+                      documents={c.documents}
+                      onOpen={(doc) => setViewing({ c, doc })}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -462,6 +469,15 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
         }
       />
 
+      {viewing ? (
+        <DocumentViewer
+          candidateId={viewing.c.id}
+          candidateName={viewing.c.fullName}
+          document={viewing.doc}
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
+
       {profile ? (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4"
@@ -510,7 +526,11 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
 
             <div className="mt-5">
               <p className="mb-2 text-sm font-semibold text-navy-800">Documents</p>
-              <DocumentList id={profile.id} documents={profile.documents} />
+              <DocumentList
+                id={profile.id}
+                documents={profile.documents}
+                onOpen={(doc) => setViewing({ c: profile, doc })}
+              />
             </div>
 
             <NotesEditor

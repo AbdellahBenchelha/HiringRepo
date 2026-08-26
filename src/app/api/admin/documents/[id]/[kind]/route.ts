@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { getDocument } from "@/lib/store";
-import { presignDownload } from "@/lib/r2";
-import { isDocumentKind, safeFilename } from "@/lib/documents";
+import { presignDownload, presignView } from "@/lib/r2";
+import { extensionOf, isDocumentKind, safeFilename } from "@/lib/documents";
 
 /**
  * Hand a recruiter one candidate document.
@@ -20,7 +20,7 @@ import { isDocumentKind, safeFilename } from "@/lib/documents";
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: { params: Promise<{ id: string; kind: string }> },
 ) {
   const session = await getAdminSession();
@@ -47,7 +47,17 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  const url = await presignDownload(doc.key, safeFilename(doc.filename));
+  const name = safeFilename(doc.filename);
+
+  // ?mode=view renders the file in the browser rather than saving it, but only
+  // for PDFs. A Word document served inline just produces a download prompt
+  // where a preview was promised, so it keeps the attachment path.
+  const wantsView = req.nextUrl.searchParams.get("mode") === "view";
+  const isPdf = extensionOf(name) === ".pdf";
+
+  const url = wantsView && isPdf
+    ? await presignView(doc.key, name)
+    : await presignDownload(doc.key, name);
   if (!url) {
     return NextResponse.json({ ok: false, error: "storage_unavailable" }, { status: 503 });
   }

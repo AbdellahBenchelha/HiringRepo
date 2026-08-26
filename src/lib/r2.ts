@@ -118,6 +118,34 @@ export async function presignDownload(key: string, filename: string): Promise<st
   );
 }
 
+/**
+ * A signed URL that displays one file in the browser instead of saving it.
+ *
+ * The deliberate opposite of presignDownload, and only ever used for PDFs.
+ * Two things make rendering acceptable here rather than reckless: the file has
+ * already passed the scanner, which rejects PDFs carrying JavaScript, launch
+ * actions or embedded files; and it is served from the storage origin, not
+ * ours, so nothing inside it shares an origin with the Admin Panel or its
+ * session cookie.
+ *
+ * Word documents are never served this way. No browser renders them, so the
+ * best case is a download prompt appearing where a preview was promised.
+ */
+export async function presignView(key: string, filename: string): Promise<string | null> {
+  const c = client();
+  if (!c) return null;
+  return getSignedUrl(
+    c,
+    new GetObjectCommand({
+      Bucket: bucket(),
+      Key: key,
+      ResponseContentDisposition: `inline; filename="${filename}"`,
+      ResponseContentType: "application/pdf",
+    }),
+    { expiresIn: DOWNLOAD_URL_TTL },
+  );
+}
+
 export async function headObject(
   key: string,
 ): Promise<{ size: number; contentType?: string } | null> {
