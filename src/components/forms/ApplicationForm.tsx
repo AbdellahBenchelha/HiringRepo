@@ -42,6 +42,12 @@ interface ExperienceRow {
 interface ApplicationFormProps {
   initialPosition?: string;
   onSubmitted?: () => void;
+  /**
+   * Countries whose applicants must attach a CV, from the Admin Panel setting.
+   * Passed in from the server rather than fetched, so the rule is already known
+   * by the time anyone reaches the documents step.
+   */
+  cvRequiredCountries?: string[];
 }
 
 const yesNo = ["Yes", "No"];
@@ -206,7 +212,11 @@ async function uploadDocuments(
   }
 }
 
-export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFormProps) {
+export function ApplicationForm({
+  initialPosition,
+  onSubmitted,
+  cvRequiredCountries = [],
+}: ApplicationFormProps) {
   const positionOptions = useMemo(() => jobs.map((j) => j.title), []);
 
   // ---- Wizard state ----
@@ -318,6 +328,7 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
 
   const isLastStep = current === STEPS.length - 1;
   const step = STEPS[current];
+  const cvRequired = !!country && cvRequiredCountries.includes(country);
 
   function setField<T>(setter: (v: T) => void, key: string) {
     return (value: T) => {
@@ -369,6 +380,12 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         break;
       case "position":
         if (!position) e.position = "Please select the position you are applying for.";
+        break;
+      case "documents":
+        // Only for the listed countries; optional for everyone else. Checked
+        // here rather than only on the button, because handleSubmit re-runs
+        // every step — so changing country after skipping the CV is caught.
+        if (cvRequired && !cv) e.cv = "Please attach your CV to continue.";
         break;
       case "languages":
         if (!languages.some((l) => l.language.trim())) {
@@ -727,7 +744,15 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         <div>
           <p className="eyebrow">Step {current + 1} of {STEPS.length}</p>
           <h3 className="mt-1 text-2xl font-bold text-navy-900">{step.title}</h3>
-          {step.description ? <p className="mt-1 text-sm text-navy-500">{step.description}</p> : null}
+          {/* The documents step is captioned "Optional" in the step list, which
+              contradicts the banner below it once a CV is required. */}
+          {step.id === "documents" && cvRequired ? (
+            <p className="mt-1 text-sm text-navy-500">
+              A CV is required for {country}; the other documents are optional.
+            </p>
+          ) : step.description ? (
+            <p className="mt-1 text-sm text-navy-500">{step.description}</p>
+          ) : null}
         </div>
       </div>
 
@@ -1066,11 +1091,27 @@ export function ApplicationForm({ initialPosition, onSubmitted }: ApplicationFor
         {/* STEP 7 — CV AND DOCUMENTS */}
         {step.id === "documents" ? (
           <div className="space-y-5">
-            <p className="text-sm text-navy-500">
-              A CV is optional — you can apply without one. Documents are sent securely to our
-              recruitment team.
-            </p>
-            <FileUploader label="CV / Résumé" optional onChange={setCv} />
+            {cvRequired ? (
+              <p className="rounded-xl border border-brand-200 bg-brand-50/60 p-3.5 text-sm leading-relaxed text-navy-700">
+                <strong className="font-bold text-navy-900">A CV is required</strong> for
+                applications from {country}. The other two documents are optional. Everything is
+                sent securely to our recruitment team.
+              </p>
+            ) : (
+              <p className="text-sm text-navy-500">
+                A CV is optional — you can apply without one. Documents are sent securely to our
+                recruitment team.
+              </p>
+            )}
+            <FileUploader
+              label="CV / Résumé"
+              optional={!cvRequired}
+              error={errors.cv}
+              onChange={(f) => {
+                setCv(f);
+                if (f) setErrors((prev) => ({ ...prev, cv: "" }));
+              }}
+            />
             <FileUploader label="Cover letter" optional onChange={setCoverLetter} />
             <FileUploader label="Supporting certificate" optional onChange={setCertificate} />
           </div>

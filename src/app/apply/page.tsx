@@ -4,6 +4,7 @@ import { jobs } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
 import { recruitmentProcess } from "@/config/content";
 import { ApplicationForm } from "@/components/forms/ApplicationForm";
+import { cvRequiredCountries } from "@/lib/cvStore";
 import { Icon, type IconName } from "@/components/Icon";
 
 export const metadata = buildMetadata({
@@ -13,11 +14,22 @@ export const metadata = buildMetadata({
   path: "/apply",
 });
 
-const trustChips: { icon: IconName; label: string }[] = [
-  { icon: "checkCircle", label: "A CV is optional" },
-  { icon: "clock", label: "Takes about 5 minutes" },
-  { icon: "shield", label: "Secure & confidential" },
-];
+/**
+ * The hero sits above the form, before anyone has said where they are from, so
+ * it cannot know whether this particular visitor needs a CV. Once any country
+ * requires one, a flat "A CV is optional" is a promise the form then breaks —
+ * so it softens rather than lies.
+ */
+function trustChips(anyCountryNeedsCv: boolean): { icon: IconName; label: string }[] {
+  return [
+    {
+      icon: "checkCircle",
+      label: anyCountryNeedsCv ? "A CV is optional in most countries" : "A CV is optional",
+    },
+    { icon: "clock", label: "Takes about 5 minutes" },
+    { icon: "shield", label: "Secure & confidential" },
+  ];
+}
 
 export default async function ApplyPage({
   searchParams,
@@ -27,6 +39,9 @@ export default async function ApplyPage({
   const requested = (await searchParams)?.position;
   const initialPosition =
     requested && jobs.some((j) => j.title === requested) ? requested : undefined;
+  // Read here rather than fetched by the form, so the rule is already known by
+  // the time anyone reaches the documents step.
+  const cvRequired = await cvRequiredCountries();
 
   return (
     <>
@@ -60,7 +75,7 @@ export default async function ApplyPage({
           </div>
 
           <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-3">
-            {trustChips.map((chip) => (
+            {trustChips(cvRequired.length > 0).map((chip) => (
               <li
                 key={chip.label}
                 className="inline-flex items-center gap-2 text-sm font-medium text-navy-700"
@@ -94,7 +109,10 @@ export default async function ApplyPage({
                     </Link>
                   </div>
                 ) : null}
-                <ApplicationForm initialPosition={initialPosition} />
+                <ApplicationForm
+                  initialPosition={initialPosition}
+                  cvRequiredCountries={cvRequired}
+                />
               </div>
             </div>
 

@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getVerificationSettings } from "@/lib/verificationStore";
 import { countries } from "@/config/countries";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { VerificationCountriesEditor } from "@/components/admin/VerificationCountriesEditor";
+import { CountryListEditor } from "@/components/admin/CountryListEditor";
 
 export const metadata: Metadata = {
   title: "ID verification",
@@ -24,11 +24,16 @@ export default async function AdminVerificationSettingsPage() {
         </p>
       </header>
 
-      <VerificationCountriesEditor
+      <CountryListEditor
         countries={countries}
         initial={settings.requiredCountries}
         isDefault={settings.isDefault}
         updatedAt={settings.updatedAt}
+        endpoint="/api/admin/verification-settings"
+        heading="Countries requiring ID verification"
+        description="Candidates from these countries must upload an ID document and a photo of themselves holding it, straight after completing their assessment. They cannot skip it."
+        chipsLabel="Verification required in"
+        emptyText="No countries selected — identity verification is switched off for everyone."
       />
 
       <div className="card mt-5 p-5 text-sm leading-relaxed text-navy-600 sm:p-6">

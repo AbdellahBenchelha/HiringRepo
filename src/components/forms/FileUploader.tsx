@@ -8,6 +8,12 @@ import { formatFileSize, validateFile } from "@/lib/validation";
 interface FileUploaderProps {
   label: string;
   optional?: boolean;
+  /**
+   * Set by the parent when the form has decided this file is missing. Kept
+   * separate from the uploader's own type/size error so a validation failure
+   * cannot silently overwrite the reason a file was rejected.
+   */
+  error?: string;
   /** Lifts the validated file (or null) up to the parent form. */
   onChange: (file: File | null) => void;
 }
@@ -17,11 +23,14 @@ interface FileUploaderProps {
  * Validates type and size on selection, shows the chosen filename, and lets
  * the applicant remove or replace the document.
  */
-export function FileUploader({ label, optional, onChange }: FileUploaderProps) {
+export function FileUploader({ label, optional, error: externalError, onChange }: FileUploaderProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState<string | undefined>();
+  const [ownError, setOwnError] = useState<string | undefined>();
+  // The uploader's own complaint wins: "that file is too large" is more useful
+  // than "please attach a CV" when they just tried to attach one.
+  const error = ownError || externalError;
 
   const { acceptedExtensions, maxFileSizeMB } = siteConfig.upload;
 
@@ -30,19 +39,19 @@ export function FileUploader({ label, optional, onChange }: FileUploaderProps) {
     if (!selected) return;
     const result = validateFile(selected);
     if (!result.ok) {
-      setError(result.error);
+      setOwnError(result.error);
       setFile(null);
       onChange(null);
       return;
     }
-    setError(undefined);
+    setOwnError(undefined);
     setFile(selected);
     onChange(selected);
   }
 
   function remove() {
     setFile(null);
-    setError(undefined);
+    setOwnError(undefined);
     onChange(null);
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -51,7 +60,14 @@ export function FileUploader({ label, optional, onChange }: FileUploaderProps) {
     <div>
       <span className="label">
         {label}
-        {optional ? <span className="font-normal text-navy-400"> (optional)</span> : null}
+        {optional ? (
+          <span className="font-normal text-navy-400"> (optional)</span>
+        ) : (
+          <span className="text-red-600" aria-hidden="true">
+            {" "}
+            *
+          </span>
+        )}
       </span>
 
       {!file ? (

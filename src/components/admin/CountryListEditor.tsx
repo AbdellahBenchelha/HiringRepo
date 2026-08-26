@@ -5,22 +5,39 @@ import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 
 /**
- * Which countries require identity verification.
+ * Pick the countries a rule applies to.
  *
  * A search box over 197 countries rather than a long scroll, and the selected
  * ones lifted to the top as removable chips — the list you have chosen is the
  * thing you came to check, and it should not be scattered through an alphabet.
+ *
+ * Shared by every country-scoped setting, so they behave identically. Two
+ * pickers that look the same but respond differently is worse than two that
+ * look different.
  */
-export function VerificationCountriesEditor({
+export function CountryListEditor({
   countries,
   initial,
   isDefault,
   updatedAt,
+  endpoint,
+  heading,
+  description,
+  chipsLabel,
+  emptyText,
 }: {
   countries: string[];
   initial: string[];
   isDefault: boolean;
   updatedAt?: string;
+  /** Admin API path this saves to. */
+  endpoint: string;
+  heading: string;
+  description: string;
+  /** Heading above the chosen countries. */
+  chipsLabel: string;
+  /** Shown instead of chips when nothing is selected — say what that means. */
+  emptyText: string;
 }) {
   const [selected, setSelected] = useState<string[]>(initial);
   const [saved, setSaved] = useState<string[]>(initial);
@@ -51,7 +68,7 @@ export function VerificationCountriesEditor({
     setBusy(true);
     setError("");
     try {
-      const res = await adminPost("/api/admin/verification-settings", { countries: selected });
+      const res = await adminPost(endpoint, { countries: selected });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (data.ok) {
         setSaved(selected);
@@ -70,11 +87,8 @@ export function VerificationCountriesEditor({
     <section className="card p-5 sm:p-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-navy-900">Countries requiring ID verification</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-navy-500">
-            Candidates from these countries must upload an ID document and a photo of themselves
-            holding it, straight after completing their assessment. They cannot skip it.
-          </p>
+          <h2 className="text-lg font-bold text-navy-900">{heading}</h2>
+          <p className="mt-0.5 max-w-2xl text-sm text-navy-500">{description}</p>
         </div>
         {dirty ? (
           <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
@@ -102,13 +116,9 @@ export function VerificationCountriesEditor({
 
       {/* What is currently on the list. */}
       <div className="rounded-xl border border-navy-100 bg-navy-50/40 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">
-          Verification required in
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">{chipsLabel}</p>
         {selected.length === 0 ? (
-          <p className="mt-2 text-sm text-navy-500">
-            No countries selected — identity verification is switched off for everyone.
-          </p>
+          <p className="mt-2 text-sm text-navy-500">{emptyText}</p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-2">
             {selected.map((c) => (
