@@ -2,7 +2,7 @@
 
 import { Icon } from "@/components/Icon";
 import {
-  DOCUMENT_KINDS,
+  APPLICATION_KINDS,
   DOCUMENT_LABEL,
   DOCUMENT_SHORT,
   type CandidateDocument,
@@ -35,7 +35,7 @@ export function DocumentChips({
 
   return (
     <div className="flex flex-wrap gap-1">
-      {DOCUMENT_KINDS.map((kind) => {
+      {APPLICATION_KINDS.map((kind) => {
         const doc = byKind.get(kind);
         const short = DOCUMENT_SHORT[kind];
 
@@ -110,14 +110,23 @@ export function DocumentList({
   documents?: CandidateDocument[];
   onOpen?: (doc: CandidateDocument) => void;
 }) {
-  const docs = documents ?? [];
+  // Identity photographs are reviewed in their own panel, not listed here.
+  const docs = (documents ?? []).filter((d) =>
+    (APPLICATION_KINDS as readonly string[]).includes(d.kind),
+  );
   if (docs.length === 0) {
-    return <p className="text-sm text-navy-400">No documents were attached to this application.</p>;
+    // Named specifically: a bare "no documents" sits directly above the
+    // identity photographs in the profile and reads as a contradiction.
+    return (
+      <p className="text-sm text-navy-500">
+        No CV, cover letter or certificate was attached to this application.
+      </p>
+    );
   }
 
   return (
     <ul className="divide-y divide-navy-100 rounded-xl border border-navy-100">
-      {DOCUMENT_KINDS.filter((k) => docs.some((d) => d.kind === k)).map((kind) => {
+      {APPLICATION_KINDS.filter((k) => docs.some((d) => d.kind === k)).map((kind) => {
         const doc = docs.find((d) => d.kind === kind)!;
         const blocked = doc.status === "blocked";
         return (

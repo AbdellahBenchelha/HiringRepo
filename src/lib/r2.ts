@@ -23,6 +23,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -121,7 +122,7 @@ export async function presignDownload(key: string, filename: string): Promise<st
 /**
  * A signed URL that displays one file in the browser instead of saving it.
  *
- * The deliberate opposite of presignDownload, and only ever used for PDFs.
+ * The deliberate opposite of presignDownload, for PDFs and identity photos.
  * Two things make rendering acceptable here rather than reckless: the file has
  * already passed the scanner, which rejects PDFs carrying JavaScript, launch
  * actions or embedded files; and it is served from the storage origin, not
@@ -131,7 +132,11 @@ export async function presignDownload(key: string, filename: string): Promise<st
  * Word documents are never served this way. No browser renders them, so the
  * best case is a download prompt appearing where a preview was promised.
  */
-export async function presignView(key: string, filename: string): Promise<string | null> {
+export async function presignView(
+  key: string,
+  filename: string,
+  contentType: string,
+): Promise<string | null> {
   const c = client();
   if (!c) return null;
   return getSignedUrl(
@@ -140,7 +145,9 @@ export async function presignView(key: string, filename: string): Promise<string
       Bucket: bucket(),
       Key: key,
       ResponseContentDisposition: `inline; filename="${filename}"`,
-      ResponseContentType: "application/pdf",
+      // Fixed by us, never taken from the file. A type the browser is told
+      // explicitly is a type it will not sniff its way out of.
+      ResponseContentType: contentType,
     }),
     { expiresIn: DOWNLOAD_URL_TTL },
   );
@@ -179,6 +186,40 @@ export async function getObjectBytes(key: string, maxBytes: number): Promise<Uin
     return await body.transformToByteArray();
   } catch {
     return null;
+  }
+}
+
+/** Write an object directly from the server. Used by the backup. */
+export async function putObject(
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<boolean> {
+  const c = client();
+  if (!c) return false;
+  try {
+    await c.send(
+      new PutObjectCommand({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType }),
+    );
+    return true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[r2] could not write ${key}:`, err);
+    return false;
+  }
+}
+
+/** Every key under a prefix. Only used for the handful of backup objects. */
+export async function listObjects(prefix: string): Promise<string[]> {
+  const c = client();
+  if (!c) return [];
+  try {
+    const res = await c.send(
+      new ListObjectsV2Command({ Bucket: bucket(), Prefix: prefix, MaxKeys: 1000 }),
+    );
+    return (res.Contents ?? []).map((o) => o.Key ?? "").filter(Boolean);
+  } catch {
+    return [];
   }
 }
 

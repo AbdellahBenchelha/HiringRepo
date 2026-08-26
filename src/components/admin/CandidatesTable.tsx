@@ -12,6 +12,8 @@ import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ReminderActions } from "@/components/admin/ReminderActions";
 import { DocumentChips, DocumentList } from "@/components/admin/DocumentChips";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
+import { VerificationBadge, VerificationPanel } from "@/components/admin/VerificationPanel";
+import { VERIFICATION_FILTERS, type VerificationFilter, type VerificationStatus } from "@/lib/verification";
 import type { CandidateDocument } from "@/lib/documents";
 import {
   followUpState,
@@ -57,6 +59,13 @@ export interface CandidateView {
   openCount?: number;
   lastOpenSource?: string;
   documents?: CandidateDocument[];
+  verificationStatus: VerificationStatus;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  imagesDeletedAt?: string;
+  verificationConsentAt?: string;
 }
 
 function fmt(iso?: string) {
@@ -87,6 +96,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [pendingDelete, setPendingDelete] = useState<CandidateView | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
+  const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>("all");
   // Which document is open in the reader, and whose it is.
   const [viewing, setViewing] = useState<{ c: CandidateView; doc: CandidateDocument } | null>(null);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
@@ -134,13 +144,14 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
         return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (followUpFilter !== "all" && followUps.get(c.id)?.kind !== followUpFilter) return false;
+      if (verifyFilter !== "all" && c.verificationStatus !== verifyFilter) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
         if (applied < from) return false;
       }
       return true;
     });
-  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps]);
+  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -278,6 +289,12 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           </select>
         </div>
         <div>
+          <label className="label" htmlFor="verification">ID verification</label>
+          <select id="verification" className="select" value={verifyFilter} onChange={(e) => setVerifyFilter(e.target.value as VerificationFilter)}>
+            {VERIFICATION_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </div>
+        <div>
           <label className="label" htmlFor="datefrom">Applied on or after</label>
           <input id="datefrom" type="date" className="input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </div>
@@ -301,7 +318,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
 
       {/* Table */}
       <div className="card overflow-x-auto p-0">
-        <table className="w-full min-w-[1420px] text-left text-sm">
+        <table className="w-full min-w-[1560px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
               <SortHeader label="Candidate" k="name" sort={sort} onSort={toggleSort} />
@@ -312,6 +329,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
               <SortHeader label="Interview" k="score" sort={sort} onSort={toggleSort} />
               <SortHeader label="Follow-up" k="followup" sort={sort} onSort={toggleSort} />
               <th className="px-4 py-3 font-semibold">Documents</th>
+              <th className="px-4 py-3 font-semibold">ID check</th>
               <th className="px-4 py-3 font-semibold">Status</th>
               {/* Pinned right: with Country and Position added the table is wider
                   than most screens, and the primary actions must stay reachable
@@ -323,7 +341,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           </thead>
           <tbody className="divide-y divide-navy-50">
             {sorted.length === 0 ? (
-              <tr><td colSpan={10} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
+              <tr><td colSpan={11} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
             ) : (
               sorted.map((c) => (
                 <tr key={c.id} className="group hover:bg-cream-100">
@@ -367,6 +385,9 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                       documents={c.documents}
                       onOpen={(doc) => setViewing({ c, doc })}
                     />
+                  </td>
+                  <td className="px-4 py-3">
+                    <VerificationBadge status={c.verificationStatus} />
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -530,6 +551,23 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                 id={profile.id}
                 documents={profile.documents}
                 onOpen={(doc) => setViewing({ c: profile, doc })}
+              />
+            </div>
+
+            <div className="mt-5">
+              <VerificationPanel
+                id={profile.id}
+                fullName={profile.fullName}
+                documents={profile.documents}
+                initial={{
+                  status: profile.verificationStatus,
+                  verifiedAt: profile.verifiedAt,
+                  verifiedBy: profile.verifiedBy,
+                  rejectedAt: profile.rejectedAt,
+                  rejectionReason: profile.rejectionReason,
+                  imagesDeletedAt: profile.imagesDeletedAt,
+                  consentAt: profile.verificationConsentAt,
+                }}
               />
             </div>
 

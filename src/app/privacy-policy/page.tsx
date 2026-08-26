@@ -26,7 +26,36 @@ export default function PrivacyPolicyPage() {
         <li>Professional information (work experience, education, certifications, CV and documents).</li>
         <li>Responses to application questions and any information you choose to provide.</li>
         <li>Technical data (such as essential cookies needed for the site to function).</li>
+        <li>
+          Identity verification documents, where required: an image of an official identity
+          document and a photograph of you holding it. This is requested only from applicants in
+          certain countries, and only after the online assessment.
+        </li>
       </ul>
+
+      <h2>1a. Identity verification</h2>
+      <p>
+        For some roles and locations we ask applicants to confirm their identity before the
+        application continues. Where this applies, you are asked for an image of an official
+        identity document — a passport, national identity card or driver&rsquo;s licence — and a
+        photograph of yourself holding it.
+      </p>
+      <p>
+        A photograph used to confirm that you are the person shown on a document is biometric
+        data. We ask for your explicit consent before collecting it, separately from any other
+        consent, and you are told what it is for at the point we ask. We use these images only to
+        confirm your identity and to prevent the same person applying repeatedly under different
+        details. They are never used for automated facial recognition, never sold, and never
+        shared outside our recruitment team.
+      </p>
+      <p>
+        Images are stored encrypted and access is restricted to recruitment staff. They are
+        deleted once a verification decision has been made and there is no longer a need to keep
+        them; the outcome of the decision is retained as part of your application record. You may
+        withdraw consent and ask us to delete these images at any time by writing to{" "}
+        <a href={`mailto:${contact.privacyEmail}`}>{contact.privacyEmail}</a>, and we will do so
+        unless we are required to keep them by law.
+      </p>
 
       <h2>2. Why we collect information</h2>
       <p>We use personal information to:</p>

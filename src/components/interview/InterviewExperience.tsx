@@ -166,6 +166,18 @@ export function InterviewExperience({ fullName, candidateId, token, source, ques
       } catch {
         /* ignore */
       }
+      // Where verification is required, the server renders that step for this
+      // same link. Reloading rather than deciding here keeps one source of
+      // truth for who needs it — the country list can change between the page
+      // loading and the assessment being submitted.
+      if (candidateId) {
+        const data = (await res.json().catch(() => ({}))) as { verificationRequired?: boolean };
+        if (data.verificationRequired) {
+          window.location.assign(`/interview?c=${encodeURIComponent(candidateId)}`);
+          return;
+        }
+      }
+
       setPhase("done");
       scrollTop();
     } catch {

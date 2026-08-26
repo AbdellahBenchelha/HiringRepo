@@ -22,6 +22,11 @@ export type EmailResult =
   | { ok: false; error: string };
 
 function endpoint(): string {
+  // ZEPTOMAIL_API_BASE exists so a test can point this at a local stub and
+  // read the exact message that would have been sent, the same way
+  // TELEGRAM_API_BASE does. Unset everywhere else, which is the real API.
+  const override = process.env.ZEPTOMAIL_API_BASE?.trim();
+  if (override) return `${override.replace(/\/$/, "")}/v1.1/email`;
   return process.env.ZEPTOMAIL_REGION?.toLowerCase() === "eu"
     ? "https://api.zeptomail.eu/v1.1/email"
     : "https://api.zeptomail.com/v1.1/email";

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
+import { requiredCountries } from "@/lib/verificationStore";
+import { verificationStatus } from "@/lib/verification";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { CandidatesTable, type CandidateView } from "@/components/admin/CandidatesTable";
 
@@ -19,6 +21,7 @@ export default async function AdminCandidatesPage() {
   await requireAdmin();
   const base = await baseUrl();
   const candidates = await listCandidates();
+  const required = await requiredCountries();
 
   const views: CandidateView[] = candidates.map((c) => {
     return {
@@ -55,6 +58,13 @@ export default async function AdminCandidatesPage() {
       openCount: c.openCount,
       lastOpenSource: c.lastOpenSource,
       documents: c.documents,
+      verificationStatus: verificationStatus(c, required),
+      verifiedAt: c.verifiedAt,
+      verifiedBy: c.verifiedBy,
+      rejectedAt: c.rejectedAt,
+      rejectionReason: c.rejectionReason,
+      imagesDeletedAt: c.imagesDeletedAt,
+      verificationConsentAt: c.verificationConsentAt,
     };
   });
 

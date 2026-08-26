@@ -49,14 +49,21 @@ export async function GET(
 
   const name = safeFilename(doc.filename);
 
-  // ?mode=view renders the file in the browser rather than saving it, but only
-  // for PDFs. A Word document served inline just produces a download prompt
-  // where a preview was promised, so it keeps the attachment path.
+  // ?mode=view renders the file in the browser rather than saving it. Only
+  // types a browser can actually display qualify — a Word document served
+  // inline just produces a download prompt where a preview was promised, so it
+  // keeps the attachment path.
   const wantsView = req.nextUrl.searchParams.get("mode") === "view";
-  const isPdf = extensionOf(name) === ".pdf";
+  const VIEWABLE: Record<string, string> = {
+    ".pdf": "application/pdf",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+  };
+  const viewType = VIEWABLE[extensionOf(name)];
 
-  const url = wantsView && isPdf
-    ? await presignView(doc.key, name)
+  const url = wantsView && viewType
+    ? await presignView(doc.key, name, viewType)
     : await presignDownload(doc.key, name);
   if (!url) {
     return NextResponse.json({ ok: false, error: "storage_unavailable" }, { status: 503 });

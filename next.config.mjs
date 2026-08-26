@@ -13,19 +13,38 @@
  *   <account>.r2.cloudflarestorage.com   object storage, which the browser
  *                                        uploads documents to directly.
  *
- * The storage origin is pinned to the configured account when R2_ACCOUNT_ID is
- * available at build time. Without it the policy has to fall back to a wildcard
- * — still only R2, but any R2 account. Set the variable so it stays pinned.
+ * The origin has to be whatever the SDK will actually sign against, or the
+ * browser refuses the upload and the failure looks like a storage outage. That
+ * is R2_ENDPOINT when it is set — src/lib/r2.ts prefers it over the account id,
+ * so a custom endpoint would otherwise be signed for and then blocked here.
+ *
+ * Falling back to a wildcard means still only R2, but any R2 account. Set
+ * R2_ACCOUNT_ID (or R2_ENDPOINT) at build time so the origin stays pinned.
  */
-const r2Origin = process.env.R2_ACCOUNT_ID?.trim()
-  ? `https://${process.env.R2_ACCOUNT_ID.trim()}.r2.cloudflarestorage.com`
-  : "https://*.r2.cloudflarestorage.com";
+function storageOrigin() {
+  const endpoint = process.env.R2_ENDPOINT?.trim();
+  if (endpoint) {
+    try {
+      return new URL(endpoint).origin;
+    } catch {
+      // Malformed value — fall through rather than emitting a broken policy.
+    }
+  }
+  const accountId = process.env.R2_ACCOUNT_ID?.trim();
+  return accountId
+    ? `https://${accountId}.r2.cloudflarestorage.com`
+    : "https://*.r2.cloudflarestorage.com";
+}
+
+const r2Origin = storageOrigin();
 
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  // Identity photographs are reviewed inline in the Admin Panel, served
+  // from storage. Without the origin here the review panel is blank.
+  `img-src 'self' data: blob: ${r2Origin}`,
   "font-src 'self' data:",
   `connect-src 'self' https://ipwho.is ${r2Origin}`,
   // The Admin Panel previews candidate PDFs in an iframe pointed at storage.

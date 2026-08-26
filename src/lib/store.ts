@@ -105,6 +105,19 @@ export interface Candidate {
    * something was sent and what happened to it.
    */
   documents?: CandidateDocument[];
+  /**
+   * Identity verification. The images live in R2 like any other document; these
+   * record the decision about them, which outlives the files themselves so a
+   * recruiter can clear the photographs without losing the outcome.
+   */
+  verificationConsentAt?: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  imagesDeletedAt?: string;
+  /** Set when a recruiter asks someone whose country is not on the list. */
+  verificationRequestedAt?: string;
   /** Reminder chasing an unfinished assessment, per channel. */
   reminderEmailSentAt?: string;
   reminderEmailCount?: number;
@@ -354,6 +367,97 @@ export async function getDocument(
 ): Promise<CandidateDocument | null> {
   const c = await getCandidate(id);
   return c?.documents?.find((d) => d.kind === kind) ?? null;
+}
+
+/**
+ * Another candidate who uploaded a byte-identical file.
+ *
+ * The same person applying again under a new email and a new number still
+ * photographs the same passport, so an identical hash on an identity image is
+ * the same person with near-certainty. Returned rather than acted on: two
+ * siblings sharing a household is not the same as one person applying twice,
+ * and only a human can tell those apart.
+ */
+export async function findDocumentTwin(
+  id: string,
+  sha256: string,
+): Promise<{ id: string; name: string; kind: DocumentKind } | null> {
+  if (!sha256) return null;
+  const list = await readAll();
+  for (const c of list) {
+    if (c.id === id) continue;
+    const hit = (c.documents ?? []).find((d) => d.sha256 === sha256 && d.status !== "blocked");
+    if (hit) return { id: c.id, name: c.fullName || "Unknown", kind: hit.kind };
+  }
+  return null;
+}
+
+/** Record the candidate's explicit consent to identity processing. */
+export function recordVerificationConsent(id: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: false };
+    if (!c.verificationConsentAt) c.verificationConsentAt = new Date().toISOString();
+    return { list, result: true };
+  });
+}
+
+/** A recruiter's decision on the images. */
+export function setVerificationDecision(
+  id: string,
+  decision: "verified" | "rejected",
+  by: string,
+  reason?: string,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    if (decision === "verified") {
+      c.verifiedAt = now;
+      c.verifiedBy = by;
+      delete c.rejectedAt;
+      delete c.rejectionReason;
+    } else {
+      c.rejectedAt = now;
+      c.verifiedBy = by;
+      c.rejectionReason = reason?.slice(0, 300) || undefined;
+      delete c.verifiedAt;
+    }
+    return { list, result: c };
+  });
+}
+
+/**
+ * Forget the identity images, keeping the decision.
+ *
+ * Returns the keys so the caller can remove them from storage. The record
+ * stays: "verified on 3 March by wradmin" is the useful part, and the
+ * photographs are the part worth not keeping once they have been looked at.
+ */
+export function clearVerificationImages(id: string): Promise<string[]> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: [] as string[] };
+    const removed: string[] = [];
+    c.documents = (c.documents ?? []).filter((d) => {
+      if (d.kind !== "identity" && d.kind !== "selfie") return true;
+      if (d.key) removed.push(d.key);
+      return false;
+    });
+    if (removed.length) c.imagesDeletedAt = new Date().toISOString();
+    return { list, result: removed };
+  });
+}
+
+/** Ask someone whose country does not require it to verify anyway. */
+export function requestVerification(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.verificationRequestedAt = new Date().toISOString();
+    return { list, result: c };
+  });
 }
 
 /** Every R2 key a candidate owns, for cleanup. */

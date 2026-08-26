@@ -4,13 +4,16 @@ import { deleteObject, getObjectBytes, headObject } from "@/lib/r2";
 import { scanDocument } from "@/lib/documentScan";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
+import { createHash } from "node:crypto";
 import {
-  MAX_DOCUMENT_BYTES,
+  isAllowedForKind,
   isDocumentKind,
-  isAllowedExtension,
+  isImageKind,
+  maxBytesFor,
   safeFilename,
   type CandidateDocument,
 } from "@/lib/documents";
+import { findDocumentTwin, flagDuplicate } from "@/lib/store";
 
 /**
  * Accept or destroy an uploaded document.
@@ -30,12 +33,16 @@ import {
 
 export const runtime = "nodejs";
 
-const MAX_REQUESTS = 10;
+// Mirrors the presign route: bounded per candidate, with a loose per-IP ceiling
+// so applicants sharing a mobile carrier's address do not lock each other out.
+// See the comment there for why the two differ.
+const PER_CANDIDATE = 20;
+const PER_IP = 60;
 const WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
-  const limit = rateLimit(`doc-confirm:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter, "document-confirm");
+  const limit = rateLimit(`doc-confirm:${clientIp(req)}`, PER_IP, WINDOW_MS);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter, "document-confirm (ip)");
 
   const parsed = await readJsonBody<{
     id?: string;
@@ -52,20 +59,27 @@ export async function POST(req: NextRequest) {
   if (typeof id !== "string" || !/^[A-Za-z0-9]{1,32}$/.test(id) || !isDocumentKind(kind)) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
-  if (typeof key !== "string" || typeof filename !== "string" || !isAllowedExtension(filename)) {
+  if (typeof key !== "string" || typeof filename !== "string" || !isAllowedForKind(kind, filename)) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
 
   // The key must be exactly the shape presign issues for this candidate and
   // this kind. Without this, anyone could confirm another candidate's object
   // onto their own record and then read it back through the download route.
-  const KEY_RE = new RegExp(`^candidates/${id}/${kind}-[A-Za-z0-9]{1,24}\\.(pdf|docx?)$`);
+  const KEY_RE = new RegExp(`^candidates/${id}/${kind}-[A-Za-z0-9]{1,24}\\.(pdf|docx?|jpe?g|png)$`);
   if (!KEY_RE.test(key)) {
     return NextResponse.json({ ok: false, error: "bad_key" }, { status: 400 });
   }
 
   const candidate = await getCandidate(id);
   if (!candidate) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+
+  // Reading the object back is the costly part of this route, so it is counted
+  // here — after the key and the candidate have both been checked.
+  const perCandidate = rateLimit(`doc-confirm:id:${id}`, PER_CANDIDATE, WINDOW_MS);
+  if (!perCandidate.ok) {
+    return tooManyRequests(perCandidate.retryAfter, "document-confirm (candidate)");
+  }
 
   const name = safeFilename(filename);
   const record = (extra: Partial<CandidateDocument>): CandidateDocument => ({
@@ -89,13 +103,14 @@ export async function POST(req: NextRequest) {
   const head = await headObject(key);
   if (!head) return NextResponse.json({ ok: true, status: "missing" });
   if (head.size === 0) return reject("The file was empty.");
-  if (head.size > MAX_DOCUMENT_BYTES) {
-    return reject(`The file is larger than ${MAX_DOCUMENT_BYTES / (1024 * 1024)} MB.`);
+  const maxBytes = maxBytesFor(kind);
+  if (head.size > maxBytes) {
+    return reject(`The file is larger than ${maxBytes / (1024 * 1024)} MB.`);
   }
 
   // Read it back and look at it. R2 charges nothing for reads, so inspecting a
   // 2 MB file costs only the moment it takes.
-  const bytes = await getObjectBytes(key, MAX_DOCUMENT_BYTES);
+  const bytes = await getObjectBytes(key, maxBytes);
   if (!bytes) {
     // Storage answered but would not hand the file back. Keep it — it may be
     // perfectly fine — and mark it so nobody mistakes it for checked.
@@ -109,13 +124,29 @@ export async function POST(req: NextRequest) {
   const verdict = scanDocument(bytes, name);
   if (!verdict.ok) return reject(verdict.reason);
 
+  // Hash the stored bytes so a re-application under a new email can be spotted:
+  // the same person photographs the same passport.
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+
   const { replacedKey } = await addDocument(
     id,
-    record({ key, size: head.size, status: "clean", reason: undefined }),
+    record({ key, size: head.size, status: "clean", reason: undefined, sha256 }),
   );
   // Re-uploading replaces the record; the old object would otherwise sit in the
   // bucket forever, paid for and unreachable.
   if (replacedKey && replacedKey !== key) await deleteObject(replacedKey);
+
+  // An identical file already on another candidate is the signal this feature
+  // exists for. Flagged for a person to judge, never acted on automatically —
+  // two people in one household are not one person applying twice.
+  if (isImageKind(kind)) {
+    const twin = await findDocumentTwin(id, sha256);
+    if (twin) {
+      await flagDuplicate(id, twin.id, twin.name);
+      // eslint-disable-next-line no-console
+      console.warn(`[documents] ${id} ${kind} is byte-identical to ${twin.id} (${twin.name})`);
+    }
+  }
 
   // eslint-disable-next-line no-console
   console.log(`[documents] ${id} ${kind} stored (${head.size} bytes)`);

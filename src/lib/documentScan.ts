@@ -39,6 +39,10 @@ const SIGNATURES: { ext: string; magic: number[]; label: string }[] = [
   { ext: ".docx", magic: [0x50, 0x4b, 0x03, 0x04], label: "DOCX" },
   // Legacy .doc is an OLE2 compound file.
   { ext: ".doc", magic: [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1], label: "DOC" },
+  // Identity photographs. JPEG starts FF D8 FF; PNG has an 8-byte signature.
+  { ext: ".jpg", magic: [0xff, 0xd8, 0xff], label: "JPEG" },
+  { ext: ".jpeg", magic: [0xff, 0xd8, 0xff], label: "JPEG" },
+  { ext: ".png", magic: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], label: "PNG" },
 ];
 
 /** "VBA" as it appears inside a UTF-16LE name: V\x00B\x00A\x00. */
@@ -116,6 +120,18 @@ export function checkStructure(bytes: Uint8Array, filename: string): ScanVerdict
     // nothing inside, and vbaProject.bin is still listed in the archive.
     if (text.includes("vbaProject.bin")) {
       return { ok: false, reason: "This document contains macros." };
+    }
+    return { ok: true };
+  }
+
+  if (ext === ".jpg" || ext === ".jpeg" || ext === ".png") {
+    // A polyglot — a file valid as both an image and as HTML — is the known
+    // trick here. It only matters if a browser is ever persuaded to treat the
+    // bytes as markup, which is why these are served from the storage origin
+    // with their type fixed rather than sniffed. Refuse the obvious attempt
+    // anyway; a real photograph never contains a script tag.
+    if (/<script|<html|<\/svg|javascript:/i.test(text.slice(0, 4096))) {
+      return { ok: false, reason: "This image contains embedded markup." };
     }
     return { ok: true };
   }

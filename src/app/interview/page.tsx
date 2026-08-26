@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { readInterviewToken } from "@/lib/token";
 import { isOpenSource } from "@/lib/followUp";
+import { requiredCountries } from "@/lib/verificationStore";
+import { verificationRequired, verificationStatus } from "@/lib/verification";
+import { IdentityVerification } from "@/components/interview/IdentityVerification";
 import { getCandidate } from "@/lib/store";
 import { publicQuestions, sections } from "@/config/interviewQuestions";
 import { siteConfig } from "@/config/site";
@@ -31,11 +34,17 @@ export default async function InterviewPage({
   // legacy signed token so old links keep working.
   let identity: { id?: string; name: string } | null = null;
   let alreadyCompleted = false;
+  let needsVerification = false;
+  /** True once their photographs are in, so the notice can acknowledge them. */
+  let verificationSent = false;
   if (candidateId) {
     const cand = await getCandidate(candidateId);
     if (cand) {
       identity = { id: cand.id, name: cand.fullName };
       alreadyCompleted = !!cand.interview;
+      const required = await requiredCountries();
+      needsVerification = verificationRequired(cand, required);
+      verificationSent = verificationStatus(cand, required) === "provided";
     }
   }
   if (!identity && tokenParam) {
@@ -46,8 +55,21 @@ export default async function InterviewPage({
       if (fromToken.id) {
         const cand = await getCandidate(fromToken.id);
         if (cand?.interview) alreadyCompleted = true;
+        if (cand) {
+          const required = await requiredCountries();
+          needsVerification = verificationRequired(cand, required);
+          verificationSent = verificationStatus(cand, required) === "provided";
+        }
       }
     }
+  }
+
+  // Verification outranks the completion notice. Someone whose phone died
+  // halfway through uploading has to be able to return and finish; showing them
+  // "you have already completed this" would strand their application with no
+  // way to move it forward.
+  if (identity?.id && alreadyCompleted && needsVerification) {
+    return <IdentityVerification candidateId={identity.id} fullName={identity.name} />;
   }
 
   // Already submitted — show a confirmation instead of letting them retake it.
@@ -58,12 +80,24 @@ export default async function InterviewPage({
           <Icon name="checkCircle" className="h-9 w-9 text-green-600" />
         </div>
         <h1 className="mt-6 text-2xl font-bold text-navy-900 sm:text-3xl">
-          You have already completed this assessment
+          {verificationSent
+            ? "Everything is in — thank you"
+            : "You have already completed this assessment"}
         </h1>
         <p className="mt-3 leading-relaxed text-navy-600">
-          Thank you, {identity.name.split(/\s+/)[0] || identity.name}. Your interview has already
-          been submitted, so it cannot be taken again. Our recruitment team will review your
-          answers and contact you about the next steps.
+          {verificationSent ? (
+            <>
+              Thank you, {identity.name.split(/\s+/)[0] || identity.name}. We have your assessment
+              and your identity documents. Our recruitment team will review both and contact you
+              about the next steps — there is nothing more for you to do.
+            </>
+          ) : (
+            <>
+              Thank you, {identity.name.split(/\s+/)[0] || identity.name}. Your interview has
+              already been submitted, so it cannot be taken again. Our recruitment team will review
+              your answers and contact you about the next steps.
+            </>
+          )}
         </p>
         <Link href="/" className="btn-secondary mt-8">
           Go to {siteConfig.company.name}

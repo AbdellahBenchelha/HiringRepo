@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
 import { DOCUMENT_SHORT } from "@/lib/documents";
+import { requiredCountries } from "@/lib/verificationStore";
+import { verificationStatus, VERIFICATION_LABEL } from "@/lib/verification";
 
 /**
  * CSV export of every candidate.
@@ -39,12 +41,13 @@ export async function GET(_req: NextRequest) {
   }
 
   const candidates = await listCandidates();
+  const required = await requiredCountries();
 
   const headers = [
     "id", "First name", "Last name", "Date of birth", "Email", "Phone",
     "Country", "City", "Address", "LinkedIn", "Position", "Languages",
     "Status", "Applied", "Submitted", "Interview completed", "Score", "Total",
-    "Assessment email sent", "Possible duplicate", "Duplicate of", "Documents", "Notes",
+    "Assessment email sent", "Possible duplicate", "Duplicate of", "Documents", "ID verification", "Verified on", "Notes",
   ];
 
   const rows = candidates.map((c) =>
@@ -62,6 +65,8 @@ export async function GET(_req: NextRequest) {
       (c.documents ?? [])
         .map((d) => `${DOCUMENT_SHORT[d.kind]}${d.status === "clean" ? "" : ` (${d.status})`}`)
         .join(" / "),
+      VERIFICATION_LABEL[verificationStatus(c, required)],
+      c.verifiedAt ?? c.rejectedAt ?? "",
       c.notes ?? "",
     ].map(csv).join(","),
   );

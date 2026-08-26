@@ -3,6 +3,8 @@ import { readInterviewToken } from "@/lib/token";
 import { scoreAnswers } from "@/config/interviewQuestions";
 import { buildInterviewResultMessage, sendTelegramMessage } from "@/lib/telegram";
 import { recordInterview, getCandidate } from "@/lib/store";
+import { requiredCountries } from "@/lib/verificationStore";
+import { verificationRequired } from "@/lib/verification";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 
@@ -86,5 +88,17 @@ export async function POST(req: NextRequest) {
     ),
   );
 
-  return NextResponse.json({ ok: true, score: { correct, total } });
+  // Tell the browser whether an identity step follows, so it can go straight
+  // there instead of showing a thank-you the candidate would have to leave.
+  let needsVerification = false;
+  if (identity.id) {
+    const fresh = await getCandidate(identity.id);
+    if (fresh) needsVerification = verificationRequired(fresh, await requiredCountries());
+  }
+
+  return NextResponse.json({
+    ok: true,
+    score: { correct, total },
+    verificationRequired: needsVerification,
+  });
 }

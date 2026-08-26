@@ -9,7 +9,7 @@
  * candidate's CV to it would make one disk failure considerably worse.
  */
 
-export const DOCUMENT_KINDS = ["cv", "cover", "certificate"] as const;
+export const DOCUMENT_KINDS = ["cv", "cover", "certificate", "identity", "selfie"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export function isDocumentKind(v: unknown): v is DocumentKind {
@@ -20,6 +20,8 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   cv: "CV / Résumé",
   cover: "Cover letter",
   certificate: "Supporting certificate",
+  identity: "ID document",
+  selfie: "Photo holding ID",
 };
 
 /** Short form for the table chips, where three of them share one cell. */
@@ -27,7 +29,12 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   cv: "CV",
   cover: "Cover",
   certificate: "Cert",
+  identity: "ID",
+  selfie: "Photo",
 };
+
+/** The identity pair, which the application documents column does not show. */
+export const APPLICATION_KINDS = ["cv", "cover", "certificate"] as const;
 
 /**
  * 2 MB is generous for a CV and keeps a thousand applicants inside R2's free
@@ -36,6 +43,12 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
  */
 export const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
 
+/**
+ * Photographs get more room. 2 MB is generous for a CV and too tight for a
+ * phone picture of a passport, which has to stay readable enough to check.
+ */
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 export const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"] as const;
 
 export const ALLOWED_MIME = [
@@ -43,6 +56,32 @@ export const ALLOWED_MIME = [
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
+
+/** Identity images only. A CV is never a photograph and vice versa. */
+export const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"] as const;
+export const IMAGE_MIME = ["image/jpeg", "image/png"] as const;
+
+/** Which kinds are photographs rather than documents. */
+export function isImageKind(kind: DocumentKind): boolean {
+  return kind === "identity" || kind === "selfie";
+}
+
+export function maxBytesFor(kind: DocumentKind): number {
+  return isImageKind(kind) ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
+}
+
+export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
+  return isImageKind(kind) ? IMAGE_EXTENSIONS : ALLOWED_EXTENSIONS;
+}
+
+export function allowedMimeFor(kind: DocumentKind): readonly string[] {
+  return isImageKind(kind) ? IMAGE_MIME : ALLOWED_MIME;
+}
+
+/** Accepts only what this kind allows, so a CV cannot arrive as a photo. */
+export function isAllowedForKind(kind: DocumentKind, filename: string): boolean {
+  return allowedExtensionsFor(kind).includes(extensionOf(filename));
+}
 
 /** Lowercased extension including the dot, or "" when there isn't one. */
 export function extensionOf(filename: string): string {
@@ -74,6 +113,14 @@ export interface CandidateDocument {
   status: DocumentStatus;
   /** Why it was blocked, in words a recruiter can act on. */
   reason?: string;
+  /**
+   * SHA-256 of the stored bytes.
+   *
+   * The point of this is the same person applying twice under a new email: an
+   * identical hash means an identical file, which for an ID photograph means
+   * the same person.
+   */
+  sha256?: string;
 }
 
 /**

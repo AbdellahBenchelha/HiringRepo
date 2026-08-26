@@ -4,11 +4,11 @@ import { presignUpload, r2Configured } from "@/lib/r2";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import {
-  ALLOWED_MIME,
-  MAX_DOCUMENT_BYTES,
+  allowedMimeFor,
   extensionOf,
-  isAllowedExtension,
+  isAllowedForKind,
   isDocumentKind,
+  maxBytesFor,
 } from "@/lib/documents";
 import { newId } from "@/lib/id";
 
@@ -26,14 +26,26 @@ import { newId } from "@/lib/id";
 
 export const runtime = "nodejs";
 
-// A candidate has three documents to send. Ten attempts in ten minutes leaves
-// room for retries and none for using this endpoint to fill the bucket.
-const MAX_REQUESTS = 10;
+/**
+ * Two budgets, because one address is not one person.
+ *
+ * A candidate may send five files — CV, cover letter, certificate, ID document
+ * and the photo holding it — and will retry a few of them, so the ceiling that
+ * matters is per candidate. Applying it per IP instead punishes the wrong
+ * people: mobile networks in the countries we hire from put thousands of
+ * subscribers behind a handful of addresses, so a per-IP cap tight enough to
+ * bound one person locks out everyone who shares their carrier.
+ *
+ * The per-IP limit therefore stays, but only as a ceiling on someone spraying
+ * candidate ids — high enough that ordinary shared connections never reach it.
+ */
+const PER_CANDIDATE = 20;
+const PER_IP = 60;
 const WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
-  const limit = rateLimit(`doc-presign:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter, "document-presign");
+  const limit = rateLimit(`doc-presign:${clientIp(req)}`, PER_IP, WINDOW_MS);
+  if (!limit.ok) return tooManyRequests(limit.retryAfter, "document-presign (ip)");
 
   if (!r2Configured()) {
     // eslint-disable-next-line no-console
@@ -58,13 +70,15 @@ export async function POST(req: NextRequest) {
   if (!isDocumentKind(kind)) {
     return NextResponse.json({ ok: false, error: "bad_kind" }, { status: 400 });
   }
-  if (typeof filename !== "string" || !isAllowedExtension(filename)) {
+  // Limits are per kind: a CV is never a photograph, and a passport picture
+  // needs more room than a CV does.
+  if (typeof filename !== "string" || !isAllowedForKind(kind, filename)) {
     return NextResponse.json({ ok: false, error: "bad_type" }, { status: 400 });
   }
-  if (typeof size !== "number" || size <= 0 || size > MAX_DOCUMENT_BYTES) {
+  if (typeof size !== "number" || size <= 0 || size > maxBytesFor(kind)) {
     return NextResponse.json({ ok: false, error: "too_large" }, { status: 400 });
   }
-  if (typeof contentType !== "string" || !(ALLOWED_MIME as readonly string[]).includes(contentType)) {
+  if (typeof contentType !== "string" || !allowedMimeFor(kind).includes(contentType)) {
     return NextResponse.json({ ok: false, error: "bad_type" }, { status: 400 });
   }
 
@@ -73,6 +87,13 @@ export async function POST(req: NextRequest) {
   const candidate = await getCandidate(id);
   if (!candidate) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
+  // Counted only once the candidate is known to be real, so a wrong id spends
+  // the sprayer's IP budget rather than a genuine applicant's.
+  const perCandidate = rateLimit(`doc-presign:id:${id}`, PER_CANDIDATE, WINDOW_MS);
+  if (!perCandidate.ok) {
+    return tooManyRequests(perCandidate.retryAfter, "document-presign (candidate)");
   }
 
   // The key is generated, never derived from the candidate's filename — an
