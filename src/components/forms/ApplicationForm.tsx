@@ -1102,9 +1102,13 @@ export function ApplicationForm({
                 experience. All documents are handled securely and in confidence.
               </p>
             ) : (
+              /* Says what the documents are for rather than what is not
+                 compulsory. The "(optional)" labels below and the step caption
+                 above already carry that, and leading with "optional" invites
+                 people to skip the thing we most want. */
               <p className="text-sm text-navy-500">
-                A CV is optional — you can apply without one. Documents are sent securely to our
-                recruitment team.
+                Attach your CV and any supporting documents so our recruitment team can review your
+                experience.
               </p>
             )}
             <FileUploader
