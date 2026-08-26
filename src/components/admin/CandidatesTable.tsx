@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { StatusBadge, InterviewBadge, IncompleteFormBadge } from "@/components/admin/StatusBadge";
+import { InterviewBadge, IncompleteFormBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { siteConfig } from "@/config/site";
 import { adminPost, adminDelete } from "@/lib/adminClient";
@@ -23,7 +23,7 @@ import {
   type FollowUpState,
 } from "@/lib/followUp";
 
-type SortKey = "applied" | "name" | "country" | "position" | "score" | "followup";
+type SortKey = "applied" | "name" | "country" | "score" | "followup";
 
 export interface CandidateView {
   id: string;
@@ -161,8 +161,6 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           return a.fullName.localeCompare(b.fullName) * dir;
         case "country":
           return (a.country || "").localeCompare(b.country || "") * dir;
-        case "position":
-          return (a.position || "").localeCompare(b.position || "") * dir;
         case "followup": {
           // Ordered by how much attention each row needs, not by how far the
           // candidate has got: never reminded first, then the longest wait.
@@ -318,22 +316,18 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
 
       {/* Table */}
       <div className="card overflow-x-auto p-0">
-        <table className="w-full min-w-[1560px] text-left text-sm">
+        <table className="w-full min-w-[1100px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
               <SortHeader label="Candidate" k="name" sort={sort} onSort={toggleSort} />
               <SortHeader label="Country" k="country" sort={sort} onSort={toggleSort} />
-              <SortHeader label="Position" k="position" sort={sort} onSort={toggleSort} />
-              <th className="px-4 py-3 font-semibold">WhatsApp</th>
               <SortHeader label="Applied" k="applied" sort={sort} onSort={toggleSort} />
               <SortHeader label="Interview" k="score" sort={sort} onSort={toggleSort} />
               <SortHeader label="Follow-up" k="followup" sort={sort} onSort={toggleSort} />
               <th className="px-4 py-3 font-semibold">Documents</th>
               <th className="px-4 py-3 font-semibold">ID check</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              {/* Pinned right: with Country and Position added the table is wider
-                  than most screens, and the primary actions must stay reachable
-                  without scrolling sideways to find them. */}
+              {/* Pinned right so the primary actions stay reachable without
+                  scrolling sideways to find them. */}
               <th className="sticky right-0 bg-navy-50 px-4 py-3 font-semibold shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
                 Actions
               </th>
@@ -341,7 +335,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           </thead>
           <tbody className="divide-y divide-navy-50">
             {sorted.length === 0 ? (
-              <tr><td colSpan={11} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
             ) : (
               sorted.map((c) => (
                 <tr key={c.id} className="group hover:bg-cream-100">
@@ -367,8 +361,6 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                     <p className="font-medium text-navy-800">{c.country || "—"}</p>
                     {c.city ? <p className="text-xs text-navy-500">{c.city}</p> : null}
                   </td>
-                  <td className="px-4 py-3 text-navy-700">{c.position || "—"}</td>
-                  <td className="px-4 py-3 text-navy-700">{c.phone || "—"}</td>
                   <td className="px-4 py-3 text-navy-500">{fmt(c.submittedAt || c.createdAt)}</td>
                   <td className="px-4 py-3">
                     <InterviewBadge completed={c.interviewCompleted} opened={!!c.interviewOpenedAt} />
@@ -388,16 +380,6 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   </td>
                   <td className="px-4 py-3">
                     <VerificationBadge status={c.verificationStatus} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={c.status}
-                      onChange={(e) => changeStatus(c.id, e.target.value as CandidateStatus)}
-                      className="select !w-auto !py-1.5 text-xs"
-                      aria-label="Change status"
-                    >
-                      {CANDIDATE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
                   </td>
                   <td className="sticky right-0 bg-white px-4 py-3 transition-colors group-hover:bg-cream-100 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
                     <div className="flex items-center gap-2">
@@ -512,7 +494,17 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
               <div>
                 <h3 className="text-xl font-bold text-navy-900">{profile.fullName || "Candidate"}</h3>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <StatusBadge status={profile.status} />
+                  {/* The status column is gone from the table, so this is the
+                      only place a status can be changed. Editable here rather
+                      than a badge, or the capability disappears with it. */}
+                  <select
+                    value={profile.status}
+                    onChange={(e) => changeStatus(profile.id, e.target.value as CandidateStatus)}
+                    className="select !w-auto !py-1.5 text-xs"
+                    aria-label="Change status"
+                  >
+                    {CANDIDATE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
                   <InterviewBadge completed={profile.interviewCompleted} opened={!!profile.interviewOpenedAt} />
                 </div>
               </div>
