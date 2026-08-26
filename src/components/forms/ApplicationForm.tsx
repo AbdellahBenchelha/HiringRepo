@@ -748,7 +748,7 @@ export function ApplicationForm({
               contradicts the banner below it once a CV is required. */}
           {step.id === "documents" && cvRequired ? (
             <p className="mt-1 text-sm text-navy-500">
-              A CV is required for {country}; the other documents are optional.
+              A CV is required — the other documents are optional.
             </p>
           ) : step.description ? (
             <p className="mt-1 text-sm text-navy-500">{step.description}</p>
@@ -1092,10 +1092,14 @@ export function ApplicationForm({
         {step.id === "documents" ? (
           <div className="space-y-5">
             {cvRequired ? (
+              /* Deliberately does not name their country. "Because you are from
+                 Nigeria" singles a person out for something they did not
+                 choose; the reason we actually want it is the same for
+                 everyone, so that is what it says. */
               <p className="rounded-xl border border-brand-200 bg-brand-50/60 p-3.5 text-sm leading-relaxed text-navy-700">
-                <strong className="font-bold text-navy-900">A CV is required</strong> for
-                applications from {country}. The other two documents are optional. Everything is
-                sent securely to our recruitment team.
+                <strong className="font-bold text-navy-900">A CV is required</strong> so we can
+                review your experience. The cover letter and certificate are optional. Everything
+                is sent securely to our recruitment team.
               </p>
             ) : (
               <p className="text-sm text-navy-500">
