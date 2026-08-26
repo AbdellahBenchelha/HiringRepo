@@ -65,6 +65,7 @@ export default async function AdminCandidatesPage() {
       rejectionReason: c.rejectionReason,
       imagesDeletedAt: c.imagesDeletedAt,
       verificationConsentAt: c.verificationConsentAt,
+      verificationRequestedAt: c.verificationRequestedAt,
     };
   });
 

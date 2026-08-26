@@ -66,6 +66,7 @@ export interface CandidateView {
   rejectionReason?: string;
   imagesDeletedAt?: string;
   verificationConsentAt?: string;
+  verificationRequestedAt?: string;
 }
 
 function fmt(iso?: string) {
@@ -379,7 +380,10 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <VerificationBadge status={c.verificationStatus} />
+                    <VerificationBadge
+                      status={c.verificationStatus}
+                      requestedAt={c.verificationRequestedAt}
+                    />
                   </td>
                   <td className="sticky right-0 bg-white px-4 py-3 transition-colors group-hover:bg-cream-100 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
                     <div className="flex items-center gap-2">
@@ -559,6 +563,24 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   rejectionReason: profile.rejectionReason,
                   imagesDeletedAt: profile.imagesDeletedAt,
                   consentAt: profile.verificationConsentAt,
+                  requestedAt: profile.verificationRequestedAt,
+                }}
+                onChange={(v) => {
+                  // Keep the row behind the profile in step, or closing this
+                  // leaves the ID check column showing what it said before.
+                  const patch = {
+                    verificationStatus: v.status,
+                    verifiedAt: v.verifiedAt,
+                    verifiedBy: v.verifiedBy,
+                    rejectedAt: v.rejectedAt,
+                    rejectionReason: v.rejectionReason,
+                    imagesDeletedAt: v.imagesDeletedAt,
+                    verificationRequestedAt: v.requestedAt,
+                  };
+                  setRows((prev) =>
+                    prev.map((c) => (c.id === profile.id ? { ...c, ...patch } : c)),
+                  );
+                  setProfile((pf) => (pf ? { ...pf, ...patch } : pf));
                 }}
               />
             </div>

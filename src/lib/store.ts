@@ -450,12 +450,23 @@ export function clearVerificationImages(id: string): Promise<string[]> {
   });
 }
 
-/** Ask someone whose country does not require it to verify anyway. */
+/**
+ * Ask a candidate to verify, and record when.
+ *
+ * Used for three people: someone whose country is not on the list, someone
+ * whose country is but who finished their assessment before the check existed,
+ * and someone who was rejected and is being given another go. A previous
+ * rejection is cleared, because it is what makes their status "rejected" and
+ * so stops the upload step ever appearing for them again — asking someone to
+ * try again while leaving them barred is not asking at all.
+ */
 export function requestVerification(id: string): Promise<Candidate | null> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
     c.verificationRequestedAt = new Date().toISOString();
+    delete c.rejectedAt;
+    delete c.rejectionReason;
     return { list, result: c };
   });
 }

@@ -73,6 +73,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (body.action === "request") {
     const updated = await requestVerification(id);
     if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    // eslint-disable-next-line no-console
+    console.log(`[verification] ${id} verification requested by ${by}`);
 
     // Someone asked by hand is, by definition, someone whose country does not
     // trigger this — so they have no reason to revisit their link and would

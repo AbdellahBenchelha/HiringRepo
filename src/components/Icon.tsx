@@ -38,6 +38,12 @@ export type IconName =
   | "shield"
   | "headset"
   | "search"
+  | "zoomIn"
+  | "zoomOut"
+  | "rotate"
+  | "chevronLeft"
+  | "chevronRight"
+  | "expand"
   | "briefcase"
   | "star";
 
@@ -95,6 +101,20 @@ const paths: Record<IconName, React.ReactNode> = {
   ),
   briefcase: (
     <path d="M9 4a2 2 0 0 0-2 2v1H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3V6a2 2 0 0 0-2-2H9Zm0 3V6h6v1H9Z" />
+  ),
+  zoomIn: (
+    <path d="M10 2a8 8 0 1 0 4.9 14.32l5.39 5.4 1.42-1.42-5.4-5.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm-1 2v2H7v2h2v2h2V10h2V8h-2V6H9Z" />
+  ),
+  zoomOut: (
+    <path d="M10 2a8 8 0 1 0 4.9 14.32l5.39 5.4 1.42-1.42-5.4-5.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12ZM7 8v2h6V8H7Z" />
+  ),
+  rotate: (
+    <path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z" />
+  ),
+  chevronLeft: <path d="M14.5 5.5 8 12l6.5 6.5L16 17l-5-5 5-5-1.5-1.5Z" />,
+  chevronRight: <path d="M9.5 5.5 16 12l-6.5 6.5L8 17l5-5-5-5 1.5-1.5Z" />,
+  expand: (
+    <path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z" />
   ),
 };
 
