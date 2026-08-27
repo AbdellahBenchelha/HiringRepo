@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
 import { toCandidateView } from "@/lib/candidateView";
+import { verificationStatus } from "@/lib/verification";
 import { getMessageTemplates } from "@/lib/messageStore";
 import { buildVars, TEMPLATE_KEYS, type TemplateKey } from "@/lib/messageTemplates";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -35,15 +36,35 @@ async function baseUrl(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-export default async function AdminInterviewsPage() {
+export default async function AdminInterviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
   await requireAdmin();
-  const [all, saved, required, base] = await Promise.all([
+  const [params, all, saved, required, base] = await Promise.all([
+    searchParams,
     listCandidates(),
     getMessageTemplates(),
     requiredCountries(),
     baseUrl(),
   ]);
-  const completed = all.filter((c) => c.interview);
+  const finished = all.filter((c) => c.interview);
+
+  /**
+   * Nobody has told this candidate they need to verify — so there is nothing
+   * to follow up on yet, and this tab is for following up. Same condition the
+   * red "Not asked yet" badge uses: verification is due, and no request has
+   * gone out.
+   */
+  const notAsked = (c: (typeof finished)[number]) =>
+    verificationStatus(c, required) === "awaiting" && !c.verificationRequestedAt;
+
+  // Hidden by default, but never silently: the count below says how many and
+  // links to them, or a candidate simply vanishes with no explanation.
+  const showAll = params.show === "all";
+  const hidden = finished.filter(notAsked);
+  const completed = showAll ? finished : finished.filter((c) => !notAsked(c));
 
   // Flatten to bodies once for the whole table rather than per row.
   const templates = Object.fromEntries(TEMPLATE_KEYS.map((k) => [k, saved[k].body])) as Record<
@@ -56,7 +77,31 @@ export default async function AdminInterviewsPage() {
       <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">Interviews</h1>
-          <p className="mt-1 text-sm text-navy-500">{completed.length} completed interview{completed.length === 1 ? "" : "s"}.</p>
+          <p className="mt-1 text-sm text-navy-500">
+            {completed.length} completed interview{completed.length === 1 ? "" : "s"}
+            {hidden.length > 0 ? (
+              showAll ? (
+                <>
+                  , including {hidden.length} with no ID check requested.{" "}
+                  <Link href="/admin/interviews" className="font-semibold text-brand-700 underline">
+                    Hide them
+                  </Link>
+                </>
+              ) : (
+                <>
+                  . {hidden.length} hidden — ID check not requested yet.{" "}
+                  <Link
+                    href="/admin/interviews?show=all"
+                    className="font-semibold text-brand-700 underline"
+                  >
+                    Show {hidden.length === 1 ? "it" : "them"}
+                  </Link>
+                </>
+              )
+            ) : (
+              "."
+            )}
+          </p>
         </div>
         <Link href="/admin/settings/messages" className="btn-secondary !px-4 !py-2 text-sm">
           Edit WhatsApp messages
