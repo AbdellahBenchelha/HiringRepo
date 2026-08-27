@@ -48,7 +48,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "customer-support-representative",
     title: "Customer Support Representative",
-    salary: { currency: "USD", min: 25, max: 35, unit: "HOUR" },
+    salary: { currency: "USD", min: 20, max: 28, unit: "HOUR" },
     shortDescription:
       "Be the friendly, knowledgeable voice that helps customers across phone, email, and live chat — resolving issues and creating positive experiences.",
     workArrangement: "Remote",
@@ -76,7 +76,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "call-center-agent",
     title: "Call Center Agent",
-    salary: { currency: "USD", min: 25, max: 35, unit: "HOUR" },
+    salary: { currency: "USD", min: 18, max: 25, unit: "HOUR" },
     shortDescription:
       "Handle inbound or outbound calls with confidence, helping customers understand products and services while meeting quality and performance standards.",
     workArrangement: "Remote",
@@ -104,7 +104,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "live-chat-and-email-support-agent",
     title: "Live Chat and Email Support Agent",
-    salary: { currency: "USD", min: 25, max: 35, unit: "HOUR" },
+    salary: { currency: "USD", min: 19, max: 26, unit: "HOUR" },
     shortDescription:
       "Deliver fast, accurate, and professional written support across live chat and email, managing multiple conversations with care.",
     workArrangement: "Remote",
@@ -130,7 +130,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "technical-support-representative",
     title: "Technical Support Representative",
-    salary: { currency: "USD", min: 25, max: 35, unit: "HOUR" },
+    salary: { currency: "USD", min: 29, max: 35, unit: "HOUR" },
     shortDescription:
       "Guide customers through technical issues with patience and clarity, turning frustration into confidence with simple, helpful solutions.",
     workArrangement: "Remote",
@@ -156,7 +156,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "sales-and-retention-agent",
     title: "Sales and Retention Agent",
-    salary: { currency: "USD", min: 25, max: 35, unit: "HOUR" },
+    salary: { currency: "USD", min: 22, max: 30, unit: "HOUR" },
     shortDescription:
       "Build relationships, understand customer needs, and present the right solutions — helping customers stay and grow with the brands we support.",
     workArrangement: "Remote",
