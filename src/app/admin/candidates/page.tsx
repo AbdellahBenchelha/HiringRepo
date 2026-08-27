@@ -3,9 +3,9 @@ import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
-import { verificationStatus } from "@/lib/verification";
+import { toCandidateView } from "@/lib/candidateView";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { CandidatesTable, type CandidateView } from "@/components/admin/CandidatesTable";
+import { CandidatesTable } from "@/components/admin/CandidatesTable";
 
 export const metadata: Metadata = { title: "Candidates", robots: { index: false, follow: false } };
 
@@ -23,51 +23,7 @@ export default async function AdminCandidatesPage() {
   const candidates = await listCandidates();
   const required = await requiredCountries();
 
-  const views: CandidateView[] = candidates.map((c) => {
-    return {
-      id: c.id,
-      fullName: c.fullName,
-      dob: c.dob,
-      email: c.email,
-      phone: c.phone,
-      country: c.country,
-      city: c.city,
-      address: c.address,
-      linkedin: c.linkedin,
-      languages: c.languages.filter((l) => l.language).map((l) => l.language),
-      position: c.position,
-      status: c.status,
-      createdAt: c.createdAt,
-      submittedAt: c.submittedAt,
-      invitationSentAt: c.invitationSentAt,
-      interviewCompleted: !!c.interview,
-      score: c.interview?.score,
-      total: c.interview?.total,
-      interviewLink: `${base}/interview?c=${c.id}`,
-      duplicateFlag: c.duplicateFlag,
-      duplicateOfName: c.duplicateOfName,
-      interviewEmailSentAt: c.interviewEmailSentAt,
-      notes: c.notes,
-      interviewOpenedAt: c.interviewOpenedAt,
-      formCompleted: !!c.submittedAt,
-      reminderEmailSentAt: c.reminderEmailSentAt,
-      reminderEmailCount: c.reminderEmailCount,
-      reminderWhatsAppSentAt: c.reminderWhatsAppSentAt,
-      reminderWhatsAppCount: c.reminderWhatsAppCount,
-      lastOpenedAt: c.lastOpenedAt,
-      openCount: c.openCount,
-      lastOpenSource: c.lastOpenSource,
-      documents: c.documents,
-      verificationStatus: verificationStatus(c, required),
-      verifiedAt: c.verifiedAt,
-      verifiedBy: c.verifiedBy,
-      rejectedAt: c.rejectedAt,
-      rejectionReason: c.rejectionReason,
-      imagesDeletedAt: c.imagesDeletedAt,
-      verificationConsentAt: c.verificationConsentAt,
-      verificationRequestedAt: c.verificationRequestedAt,
-    };
-  });
+  const views = candidates.map((c) => toCandidateView(c, base, required));
 
   return (
     <AdminShell>

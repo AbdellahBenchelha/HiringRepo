@@ -10,11 +10,13 @@ import { adminPost, adminDelete } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ReminderActions } from "@/components/admin/ReminderActions";
-import { DocumentChips, DocumentList } from "@/components/admin/DocumentChips";
+import { DocumentChips } from "@/components/admin/DocumentChips";
+import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
-import { VerificationBadge, VerificationPanel } from "@/components/admin/VerificationPanel";
+import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { VERIFICATION_FILTERS, type VerificationFilter, type VerificationStatus } from "@/lib/verification";
 import type { CandidateDocument } from "@/lib/documents";
+import type { CandidateView } from "@/lib/candidateView";
 import {
   followUpState,
   withSource,
@@ -25,49 +27,8 @@ import {
 
 type SortKey = "applied" | "name" | "country" | "score" | "followup";
 
-export interface CandidateView {
-  id: string;
-  fullName: string;
-  dob: string;
-  email: string;
-  phone: string;
-  country: string;
-  city: string;
-  address: string;
-  linkedin: string;
-  languages: string[];
-  position: string;
-  status: CandidateStatus;
-  createdAt: string;
-  submittedAt?: string;
-  invitationSentAt?: string;
-  interviewCompleted: boolean;
-  score?: number;
-  total?: number;
-  interviewLink: string;
-  notes?: string;
-  interviewOpenedAt?: string;
-  formCompleted: boolean;
-  reminderEmailSentAt?: string;
-  reminderEmailCount?: number;
-  reminderWhatsAppSentAt?: string;
-  reminderWhatsAppCount?: number;
-  duplicateFlag?: boolean;
-  duplicateOfName?: string;
-  interviewEmailSentAt?: string;
-  lastOpenedAt?: string;
-  openCount?: number;
-  lastOpenSource?: string;
-  documents?: CandidateDocument[];
-  verificationStatus: VerificationStatus;
-  verifiedAt?: string;
-  verifiedBy?: string;
-  rejectedAt?: string;
-  rejectionReason?: string;
-  imagesDeletedAt?: string;
-  verificationConsentAt?: string;
-  verificationRequestedAt?: string;
-}
+// Re-exported so existing imports of the view type keep working.
+export type { CandidateView };
 
 function fmt(iso?: string) {
   if (!iso) return "—";
@@ -486,150 +447,20 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       ) : null}
 
       {profile ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4"
-          onClick={() => setProfile(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${profile.fullName || "Candidate"} profile`}
-        >
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-navy-900">{profile.fullName || "Candidate"}</h3>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {/* The status column is gone from the table, so this is the
-                      only place a status can be changed. Editable here rather
-                      than a badge, or the capability disappears with it. */}
-                  <select
-                    value={profile.status}
-                    onChange={(e) => changeStatus(profile.id, e.target.value as CandidateStatus)}
-                    className="select !w-auto !py-1.5 text-xs"
-                    aria-label="Change status"
-                  >
-                    {CANDIDATE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  <InterviewBadge completed={profile.interviewCompleted} opened={!!profile.interviewOpenedAt} />
-                </div>
-              </div>
-              <button type="button" onClick={() => setProfile(null)} className="rounded-lg p-2 text-navy-500 hover:bg-navy-100" aria-label="Close">
-                <Icon name="close" className="h-5 w-5" />
-              </button>
-            </div>
-
-            <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              <Field label="Email" value={profile.email} />
-              <Field label="WhatsApp number" value={profile.phone} />
-              <Field label="Date of birth" value={profile.dob} />
-              <Field label="Position" value={profile.position} />
-              <Field label="Country" value={profile.country} />
-              <Field label="City" value={profile.city} />
-              <Field label="Full address" value={profile.address} full />
-              <Field label="Languages" value={profile.languages.join(", ")} full />
-              <Field
-                label="LinkedIn"
-                full
-                value={
-                  profile.linkedin ? (
-                    <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" className="text-brand-700 underline">
-                      {profile.linkedin}
-                    </a>
-                  ) : ""
-                }
-              />
-              <Field label="Applied" value={fmt(profile.submittedAt || profile.createdAt)} />
-              <Field label="Invitation sent" value={fmt(profile.invitationSentAt)} />
-            </dl>
-
-            <div className="mt-5">
-              <p className="mb-2 text-sm font-semibold text-navy-800">Documents</p>
-              <DocumentList
-                id={profile.id}
-                documents={profile.documents}
-                onOpen={(doc) => setViewing({ c: profile, doc })}
-              />
-            </div>
-
-            <div className="mt-5">
-              <VerificationPanel
-                id={profile.id}
-                fullName={profile.fullName}
-                documents={profile.documents}
-                initial={{
-                  status: profile.verificationStatus,
-                  verifiedAt: profile.verifiedAt,
-                  verifiedBy: profile.verifiedBy,
-                  rejectedAt: profile.rejectedAt,
-                  rejectionReason: profile.rejectionReason,
-                  imagesDeletedAt: profile.imagesDeletedAt,
-                  consentAt: profile.verificationConsentAt,
-                  requestedAt: profile.verificationRequestedAt,
-                }}
-                onChange={(v) => {
-                  // Keep the row behind the profile in step, or closing this
-                  // leaves the ID check column showing what it said before.
-                  const patch = {
-                    verificationStatus: v.status,
-                    verifiedAt: v.verifiedAt,
-                    verifiedBy: v.verifiedBy,
-                    rejectedAt: v.rejectedAt,
-                    rejectionReason: v.rejectionReason,
-                    imagesDeletedAt: v.imagesDeletedAt,
-                    verificationRequestedAt: v.requestedAt,
-                  };
-                  setRows((prev) =>
-                    prev.map((c) => (c.id === profile.id ? { ...c, ...patch } : c)),
-                  );
-                  setProfile((pf) => (pf ? { ...pf, ...patch } : pf));
-                }}
-              />
-            </div>
-
-            <NotesEditor
-              id={profile.id}
-              initial={profile.notes ?? ""}
-              onSaved={(notes) => {
-                setRows((prev) => prev.map((c) => (c.id === profile.id ? { ...c, notes } : c)));
-                setProfile((p) => (p ? { ...p, notes } : p));
-              }}
-            />
-
-            <div className="mt-5 rounded-xl border border-navy-100 bg-navy-50/50 p-4">
-              <p className="text-sm font-semibold text-navy-800">Interview</p>
-              {profile.interviewCompleted ? (
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-sm text-navy-600">Score: <strong>{profile.score}/{profile.total}</strong></p>
-                  <Link href={`/admin/interviews/${profile.id}`} className="text-sm font-medium text-brand-700 hover:text-brand-800">
-                    View full results →
-                  </Link>
-                </div>
-              ) : (
-                <p className="mt-1 text-sm text-navy-500">Not completed yet.</p>
-              )}
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => sendWhatsApp(profile)}
-                disabled={!profile.phone}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                <Icon name="chat" className="h-4 w-4" /> Send interview link via WhatsApp
-              </button>
-            </div>
-          </div>
-        </div>
+        <CandidateProfileModal
+          candidate={profile}
+          onClose={() => setProfile(null)}
+          onOpenDocument={(doc) => setViewing({ c: profile, doc })}
+          onStatusChange={changeStatus}
+          onSendWhatsApp={sendWhatsApp}
+          onChange={(patch) => {
+            // Keep the row behind the profile in step, or closing this leaves
+            // the table showing what it said before.
+            setRows((prev) => prev.map((c) => (c.id === profile.id ? { ...c, ...patch } : c)));
+            setProfile((p) => (p ? { ...p, ...patch } : p));
+          }}
+        />
       ) : null}
-    </div>
-  );
-}
-
-function Field({ label, value, full }: { label: string; value: React.ReactNode; full?: boolean }) {
-  return (
-    <div className={full ? "sm:col-span-2" : ""}>
-      <dt className="text-xs font-medium uppercase tracking-wide text-navy-400">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm text-navy-900">{value || "—"}</dd>
     </div>
   );
 }
@@ -702,82 +533,3 @@ function SortHeader({
   );
 }
 
-/**
- * Recruiter notes on a candidate.
- *
- * Saved explicitly rather than on every keystroke: each write rewrites the
- * whole candidate file, so autosaving mid-sentence would rewrite it once per
- * character typed.
- */
-function NotesEditor({
-  id,
-  initial,
-  onSaved,
-}: {
-  id: string;
-  initial: string;
-  onSaved: (notes: string) => void;
-}) {
-  const [value, setValue] = useState(initial);
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-
-  // Switching candidate must not carry the previous one's notes across.
-  useEffect(() => {
-    setValue(initial);
-    setState("idle");
-  }, [id, initial]);
-
-  async function save() {
-    setState("saving");
-    try {
-      const res = await adminPost(`/api/admin/candidates/${id}/notes`, { notes: value });
-      if (res.ok) {
-        setState("saved");
-        onSaved(value);
-      } else {
-        setState("error");
-      }
-    } catch {
-      setState("error");
-    }
-  }
-
-  const dirty = value !== initial;
-
-  return (
-    <div className="mt-5">
-      <div className="flex items-center justify-between">
-        <label htmlFor={`notes-${id}`} className="text-sm font-semibold text-navy-800">
-          Recruiter notes
-        </label>
-        {state === "saved" && !dirty ? (
-          <span className="text-xs font-semibold text-green-700">Saved</span>
-        ) : null}
-        {state === "error" ? (
-          <span className="text-xs font-semibold text-red-600">Could not save</span>
-        ) : null}
-      </div>
-      <textarea
-        id={`notes-${id}`}
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          if (state !== "idle") setState("idle");
-        }}
-        rows={3}
-        placeholder="Call outcomes, availability, anything worth remembering…"
-        className="textarea mt-2 !min-h-[5rem]"
-      />
-      <div className="mt-2 flex justify-end">
-        <button
-          type="button"
-          onClick={save}
-          disabled={!dirty || state === "saving"}
-          className="rounded-full bg-navy-900 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-navy-800 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {state === "saving" ? "Saving…" : "Save notes"}
-        </button>
-      </div>
-    </div>
-  );
-}
