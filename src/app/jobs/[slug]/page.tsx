@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { jobs, getJobBySlug, formatSalary } from "@/config/jobs";
+import { jobs, getJobBySlug, salaryParts } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -176,22 +176,43 @@ export default async function JobDetailPage({
               <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 At a glance
               </h2>
+
+              {/* Pay is set apart rather than enlarged. It stays the first
+                  thing in the panel and the only tinted block, which is enough
+                  to make it the fact the eye lands on — the surrounding rows
+                  are plain text on white.
+                  Shown as well as marked up: Google expects structured data to
+                  reflect what a visitor can actually read on the page. */}
+              {job.salary ? (
+                <div className="mt-4 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-brand-700">
+                    Pay
+                  </p>
+                  <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+                    <span className="text-lg font-bold tracking-tight text-navy-900">
+                      {salaryParts(job.salary).amount}
+                    </span>
+                    <span className="text-xs font-medium text-navy-600">
+                      {salaryParts(job.salary).period}
+                    </span>
+                  </p>
+                  {salaryParts(job.salary).note ? (
+                    <p className="mt-1.5">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-800">
+                        <Icon name="wallet" className="h-3 w-3" />
+                        {salaryParts(job.salary).note}
+                      </span>
+                    </p>
+                  ) : null}
+                  {job.salary.detail ? (
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-navy-600">
+                      {job.salary.detail}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
               <dl className="mt-4 space-y-4 text-sm">
-                {/* Shown as well as marked up: Google expects structured data
-                    to reflect what a visitor can actually read on the page. */}
-                {job.salary ? (
-                  <div>
-                    <dt className="font-medium text-navy-500">Pay</dt>
-                    <dd className="mt-0.5 font-semibold text-navy-900">
-                      {formatSalary(job.salary)}
-                    </dd>
-                    {job.salary.detail ? (
-                      <dd className="mt-1 text-xs leading-relaxed text-navy-600">
-                        {job.salary.detail}
-                      </dd>
-                    ) : null}
-                  </div>
-                ) : null}
                 <div>
                   <dt className="font-medium text-navy-500">Work arrangement</dt>
                   <dd className="mt-0.5 text-navy-800">{job.workArrangement}</dd>

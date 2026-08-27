@@ -209,6 +209,38 @@ const UNIT_LABEL: Record<Salary["unit"], string> = {
   YEAR: "year",
 };
 
+export interface SalaryParts {
+  /** The figures alone, e.g. "$20 – $28". */
+  amount: string;
+  /** The period alone, e.g. "per hour". */
+  period: string;
+  /** The qualifier, e.g. "plus commission". */
+  note?: string;
+}
+
+/**
+ * Pay broken into its parts, for the one place that styles them differently.
+ *
+ * The job page sets the figure apart from its period; everywhere else wants
+ * the whole thing as one string and uses formatSalary below.
+ */
+export function salaryParts(salary: Salary): SalaryParts {
+  const money = (n: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: salary.currency,
+      maximumFractionDigits: 0,
+    }).format(n);
+  return {
+    amount:
+      salary.max !== undefined && salary.max !== salary.min
+        ? `${money(salary.min)} – ${money(salary.max)}`
+        : money(salary.min),
+    period: `per ${UNIT_LABEL[salary.unit]}`,
+    note: salary.note,
+  };
+}
+
 /**
  * Human-readable pay, e.g. "$5 – $8 per hour".
  *
@@ -220,18 +252,8 @@ const UNIT_LABEL: Record<Salary["unit"], string> = {
  * unambiguous currency code goes to Google in the structured data regardless.
  */
 export function formatSalary(salary: Salary): string {
-  const money = (n: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: salary.currency,
-      maximumFractionDigits: 0,
-    }).format(n);
-  const amount =
-    salary.max !== undefined && salary.max !== salary.min
-      ? `${money(salary.min)} – ${money(salary.max)}`
-      : money(salary.min);
-  const rate = `${amount} per ${UNIT_LABEL[salary.unit]}`;
-  return salary.note ? `${rate} ${salary.note}` : rate;
+  const { amount, period, note } = salaryParts(salary);
+  return [amount, period, note].filter(Boolean).join(" ");
 }
 
 export function getJobBySlug(slug: string): JobPosting | undefined {
