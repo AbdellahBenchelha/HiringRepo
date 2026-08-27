@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { JobPosting } from "@/config/jobs";
+import { formatSalary, type JobPosting } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
 import { Icon, type IconName } from "@/components/Icon";
 import { ApplyButton } from "@/components/apply/ApplyButton";
@@ -50,6 +50,14 @@ export function JobCard({ job }: { job: JobPosting }) {
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {/* Pay first when there is any: it is the thing candidates scan for,
+            and a card that hides it gets opened only to be closed again. */}
+        {job.salary ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-800">
+            <Icon name="wallet" className="h-3.5 w-3.5" />
+            {formatSalary(job.salary)}
+          </span>
+        ) : null}
         <Tag icon="globe">{workShort}</Tag>
         <Tag icon="clock">{employmentLabels[job.employmentType]}</Tag>
         <Tag icon="trendingUp">{job.experienceLevel.replace(" to ", " – ")}</Tag>

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { jobs, getJobBySlug } from "@/config/jobs";
+import { jobs, getJobBySlug, formatSalary } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -37,6 +37,11 @@ export async function generateMetadata({
  *   applicantLocationRequirements — for a TELECOMMUTE role this must name real
  *     countries. A placeholder is rejected, and the values decide which
  *     candidates are shown the listing at all.
+ *   baseSalary — recommended, not required: Search Console reports it missing
+ *     as a non-critical issue and the listing stays valid without it. Emitted
+ *     only for jobs that actually declare pay, because a figure here is a
+ *     public statement about what the role pays, and one that contradicts the
+ *     page is worse than one that is absent.
  */
 function jobPostingJsonLd(slug: string) {
   const job = getJobBySlug(slug);
@@ -73,6 +78,24 @@ function jobPostingJsonLd(slug: string) {
     })),
     jobLocationType: "TELECOMMUTE",
     directApply: true,
+    ...(job.salary
+      ? {
+          baseSalary: {
+            "@type": "MonetaryAmount",
+            currency: job.salary.currency,
+            value: {
+              "@type": "QuantitativeValue",
+              // A range needs min and max; a fixed rate needs a single value.
+              // Sending both, or a range whose ends are equal, is what trips
+              // the Rich Results test.
+              ...(job.salary.max !== undefined && job.salary.max !== job.salary.min
+                ? { minValue: job.salary.min, maxValue: job.salary.max }
+                : { value: job.salary.min }),
+              unitText: job.salary.unit,
+            },
+          },
+        }
+      : {}),
   };
 }
 
@@ -150,6 +173,16 @@ export default async function JobDetailPage({
                 At a glance
               </h2>
               <dl className="mt-4 space-y-4 text-sm">
+                {/* Shown as well as marked up: Google expects structured data
+                    to reflect what a visitor can actually read on the page. */}
+                {job.salary ? (
+                  <div>
+                    <dt className="font-medium text-navy-500">Pay</dt>
+                    <dd className="mt-0.5 font-semibold text-navy-900">
+                      {formatSalary(job.salary)}
+                    </dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt className="font-medium text-navy-500">Work arrangement</dt>
                   <dd className="mt-0.5 text-navy-800">{job.workArrangement}</dd>
