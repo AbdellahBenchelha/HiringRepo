@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getVerificationSettings } from "@/lib/verificationStore";
+import { getNotificationSettings } from "@/lib/notificationSettings";
 import { countries } from "@/config/countries";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { CountryListEditor } from "@/components/admin/CountryListEditor";
+import { QuietNotificationsToggle } from "@/components/admin/QuietNotificationsToggle";
 
 export const metadata: Metadata = {
   title: "ID verification",
@@ -12,7 +14,10 @@ export const metadata: Metadata = {
 
 export default async function AdminVerificationSettingsPage() {
   await requireAdmin();
-  const settings = await getVerificationSettings();
+  const [settings, notifications] = await Promise.all([
+    getVerificationSettings(),
+    getNotificationSettings(),
+  ]);
 
   return (
     <AdminShell>
@@ -35,6 +40,13 @@ export default async function AdminVerificationSettingsPage() {
         chipsLabel="Verification required in"
         emptyText="No countries selected — identity verification is switched off for everyone."
       />
+
+      <div className="mt-5">
+        <QuietNotificationsToggle
+          initial={notifications.quietUntilAssessment}
+          updatedAt={notifications.updatedAt}
+        />
+      </div>
 
       <div className="card mt-5 p-5 text-sm leading-relaxed text-navy-600 sm:p-6">
         <h2 className="text-sm font-bold text-navy-900">How it works</h2>

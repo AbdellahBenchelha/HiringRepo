@@ -12,7 +12,7 @@
  * keepalive fetch when sendBeacon isn't available.
  */
 export type TelegramNotification =
-  | { type: "submitted"; name?: string; suspectedBot?: boolean }
+  | { type: "submitted"; id?: string; name?: string; suspectedBot?: boolean }
   | {
       type: "personal";
       id?: string;

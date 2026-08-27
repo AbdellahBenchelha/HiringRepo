@@ -5,6 +5,10 @@ import {
   escapeHtml,
   sendTelegramMessage,
 } from "@/lib/telegram";
+import { getNotificationSettings } from "@/lib/notificationSettings";
+import { requiredCountries } from "@/lib/verificationStore";
+import { verificationApplies } from "@/lib/verification";
+import { getCandidate } from "@/lib/store";
 import { createInterviewToken } from "@/lib/token";
 import { upsertPersonal, flagDuplicate } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
@@ -55,7 +59,7 @@ const MAX_PERSONAL = 20;
 const MAX_OVERALL = 200;
 
 type Payload =
-  | { type: "submitted"; name?: string; suspectedBot?: boolean }
+  | { type: "submitted"; id?: string; name?: string; suspectedBot?: boolean }
   | {
       type: "personal";
       id?: string;
@@ -74,6 +78,32 @@ function baseUrl(req: NextRequest): string {
   const proto = req.headers.get("x-forwarded-proto") ?? "http";
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
   return `${proto}://${host}`;
+}
+
+/**
+ * Whether this particular notification should be held back.
+ *
+ * Reads the country and number from the payload for a step-one message, and
+ * from the stored record for a submission — by then the candidate exists, and
+ * the record is a better source than anything the browser re-sends.
+ */
+async function shouldStayQuiet(payload: Payload): Promise<boolean> {
+  if (payload.type !== "personal" && payload.type !== "submitted") return false;
+  const { quietUntilAssessment } = await getNotificationSettings();
+  if (!quietUntilAssessment) return false;
+
+  const required = await requiredCountries();
+
+  if (payload.type === "personal") {
+    const fields = payload.fields ?? {};
+    return verificationApplies({ country: str(fields.country), phone: str(fields.phone) }, required);
+  }
+
+  const id = typeof payload.id === "string" ? payload.id : "";
+  if (!id) return false;
+  const candidate = await getCandidate(id);
+  if (!candidate) return false;
+  return verificationApplies(candidate, required);
 }
 
 export async function POST(req: NextRequest) {
@@ -155,6 +185,25 @@ export async function POST(req: NextRequest) {
 
   if (!text) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
+  }
+
+  /**
+   * Stay quiet about applicants who owe an identity check until they finish.
+   *
+   * Only the message is held back. The candidate was still saved above — the
+   * step-one notification is what creates their record, and skipping that
+   * would lose the application entirely rather than just the ping.
+   *
+   * Assessment results are sent whatever this says; they are handled by
+   * /api/interview, which does not consult this at all.
+   */
+  const quiet = await shouldStayQuiet(payload);
+  if (quiet) {
+    // Logged, because a notification that silently never arrives is
+    // indistinguishable from Telegram being broken.
+    // eslint-disable-next-line no-console
+    console.log(`[telegram] type=${payload.type} suppressed: awaiting ID verification`);
+    return NextResponse.json({ ok: true, skipped: "quiet_until_assessment" });
   }
 
   const result = await sendTelegramMessage(text);

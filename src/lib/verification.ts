@@ -60,6 +60,21 @@ export function hasBothImages(documents?: CandidateDocument[]): boolean {
 }
 
 /**
+ * Is this candidate subject to identity verification at all?
+ *
+ * Country or dialling code — the same pair the status below uses, but without
+ * regard to how far along they are. Callers that want "does this rule touch
+ * this person" rather than "what is their current state" want this one.
+ */
+export function verificationApplies(
+  c: VerificationInput,
+  requiredCountries: readonly string[],
+): boolean {
+  const byCountry = !!c.country && requiredCountries.includes(c.country);
+  return byCountry || phoneCountryMatches(c.phone, requiredCountries);
+}
+
+/**
  * Where a candidate stands.
  *
  * Derived rather than stored, because "not required" depends on a country list
@@ -77,9 +92,7 @@ export function verificationStatus(
   // Either signal is enough. Someone genuinely living abroad on their old
   // mobile is asked too; that is a deliberate trade, since the ask is one
   // extra step rather than a rejection.
-  const byCountry = !!c.country && requiredCountries.includes(c.country);
-  const byPhone = phoneCountryMatches(c.phone, requiredCountries);
-  if (byCountry || byPhone || c.verificationRequestedAt) return "awaiting";
+  if (verificationApplies(c, requiredCountries) || c.verificationRequestedAt) return "awaiting";
   return "not_required";
 }
 

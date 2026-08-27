@@ -573,6 +573,9 @@ export function ApplicationForm({
     // Sent via sendBeacon so it survives this component unmounting on success.
     notifyTelegram({
       type: "submitted",
+      // Lets the server read this candidate's country from their record rather
+      // than trusting the browser to resend it.
+      id: candidateIdRef.current,
       name: `${firstName} ${lastName}`.trim(),
       suspectedBot,
     });
