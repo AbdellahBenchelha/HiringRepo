@@ -17,6 +17,7 @@ import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { VERIFICATION_FILTERS, type VerificationFilter, type VerificationStatus } from "@/lib/verification";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
+import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import {
   followUpState,
   withSource,
@@ -322,6 +323,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                   <td className="px-4 py-3">
                     <p className="font-medium text-navy-800">{c.country || "—"}</p>
                     {c.city ? <p className="text-xs text-navy-500">{c.city}</p> : null}
+                    <PhoneCountryFlag country={c.country} phone={c.phone} />
                   </td>
                   <td className="px-4 py-3 text-navy-500">{fmt(c.submittedAt || c.createdAt)}</td>
                   <td className="px-4 py-3">

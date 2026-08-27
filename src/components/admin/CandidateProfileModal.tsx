@@ -9,6 +9,7 @@ import { NotesEditor } from "@/components/admin/NotesEditor";
 import { VerificationPanel, type VerificationState } from "@/components/admin/VerificationPanel";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
+import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -106,7 +107,15 @@ export function CandidateProfileModal({
 
         <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <Field label="Email" value={candidate.email} />
-          <Field label="WhatsApp number" value={candidate.phone} />
+          <Field
+            label="WhatsApp number"
+            value={
+              <>
+                {candidate.phone}
+                <PhoneCountryFlag country={candidate.country} phone={candidate.phone} />
+              </>
+            }
+          />
           <Field label="Date of birth" value={candidate.dob} />
           <Field label="Position" value={candidate.position} />
           <Field label="Country" value={candidate.country} />

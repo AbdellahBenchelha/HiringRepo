@@ -10,6 +10,7 @@
  * decision that changes without a deploy.
  */
 import type { CandidateDocument } from "@/lib/documents";
+import { phoneCountryMatches } from "@/lib/phoneCountry";
 
 /** The two images a candidate provides. Both are required together. */
 export const VERIFICATION_KINDS = ["identity", "selfie"] as const;
@@ -34,6 +35,13 @@ export const VERIFICATION_LABEL: Record<VerificationStatus, string> = {
 
 export interface VerificationInput {
   country?: string;
+  /**
+   * Counted alongside the stated country. Selecting a country that requires
+   * nothing while entering a number from one that does is the obvious way
+   * around this, and a rule keyed only on the dropdown is one click from
+   * being useless.
+   */
+  phone?: string;
   documents?: CandidateDocument[];
   verifiedAt?: string;
   rejectedAt?: string;
@@ -66,8 +74,12 @@ export function verificationStatus(
   if (c.rejectedAt) return "rejected";
   if (hasBothImages(c.documents)) return "provided";
 
+  // Either signal is enough. Someone genuinely living abroad on their old
+  // mobile is asked too; that is a deliberate trade, since the ask is one
+  // extra step rather than a rejection.
   const byCountry = !!c.country && requiredCountries.includes(c.country);
-  if (byCountry || c.verificationRequestedAt) return "awaiting";
+  const byPhone = phoneCountryMatches(c.phone, requiredCountries);
+  if (byCountry || byPhone || c.verificationRequestedAt) return "awaiting";
   return "not_required";
 }
 

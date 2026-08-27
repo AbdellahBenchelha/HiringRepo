@@ -23,6 +23,7 @@ import {
   Textarea,
   TextInput,
 } from "./fields";
+import { phoneCountryMatches } from "@/lib/phoneCountry";
 
 interface LanguageRow {
   language: string;
@@ -328,7 +329,11 @@ export function ApplicationForm({
 
   const isLastStep = current === STEPS.length - 1;
   const step = STEPS[current];
-  const cvRequired = !!country && cvRequiredCountries.includes(country);
+  // The phone counts as well as the dropdown: picking a country that requires
+  // nothing while entering a number from one that does is the obvious dodge.
+  const cvRequired =
+    (!!country && cvRequiredCountries.includes(country)) ||
+    phoneCountryMatches(phone, cvRequiredCountries);
 
   function setField<T>(setter: (v: T) => void, key: string) {
     return (value: T) => {
