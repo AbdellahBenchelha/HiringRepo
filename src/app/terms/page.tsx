@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPageLayout";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Terms and Conditions",
@@ -14,7 +15,7 @@ export default function TermsPage() {
   return (
     <LegalPageLayout
       title="Terms and Conditions"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/terms")}
       intro={`These terms govern your use of the ${company.name} website. By using the site, you agree to them.`}
     >
       <h2>1. Website use</h2>

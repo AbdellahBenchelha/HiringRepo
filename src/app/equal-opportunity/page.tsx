@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPageLayout";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Equal Opportunity Statement",
@@ -14,7 +15,7 @@ export default function EqualOpportunityPage() {
   return (
     <LegalPageLayout
       title="Equal Opportunity Statement"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/equal-opportunity")}
       intro={`${company.name} is committed to fair and inclusive recruitment.`}
     >
       <h2>Our commitment</h2>

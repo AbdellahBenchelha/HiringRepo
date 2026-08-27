@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPageLayout";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Applicant Privacy Notice",
@@ -15,7 +16,7 @@ export default function ApplicantPrivacyPage() {
   return (
     <LegalPageLayout
       title="Applicant Privacy Notice"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/applicant-privacy")}
       intro={`This notice explains specifically how ${company.name} uses the information you provide when you apply for a role.`}
     >
       <h2>1. Information we process about applicants</h2>

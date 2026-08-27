@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPageLayout";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Data Retention Policy",
@@ -15,7 +16,7 @@ export default function DataRetentionPage() {
   return (
     <LegalPageLayout
       title="Data Retention Policy"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/data-retention")}
       intro="How long we keep recruitment records, and how we delete them securely."
     >
       <h2>1. Retention periods</h2>

@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPageLayout";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Privacy Policy",
@@ -15,7 +16,7 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPageLayout
       title="Privacy Policy"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/privacy-policy")}
       intro={`This Privacy Policy explains how ${company.name} handles personal information collected through this website and during recruitment.`}
     >
       <h2>1. Information we collect</h2>

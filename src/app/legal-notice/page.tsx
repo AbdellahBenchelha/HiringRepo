@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPageLayout";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Legal Notice",
@@ -25,7 +26,7 @@ export default function LegalNoticePage() {
   return (
     <LegalPageLayout
       title="Legal Notice"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/legal-notice")}
       intro="Company identification and legal information for this website."
     >
       <p>

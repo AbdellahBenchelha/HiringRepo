@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Accessibility Statement",
@@ -14,7 +15,7 @@ export default function AccessibilityPage() {
   return (
     <LegalPageLayout
       title="Accessibility Statement"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/accessibility")}
       intro={`${company.name} is committed to making this website accessible to as many people as possible.`}
     >
       <h2>Our commitment</h2>

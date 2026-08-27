@@ -1,6 +1,7 @@
 import { buildMetadata } from "@/lib/seo";
 import { LegalPageLayout, LegalReviewNotice } from "@/components/legal/LegalPageLayout";
 import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink";
+import { updatedLabel } from "@/config/pageUpdated";
 
 export const metadata = buildMetadata({
   title: "Cookie Policy",
@@ -13,7 +14,7 @@ export default function CookiePolicyPage() {
   return (
     <LegalPageLayout
       title="Cookie Policy"
-      lastUpdated="Review before publishing"
+      lastUpdated={updatedLabel("/cookie-policy")}
       intro="This policy describes the cookies and similar technologies used on this website and how you can control them."
     >
       <h2>1. What are cookies?</h2>
