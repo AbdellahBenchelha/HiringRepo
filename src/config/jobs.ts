@@ -47,6 +47,14 @@ export interface JobPosting {
   languages: string;
   /** Date the listing was published (ISO) — used by JobPosting structured data. */
   datePosted: string;
+  /**
+   * Date this listing's content last changed (ISO), if it has since posting.
+   * Feeds the sitemap's lastmod, which is how a search engine decides whether
+   * a page is worth re-reading. Bump it when you edit a job — pay, title,
+   * responsibilities — and leave it alone otherwise. A date that moves when
+   * nothing changed is why Google ignores the field on most sites.
+   */
+  updatedAt?: string;
   employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "TEMPORARY";
   /** Omit entirely rather than guessing — see the note at the top of this file. */
   salary?: Salary;
@@ -65,6 +73,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
+    updatedAt: "2026-08-27",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Respond to customer inquiries by phone, email, or live chat",
@@ -93,6 +102,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
+    updatedAt: "2026-08-27",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Handle inbound or outbound calls",
@@ -121,6 +131,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "Strong written English required; additional languages a plus",
     datePosted: "2026-08-17",
+    updatedAt: "2026-08-27",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Answer customer questions through live chat and email",
@@ -147,6 +158,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
+    updatedAt: "2026-08-27",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Help customers troubleshoot basic technical problems",
@@ -182,6 +194,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
+    updatedAt: "2026-08-27",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Contact prospective or existing customers",
