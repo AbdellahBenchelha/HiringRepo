@@ -41,7 +41,9 @@ export async function generateMetadata({
  *     as a non-critical issue and the listing stays valid without it. Emitted
  *     only for jobs that actually declare pay, because a figure here is a
  *     public statement about what the role pays, and one that contradicts the
- *     page is worse than one that is absent.
+ *     page is worse than one that is absent. It carries base pay only:
+ *     commission is real pay but not base pay, so inflating this figure with
+ *     it would misreport what the role guarantees.
  */
 function jobPostingJsonLd(slug: string) {
   const job = getJobBySlug(slug);
@@ -57,7 +59,9 @@ function jobPostingJsonLd(slug: string) {
     title: job.title,
     description: `${job.shortDescription} Responsibilities include: ${job.responsibilities.join(
       "; "
-    )}. Requirements: ${job.requirements.join("; ")}.`,
+    )}. Requirements: ${job.requirements.join("; ")}.${
+      job.salary?.detail ? ` ${job.salary.detail}` : ""
+    }`,
     identifier: {
       "@type": "PropertyValue",
       name: siteConfig.company.name,
@@ -181,6 +185,11 @@ export default async function JobDetailPage({
                     <dd className="mt-0.5 font-semibold text-navy-900">
                       {formatSalary(job.salary)}
                     </dd>
+                    {job.salary.detail ? (
+                      <dd className="mt-1 text-xs leading-relaxed text-navy-600">
+                        {job.salary.detail}
+                      </dd>
+                    ) : null}
                   </div>
                 ) : null}
                 <div>

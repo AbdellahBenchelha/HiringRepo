@@ -26,6 +26,16 @@ export interface Salary {
   min: number;
   max?: number;
   unit: "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
+  /**
+   * Short qualifier shown beside the rate, e.g. "plus commission". Kept short
+   * because it has to fit on a job card next to the figure.
+   */
+  note?: string;
+  /**
+   * A fuller sentence, shown only in the job page's "At a glance" panel and
+   * appended to the indexed description. Room to explain what the note means.
+   */
+  detail?: string;
 }
 
 export interface JobPosting {
@@ -156,7 +166,16 @@ export const jobs: JobPosting[] = [
   {
     slug: "sales-and-retention-agent",
     title: "Sales and Retention Agent",
-    salary: { currency: "USD", min: 22, max: 30, unit: "HOUR" },
+    salary: {
+      currency: "USD",
+      min: 22,
+      max: 30,
+      unit: "HOUR",
+      // Base only. Commission is real pay but not base pay, so it is described
+      // rather than folded into the figure Google reads as baseSalary.
+      note: "plus commission",
+      detail: "Commission is paid on top of the base rate.",
+    },
     shortDescription:
       "Build relationships, understand customer needs, and present the right solutions — helping customers stay and grow with the brands we support.",
     workArrangement: "Remote",
@@ -211,7 +230,8 @@ export function formatSalary(salary: Salary): string {
     salary.max !== undefined && salary.max !== salary.min
       ? `${money(salary.min)} – ${money(salary.max)}`
       : money(salary.min);
-  return `${amount} per ${UNIT_LABEL[salary.unit]}`;
+  const rate = `${amount} per ${UNIT_LABEL[salary.unit]}`;
+  return salary.note ? `${rate} ${salary.note}` : rate;
 }
 
 export function getJobBySlug(slug: string): JobPosting | undefined {
