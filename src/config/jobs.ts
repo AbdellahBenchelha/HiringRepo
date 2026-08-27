@@ -209,40 +209,6 @@ const UNIT_LABEL: Record<Salary["unit"], string> = {
   YEAR: "year",
 };
 
-export interface SalaryParts {
-  /** The figures alone, e.g. "$20 – $28". */
-  amount: string;
-  /** The period alone, e.g. "per hour". */
-  period: string;
-  /** The qualifier, e.g. "plus commission". */
-  note?: string;
-}
-
-/**
- * Pay broken into its parts, so a layout can size them differently.
- *
- * The amount is what a candidate scans for and deserves to be the largest
- * thing in the block; "per hour" is context and should not compete with it.
- * Returning one pre-joined string forces every caller to render all three at
- * the same weight, which is what made the figure hard to find on a card.
- */
-export function salaryParts(salary: Salary): SalaryParts {
-  const money = (n: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: salary.currency,
-      maximumFractionDigits: 0,
-    }).format(n);
-  return {
-    amount:
-      salary.max !== undefined && salary.max !== salary.min
-        ? `${money(salary.min)} – ${money(salary.max)}`
-        : money(salary.min),
-    period: `per ${UNIT_LABEL[salary.unit]}`,
-    note: salary.note,
-  };
-}
-
 /**
  * Human-readable pay, e.g. "$5 – $8 per hour".
  *
@@ -254,8 +220,18 @@ export function salaryParts(salary: Salary): SalaryParts {
  * unambiguous currency code goes to Google in the structured data regardless.
  */
 export function formatSalary(salary: Salary): string {
-  const { amount, period, note } = salaryParts(salary);
-  return [amount, period, note].filter(Boolean).join(" ");
+  const money = (n: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: salary.currency,
+      maximumFractionDigits: 0,
+    }).format(n);
+  const amount =
+    salary.max !== undefined && salary.max !== salary.min
+      ? `${money(salary.min)} – ${money(salary.max)}`
+      : money(salary.min);
+  const rate = `${amount} per ${UNIT_LABEL[salary.unit]}`;
+  return salary.note ? `${rate} ${salary.note}` : rate;
 }
 
 export function getJobBySlug(slug: string): JobPosting | undefined {

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { jobs, getJobBySlug, salaryParts } from "@/config/jobs";
+import { jobs, getJobBySlug, formatSalary } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -171,45 +171,27 @@ export default async function JobDetailPage({
             </div>
           </div>
 
-          {/* First on a phone, where the sidebar would otherwise stack below
-              the whole description — a candidate should not have to scroll
-              past every requirement to find out what the job pays. */}
-          <aside className="order-first space-y-5 lg:order-none lg:sticky lg:top-28 lg:self-start">
-            {/* Pay gets a card of its own rather than a row inside "At a
-                glance". It is the one fact a candidate decides on, and it was
-                previously the same size as "Required languages". */}
-            {job.salary ? (
-              <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Pay</p>
-                <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
-                  <span className="text-3xl font-bold tracking-tight text-navy-900">
-                    {salaryParts(job.salary).amount}
-                  </span>
-                  <span className="text-sm font-medium text-navy-600">
-                    {salaryParts(job.salary).period}
-                  </span>
-                </p>
-                {salaryParts(job.salary).note ? (
-                  <p className="mt-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-green-800">
-                      <Icon name="wallet" className="h-3.5 w-3.5" />
-                      {salaryParts(job.salary).note}
-                    </span>
-                  </p>
-                ) : null}
-                {job.salary.detail ? (
-                  <p className="mt-2.5 text-xs leading-relaxed text-navy-600">
-                    {job.salary.detail}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
+          <aside className="lg:sticky lg:top-28 lg:self-start">
             <div className="card">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 At a glance
               </h2>
               <dl className="mt-4 space-y-4 text-sm">
+                {/* Shown as well as marked up: Google expects structured data
+                    to reflect what a visitor can actually read on the page. */}
+                {job.salary ? (
+                  <div>
+                    <dt className="font-medium text-navy-500">Pay</dt>
+                    <dd className="mt-0.5 font-semibold text-navy-900">
+                      {formatSalary(job.salary)}
+                    </dd>
+                    {job.salary.detail ? (
+                      <dd className="mt-1 text-xs leading-relaxed text-navy-600">
+                        {job.salary.detail}
+                      </dd>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div>
                   <dt className="font-medium text-navy-500">Work arrangement</dt>
                   <dd className="mt-0.5 text-navy-800">{job.workArrangement}</dd>
