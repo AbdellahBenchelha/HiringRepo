@@ -18,6 +18,8 @@ import { VERIFICATION_FILTERS, type VerificationFilter, type VerificationStatus 
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
+import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
+import { isCountryMismatch } from "@/lib/countryCheck";
 import {
   followUpState,
   withSource,
@@ -60,6 +62,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
   const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>("all");
+  const [mismatchOnly, setMismatchOnly] = useState(false);
   // Which document is open in the reader, and whose it is.
   const [viewing, setViewing] = useState<{ c: CandidateView; doc: CandidateDocument } | null>(null);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
@@ -108,13 +111,14 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (followUpFilter !== "all" && followUps.get(c.id)?.kind !== followUpFilter) return false;
       if (verifyFilter !== "all" && c.verificationStatus !== verifyFilter) return false;
+      if (mismatchOnly && !isCountryMismatch(c)) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
         if (applied < from) return false;
       }
       return true;
     });
-  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter]);
+  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter, mismatchOnly]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -259,6 +263,20 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           <label className="label" htmlFor="datefrom">Applied on or after</label>
           <input id="datefrom" type="date" className="input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </div>
+        {/* A checkbox rather than another select: there are only two states
+            worth asking for, and "no mismatch" is the whole list anyway. */}
+        <div className="flex items-end">
+          <label htmlFor="mismatch" className="flex cursor-pointer items-center gap-2 pb-2 text-sm text-navy-700">
+            <input
+              id="mismatch"
+              type="checkbox"
+              className="h-4 w-4 rounded border-navy-300 text-brand-600"
+              checked={mismatchOnly}
+              onChange={(e) => setMismatchOnly(e.target.checked)}
+            />
+            Country mismatch only
+          </label>
+        </div>
       </div>
 
       {/* Result count + export */}
@@ -324,6 +342,10 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                     <p className="font-medium text-navy-800">{c.country || "—"}</p>
                     {c.city ? <p className="text-xs text-navy-500">{c.city}</p> : null}
                     <PhoneCountryFlag country={c.country} phone={c.phone} />
+                    <DetectedCountryFlag
+                      country={c.country}
+                      detectedCountryName={c.detectedCountryName}
+                    />
                   </td>
                   <td className="px-4 py-3 text-navy-500">{fmt(c.submittedAt || c.createdAt)}</td>
                   <td className="px-4 py-3">

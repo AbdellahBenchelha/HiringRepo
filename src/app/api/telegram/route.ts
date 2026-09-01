@@ -10,7 +10,8 @@ import { requiredCountries } from "@/lib/verificationStore";
 import { verificationApplies } from "@/lib/verification";
 import { getCandidate } from "@/lib/store";
 import { createInterviewToken } from "@/lib/token";
-import { upsertPersonal, flagDuplicate } from "@/lib/store";
+import { upsertPersonal, flagDuplicate, setDetectedCountry } from "@/lib/store";
+import { detectCountryFromRequest } from "@/lib/geoServer";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { withSource } from "@/lib/followUp";
@@ -153,6 +154,15 @@ export async function POST(req: NextRequest) {
           });
         } catch {
           /* storage is best-effort */
+        }
+
+        // Where they actually are, for comparison against the country they
+        // picked. After the upsert, so the record exists to write it onto.
+        try {
+          const origin = await detectCountryFromRequest(req);
+          if (origin?.name) await setDetectedCountry(id, origin.iso2, origin.name);
+        } catch {
+          /* detection is bookkeeping and never blocks an application */
         }
 
         // Record the duplicate flag after the upsert, so it is not overwritten

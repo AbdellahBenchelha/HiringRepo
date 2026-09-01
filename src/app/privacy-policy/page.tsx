@@ -28,6 +28,11 @@ export default function PrivacyPolicyPage() {
         <li>Responses to application questions and any information you choose to provide.</li>
         <li>Technical data (such as essential cookies needed for the site to function).</li>
         <li>
+          The country your application was sent from, derived from your network (IP) address at
+          the moment you apply. We record the country only — your IP address itself is not
+          retained.
+        </li>
+        <li>
           Identity verification documents, where required: an image of an official identity
           document and a photograph of you holding it. This is requested only from applicants in
           certain countries, and only after the online assessment.
@@ -67,6 +72,13 @@ export default function PrivacyPolicyPage() {
         <li>Comply with applicable legal and regulatory obligations.</li>
         <li>Where you have opted in, send you future recruitment updates.</li>
       </ul>
+      <p>
+        The country derived from your network address is used only to compare against the country
+        you selected on the form, because these roles are open in specific locations. A difference
+        is never treated as a decision in itself — a VPN, a work network or simply travelling all
+        produce one — and no application is rejected automatically because of it. We do not derive
+        your city, region or location beyond the country, and we do not store your IP address.
+      </p>
 
       <h2>3. Recruitment-data processing</h2>
       <p>

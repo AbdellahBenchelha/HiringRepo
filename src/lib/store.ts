@@ -129,6 +129,18 @@ export interface Candidate {
   imagesDeletedAt?: string;
   /** Set when a recruiter asks someone whose country is not on the list. */
   verificationRequestedAt?: string;
+  /**
+   * The country the application was actually sent from, as the server saw it.
+   *
+   * Deliberately not the IP address: a raw address is personal data with real
+   * weight, and a two-letter code carries the whole signal at a fraction of the
+   * exposure. There is no stored "mismatch" flag either — it is derived when
+   * read, so it cannot go stale if the candidate's stated country changes.
+   */
+  detectedCountryIso?: string;
+  /** The same country as a name from the app's list, so it compares to `country`. */
+  detectedCountryName?: string;
+  detectedCountryAt?: string;
   /** Reminder chasing an unfinished assessment, per channel. */
   reminderEmailSentAt?: string;
   reminderEmailCount?: number;
@@ -526,6 +538,25 @@ export function setOfferOutcome(
       c.status = "Rejected";
     }
     return { list, result: c };
+  });
+}
+
+/**
+ * Record where the application came from, as the server observed it.
+ *
+ * Written on both step one and final submit: the second call catches anyone
+ * who changed their stated country in between, and re-detection is cheap.
+ * Silently does nothing for an unknown id — detection runs alongside a
+ * best-effort upsert that may not have landed.
+ */
+export function setDetectedCountry(id: string, iso2: string, name: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: false };
+    c.detectedCountryIso = iso2;
+    c.detectedCountryName = name;
+    c.detectedCountryAt = new Date().toISOString();
+    return { list, result: true };
   });
 }
 

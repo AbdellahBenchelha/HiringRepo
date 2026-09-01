@@ -21,6 +21,10 @@ export interface CandidateView {
   email: string;
   phone: string;
   country: string;
+  /** Where the application was actually sent from. Never the IP address. */
+  detectedCountryName?: string;
+  detectedCountryIso?: string;
+  detectedCountryAt?: string;
   city: string;
   address: string;
   linkedin: string;
@@ -84,6 +88,9 @@ export function toCandidateView(
     email: c.email,
     phone: c.phone,
     country: c.country,
+    detectedCountryName: c.detectedCountryName,
+    detectedCountryIso: c.detectedCountryIso,
+    detectedCountryAt: c.detectedCountryAt,
     city: c.city,
     address: c.address,
     linkedin: c.linkedin,

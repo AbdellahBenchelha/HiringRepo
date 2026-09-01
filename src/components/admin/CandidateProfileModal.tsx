@@ -10,6 +10,7 @@ import { VerificationPanel, type VerificationState } from "@/components/admin/Ve
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
+import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
 
 /**
@@ -120,6 +121,30 @@ export function CandidateProfileModal({
           <Field label="Date of birth" value={candidate.dob} />
           <Field label="Position" value={candidate.position} />
           <Field label="Country" value={candidate.country} />
+          {/* Where the application actually came from, so the stated country
+              can be read next to it rather than taken on trust. */}
+          <Field
+            label="Sent from"
+            value={
+              candidate.detectedCountryName ? (
+                <>
+                  <span
+                    className={
+                      countryMatch(candidate) === "mismatch" ? "font-semibold text-amber-700" : ""
+                    }
+                  >
+                    {candidate.detectedCountryName}
+                  </span>
+                  <span className="block text-xs font-normal text-navy-400">
+                    Detected {fmt(candidate.detectedCountryAt)} · from the network address, not the
+                    form
+                  </span>
+                </>
+              ) : (
+                <span className="text-navy-400">Not detected</span>
+              )
+            }
+          />
           <Field label="City" value={candidate.city} />
           <Field label="Full address" value={candidate.address} full />
           <Field label="Languages" value={candidate.languages.join(", ")} full />

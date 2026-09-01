@@ -4,7 +4,9 @@ import {
   claimInterviewEmail,
   releaseInterviewEmail,
   getCandidate,
+  setDetectedCountry,
 } from "@/lib/store";
+import { detectCountryFromRequest } from "@/lib/geoServer";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { sendEmail } from "@/lib/email";
@@ -61,6 +63,15 @@ export async function POST(req: NextRequest) {
     await saveApplication(id, application);
   } catch {
     return NextResponse.json({ ok: false, error: "storage_error" }, { status: 500 });
+  }
+
+  // Refresh where they applied from. Step one already recorded it; this
+  // catches anyone who changed their stated country before submitting.
+  try {
+    const origin = await detectCountryFromRequest(req);
+    if (origin?.name) await setDetectedCountry(id, origin.iso2, origin.name);
+  } catch {
+    /* detection is bookkeeping and never blocks a submission */
   }
 
   // Email the candidate their assessment link. Best-effort throughout: the

@@ -14,6 +14,23 @@ const ISO2_TO_NAME = new Map(phoneCountries.map((c) => [c.iso2.toLowerCase(), c.
 const KNOWN_ISO2 = new Set(phoneCountries.map((c) => c.iso2.toLowerCase()));
 const COUNTRY_NAMES = new Set(countries);
 
+/**
+ * Map an ISO 3166-1 alpha-2 code to the country name used across the app.
+ *
+ * Returns null for a code we do not carry, or one whose name is not in the
+ * form's own list — a name that cannot be selected in the form is useless for
+ * comparing against what the candidate selected.
+ *
+ * Exported so the server-side detection reuses this table rather than building
+ * a second one that would drift from it.
+ */
+export function countryNameFromIso2(iso2: string): string | null {
+  const key = iso2.trim().toLowerCase();
+  if (!KNOWN_ISO2.has(key)) return null;
+  const name = ISO2_TO_NAME.get(key);
+  return name && COUNTRY_NAMES.has(name) ? name : null;
+}
+
 export interface DetectedCountry {
   /** Lowercase ISO 3166-1 alpha-2 code, guaranteed to exist in phoneCountries. */
   iso2: string;
@@ -38,8 +55,7 @@ async function lookup(): Promise<DetectedCountry | null> {
 
     const iso2 = typeof record.country_code === "string" ? record.country_code.toLowerCase() : "";
     if (iso2 && KNOWN_ISO2.has(iso2)) {
-      const mapped = ISO2_TO_NAME.get(iso2);
-      return { iso2, name: mapped && COUNTRY_NAMES.has(mapped) ? mapped : null };
+      return { iso2, name: countryNameFromIso2(iso2) };
     }
 
     // No usable ISO code — fall back to matching the returned country name.

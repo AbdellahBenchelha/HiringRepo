@@ -7,6 +7,7 @@ import { InterviewActions } from "@/components/admin/InterviewActions";
 import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
+import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { CANDIDATE_STATUSES, VOICE_STATUSES, type CandidateStatus, type VoiceStatus } from "@/lib/candidateStatus";
 import { VERIFICATION_FILTERS, type VerificationFilter } from "@/lib/verification";
 import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
@@ -224,6 +225,10 @@ export function InterviewsTable({
                       <p className="font-medium text-navy-800">{c.country || "—"}</p>
                       {c.city ? <p className="text-xs text-navy-500">{c.city}</p> : null}
                       <PhoneCountryFlag country={c.country} phone={c.phone} />
+                      <DetectedCountryFlag
+                        country={c.country}
+                        detectedCountryName={c.detectedCountryName}
+                      />
                     </td>
                     <td className="px-4 py-3 text-navy-500">{fmt(c.interviewCompletedAt)}</td>
                     <td className="px-4 py-3 font-semibold text-navy-800">

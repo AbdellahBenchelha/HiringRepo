@@ -4,6 +4,7 @@ import { listCandidates } from "@/lib/store";
 import { DOCUMENT_SHORT } from "@/lib/documents";
 import { requiredCountries } from "@/lib/verificationStore";
 import { verificationStatus, VERIFICATION_LABEL } from "@/lib/verification";
+import { countryMatch } from "@/lib/countryCheck";
 
 /**
  * CSV export of every candidate.
@@ -45,7 +46,7 @@ export async function GET(_req: NextRequest) {
 
   const headers = [
     "id", "First name", "Last name", "Date of birth", "Email", "Phone",
-    "Country", "City", "Address", "LinkedIn", "Position", "Languages",
+    "Country", "Sent from", "Country mismatch", "City", "Address", "LinkedIn", "Position", "Languages",
     "Status", "Applied", "Submitted", "Interview completed", "Score", "Total",
     "Assessment email sent", "Possible duplicate", "Duplicate of", "Documents", "ID verification", "Verified on", "Notes",
   ];
@@ -53,7 +54,12 @@ export async function GET(_req: NextRequest) {
   const rows = candidates.map((c) =>
     [
       c.id, c.firstName, c.lastName, c.dob, c.email, c.phone,
-      c.country, c.city, c.address, c.linkedin, c.position,
+      c.country,
+      c.detectedCountryName ?? "",
+      // Spelled out rather than left to be eyeballed: the two columns are
+      // adjacent in the file but nobody scans a thousand rows for a difference.
+      { match: "No", mismatch: "Yes", unknown: "" }[countryMatch(c)],
+      c.city, c.address, c.linkedin, c.position,
       (c.languages || []).map((l) => l.language).filter(Boolean).join(" / "),
       c.status, c.createdAt, c.submittedAt ?? "",
       c.interview ? "Yes" : "No",
