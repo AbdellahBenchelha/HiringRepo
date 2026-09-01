@@ -17,16 +17,26 @@ import type { CandidateStatus } from "@/lib/candidateStatus";
  * to the browser twice. This keeps the table on the server and puts a small
  * island in the cell that needs one.
  *
- * It holds its own copy of the candidate so edits made in the dialog — a
- * status, a verification decision, a note — are reflected without a reload.
+ * The candidate comes from the row and every edit is reported back through
+ * `onChange` rather than kept here. The row is what the other island in the
+ * same row — the voice assessment controls — also writes to, and the two must
+ * agree: passing the assessment there is what opens the offer form here.
  */
-export function CandidateInfoButton({ candidate }: { candidate: CandidateView }) {
+export function CandidateInfoButton({
+  candidate,
+  showOffer,
+  onChange,
+}: {
+  candidate: CandidateView;
+  /** Whether this tab is where offers are made. */
+  showOffer?: boolean;
+  onChange: (patch: Partial<CandidateView>) => void;
+}) {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState(candidate);
   const [viewing, setViewing] = useState<CandidateDocument | null>(null);
 
   async function changeStatus(id: string, status: CandidateStatus) {
-    setCurrent((c) => ({ ...c, status }));
+    onChange({ status });
     try {
       await adminPost(`/api/admin/candidates/${id}/status`, { status });
     } catch {
@@ -47,18 +57,19 @@ export function CandidateInfoButton({ candidate }: { candidate: CandidateView })
 
       {open ? (
         <CandidateProfileModal
-          candidate={current}
+          candidate={candidate}
+          showOffer={showOffer}
           onClose={() => setOpen(false)}
           onOpenDocument={setViewing}
           onStatusChange={changeStatus}
-          onChange={(patch) => setCurrent((c) => ({ ...c, ...patch }))}
+          onChange={onChange}
         />
       ) : null}
 
       {viewing ? (
         <DocumentViewer
-          candidateId={current.id}
-          candidateName={current.fullName}
+          candidateId={candidate.id}
+          candidateName={candidate.fullName}
           document={viewing}
           onClose={() => setViewing(null)}
         />

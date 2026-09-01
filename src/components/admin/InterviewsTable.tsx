@@ -65,6 +65,25 @@ export function InterviewsTable({
   const [status, setStatus] = useState<"all" | CandidateStatus>("all");
   const [offer, setOffer] = useState<"all" | OfferStatus>("all");
 
+  /**
+   * Edits made since the page was rendered, by candidate id.
+   *
+   * Each row has two independent client islands — the voice assessment
+   * controls and the profile dialog — and they describe the same person. Held
+   * separately they drift: marking someone as having passed in one leaves the
+   * other still showing what the server sent, which is why the offer form
+   * would not appear until a reload. One patch per row, both islands reading
+   * and writing it, and the filters see the edits too.
+   */
+  const [patches, setPatches] = useState<Record<string, Partial<CandidateView>>>({});
+  const patch = (id: string, p: Partial<CandidateView>) =>
+    setPatches((prev) => ({ ...prev, [id]: { ...prev[id], ...p } }));
+
+  const live = useMemo(
+    () => rows.map((r) => (patches[r.view.id] ? { ...r, view: { ...r.view, ...patches[r.view.id] } } : r)),
+    [rows, patches],
+  );
+
   // Only offer countries that actually appear, so the filter never lists
   // options that return nothing.
   const countries = useMemo(
@@ -74,7 +93,7 @@ export function InterviewsTable({
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter(({ view: c }) => {
+    return live.filter(({ view: c }) => {
       if (q && ![c.fullName, c.email, c.phone, c.country, c.city].some((v) => (v || "").toLowerCase().includes(q))) {
         return false;
       }
@@ -85,7 +104,7 @@ export function InterviewsTable({
       if (offer !== "all" && offerStatus(c) !== offer) return false;
       return true;
     });
-  }, [rows, search, country, voice, verification, status, offer]);
+  }, [live, search, country, voice, verification, status, offer]);
 
   const filtering = shown.length !== rows.length;
 
@@ -258,6 +277,7 @@ export function InterviewsTable({
                         successMessageSentAt={c.successMessageSentAt}
                         voiceRequestedAt={c.voiceRequestedAt}
                         voiceStatus={c.voiceStatus}
+                        onVoiceStatusChange={(voiceStatus) => patch(c.id, { voiceStatus })}
                         templates={templates}
                         vars={vars}
                       />
@@ -270,7 +290,12 @@ export function InterviewsTable({
                         >
                           View answers →
                         </Link>
-                        <CandidateInfoButton candidate={c} />
+                        {/* Offers are made from this tab and only this tab. */}
+                        <CandidateInfoButton
+                          candidate={c}
+                          showOffer
+                          onChange={(p) => patch(c.id, p)}
+                        />
                       </div>
                     </td>
                   </tr>

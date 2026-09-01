@@ -20,7 +20,17 @@ export interface InterviewActionsProps {
   phone: string;
   successMessageSentAt?: string;
   voiceRequestedAt?: string;
+  /**
+   * Owned by the row, not by this component.
+   *
+   * Passing the assessment is what opens the offer panel in the profile
+   * dialog, which is a different component in a different cell. When this held
+   * its own copy, marking someone passed here changed nothing the dialog could
+   * see, so the offer form stayed hidden until the page was reloaded — and
+   * nobody reloads between setting a status and clicking the button beside it.
+   */
   voiceStatus?: VoiceStatus;
+  onVoiceStatusChange: (status: VoiceStatus) => void;
   /** Saved wording for both messages, resolved on the server. */
   templates: Record<TemplateKey, string>;
   /** This candidate's substitution values. */
@@ -50,9 +60,7 @@ const DIALOG: Record<TemplateKey, { title: string; confirmLabel: string; endpoin
 export function InterviewActions(props: InterviewActionsProps) {
   const [successAt, setSuccessAt] = useState(props.successMessageSentAt);
   const [voiceAt, setVoiceAt] = useState(props.voiceRequestedAt);
-  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>(
-    props.voiceStatus ?? "Voice Assessment Not Requested",
-  );
+  const voiceStatus = props.voiceStatus ?? "Voice Assessment Not Requested";
   const [error, setError] = useState("");
 
   // Which message is being confirmed, the text as it currently stands, and
@@ -106,7 +114,11 @@ export function InterviewActions(props: InterviewActionsProps) {
           setSuccessAt(new Date().toISOString());
         } else {
           setVoiceAt(new Date().toISOString());
-          setVoiceStatus((s) => (s === "Voice Assessment Not Requested" ? "Voice Assessment Requested" : s));
+          // Matches what the server does on a voice request: an untouched
+          // status moves to Requested, anything further along is left alone.
+          if (voiceStatus === "Voice Assessment Not Requested") {
+            props.onVoiceStatusChange("Voice Assessment Requested");
+          }
         }
       })
       .catch(() => {
@@ -116,7 +128,7 @@ export function InterviewActions(props: InterviewActionsProps) {
   }
 
   async function changeVoiceStatus(status: VoiceStatus) {
-    setVoiceStatus(status);
+    props.onVoiceStatusChange(status);
     try {
       await adminPost(`/api/admin/candidates/${props.id}/voice-status`, { status });
     } catch {

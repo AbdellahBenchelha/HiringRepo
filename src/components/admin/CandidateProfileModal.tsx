@@ -34,6 +34,7 @@ function fmt(iso?: string) {
 
 export function CandidateProfileModal({
   candidate,
+  showOffer,
   onClose,
   onChange,
   onOpenDocument,
@@ -41,6 +42,15 @@ export function CandidateProfileModal({
   onSendWhatsApp,
 }: {
   candidate: CandidateView;
+  /**
+   * Whether to offer the job from here.
+   *
+   * Only the Interviews tab does. An offer follows the live interview, which
+   * only happens once the voice assessment is passed, and that whole sequence
+   * is run from that tab — putting the form in front of every applicant on the
+   * Candidates tab as well only invites it being sent to the wrong person.
+   */
+  showOffer?: boolean;
   onClose: () => void;
   /** Fields that changed, for the caller to merge into its own copy. */
   onChange: (patch: Partial<CandidateView>) => void;
@@ -201,7 +211,7 @@ export function CandidateProfileModal({
 
         {/* The live interview happens off-system, after the voice assessment
             passes; this is where its outcome lands. */}
-        {candidate.voiceStatus === "Voice Assessment Passed" || candidate.offerSentAt ? (
+        {showOffer && (candidate.voiceStatus === "Voice Assessment Passed" || candidate.offerSentAt) ? (
           <div className="mt-5">
             <OfferPanel
               id={candidate.id}
