@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { InterviewActions } from "@/components/admin/InterviewActions";
@@ -8,6 +8,7 @@ import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
+import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { CANDIDATE_STATUSES, VOICE_STATUSES, type CandidateStatus, type VoiceStatus } from "@/lib/candidateStatus";
 import { VERIFICATION_FILTERS, type VerificationFilter } from "@/lib/verification";
 import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
@@ -15,11 +16,16 @@ import type { TemplateKey, TemplateVars } from "@/lib/messageTemplates";
 import type { CandidateView } from "@/lib/candidateView";
 
 /**
- * Completed interviews, filtered.
+ * Completed interviews, filtered and paged.
  *
  * The filtering is client-side over rows the server already sent, like the
- * Candidates table: these are tens of records, not thousands, and a filter
- * that reloads the page is a filter nobody uses twice.
+ * Candidates table: a filter that reloads the page is a filter nobody uses
+ * twice, and the store reads the whole file per request either way, so paging
+ * on the server would save the transfer and nothing else.
+ *
+ * Order matters — filter, then sort, then page. Paging first would make every
+ * filter a search of the current page, so "nobody has passed" would really
+ * mean "nobody in this twenty-five".
  *
  * The server has already dropped candidates whose ID check has not been
  * requested — that is a separate rule with its own link in the header, and
@@ -64,6 +70,9 @@ export function InterviewsTable({
   const [verification, setVerification] = useState<VerificationFilter>("all");
   const [status, setStatus] = useState<"all" | CandidateStatus>("all");
   const [offer, setOffer] = useState<"all" | OfferStatus>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const tableTop = useRef<HTMLDivElement>(null);
 
   /**
    * Edits made since the page was rendered, by candidate id.
@@ -108,9 +117,29 @@ export function InterviewsTable({
 
   const filtering = shown.length !== rows.length;
 
+  // Paged after filtering, never before, so a filter always searches everyone
+  // rather than whichever twenty-five happen to be on screen.
+  const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
+  // Derived, not corrected afterwards: narrowing to three rows while on page 5
+  // must show those three straight away, not a blank table for a frame.
+  const current = Math.min(page, pageCount);
+  const visible = useMemo(
+    () => shown.slice((current - 1) * pageSize, current * pageSize),
+    [shown, current, pageSize],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, country, voice, verification, status, offer, pageSize]);
+
+  function goToPage(next: number) {
+    setPage(next);
+    tableTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <>
-      <div className="card mb-5 p-4 sm:p-5">
+      <div ref={tableTop} className="card mb-5 p-4 sm:p-5">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <label className="block">
             <span className="label">Search</span>
@@ -179,8 +208,10 @@ export function InterviewsTable({
 
         {filtering ? (
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-navy-100 pt-3">
+            {/* How many the filters left. The pagination line below the table
+                says which of them you are looking at. */}
             <p className="text-sm text-navy-500">
-              Showing <strong className="text-navy-800">{shown.length}</strong> of {rows.length}
+              <strong className="text-navy-800">{shown.length}</strong> of {rows.length} match
             </p>
             <button
               type="button"
@@ -221,7 +252,7 @@ export function InterviewsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-50">
-            {shown.length === 0 ? (
+            {visible.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-4 py-10 text-center text-navy-400">
                   {rows.length === 0
@@ -230,7 +261,7 @@ export function InterviewsTable({
                 </td>
               </tr>
             ) : (
-              shown.map(({ view: c, vars }) => {
+              visible.map(({ view: c, vars }) => {
                 const p = pct(c.score ?? 0, c.total ?? 0);
                 return (
                   <tr key={c.id} className="align-top hover:bg-navy-50/40">
@@ -305,6 +336,16 @@ export function InterviewsTable({
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={current}
+        pageCount={pageCount}
+        total={shown.length}
+        pageSize={pageSize}
+        noun="interview"
+        onPage={goToPage}
+        onPageSize={setPageSize}
+      />
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { InterviewBadge, IncompleteFormBadge } from "@/components/admin/StatusBadge";
@@ -20,6 +20,7 @@ import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { isCountryMismatch } from "@/lib/countryCheck";
+import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import {
   followUpState,
   withSource,
@@ -63,6 +64,9 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
   const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>("all");
   const [mismatchOnly, setMismatchOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const tableTop = useRef<HTMLDivElement>(null);
   // Which document is open in the reader, and whose it is.
   const [viewing, setViewing] = useState<{ c: CandidateView; doc: CandidateDocument } | null>(null);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
@@ -156,6 +160,29 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       }
     });
   }, [filtered, sort, followUps]);
+
+  // Paged only after filtering and sorting. The filters have to see every
+  // candidate or they answer the wrong question — "nobody awaiting review"
+  // would really mean "nobody on this page".
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  // Derived rather than corrected in an effect: filtering down to three rows
+  // while on page 5 must show those three, not an empty table for a frame.
+  const current = Math.min(page, pageCount);
+  const visible = useMemo(
+    () => sorted.slice((current - 1) * pageSize, current * pageSize),
+    [sorted, current, pageSize],
+  );
+
+  // Any change to what is being listed sends you back to the front of it.
+  useEffect(() => {
+    setPage(1);
+  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, verifyFilter, mismatchOnly, pageSize, sort]);
+
+  function goToPage(next: number) {
+    setPage(next);
+    // Page 4 opened halfway down page 3 is a page you have to scroll up to read.
+    tableTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   async function changeStatus(id: string, status: CandidateStatus) {
     setRows((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
@@ -280,12 +307,24 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       </div>
 
       {/* Result count + export */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div ref={tableTop} className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        {/* How many the filters left. The running total per page is on the
+            pagination line below, where the page controls are. */}
         <p className="text-sm text-navy-500">
-          Showing <span className="font-semibold text-navy-900">{sorted.length}</span>
-          {sorted.length !== rows.length ? ` of ${rows.length}` : ""} candidate
-          {sorted.length === 1 ? "" : "s"}
+          {sorted.length === rows.length ? (
+            <>
+              <span className="font-semibold text-navy-900">{rows.length}</span> candidate
+              {rows.length === 1 ? "" : "s"}
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-navy-900">{sorted.length}</span> of {rows.length}{" "}
+              match your filters
+            </>
+          )}
         </p>
+        {/* Exports everyone, not this page and not this filter: it is the
+            backup route, and a backup of page 1 is not a backup. */}
         <a
           href="/api/admin/export"
           className="inline-flex items-center gap-2 rounded-full bg-navy-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-navy-800"
@@ -315,10 +354,10 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-50">
-            {sorted.length === 0 ? (
+            {visible.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
             ) : (
-              sorted.map((c) => (
+              visible.map((c) => (
                 <tr key={c.id} className="group hover:bg-cream-100">
                   <td className="px-4 py-3">
                     <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
@@ -433,6 +472,16 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={current}
+        pageCount={pageCount}
+        total={sorted.length}
+        pageSize={pageSize}
+        noun="candidate"
+        onPage={goToPage}
+        onPageSize={setPageSize}
+      />
 
       {/* Profile modal */}
       <ConfirmDialog
