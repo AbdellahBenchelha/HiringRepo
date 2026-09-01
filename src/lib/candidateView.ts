@@ -57,6 +57,10 @@ export interface CandidateView {
   verificationConsentAt?: string;
   verificationRequestedAt?: string;
   voiceStatus?: VoiceStatus;
+  /** Interview follow-up state, for the Interviews tab's own filters. */
+  interviewCompletedAt?: string;
+  successMessageSentAt?: string;
+  voiceRequestedAt?: string;
   offer?: Offer;
   offerSentAt?: string;
   offerAcceptedAt?: string;
@@ -116,6 +120,9 @@ export function toCandidateView(
     verificationConsentAt: c.verificationConsentAt,
     verificationRequestedAt: c.verificationRequestedAt,
     voiceStatus: c.voiceStatus,
+    interviewCompletedAt: c.interview?.completedAt,
+    successMessageSentAt: c.successMessageSentAt,
+    voiceRequestedAt: c.voiceRequestedAt,
     offer: c.offer,
     offerSentAt: c.offerSentAt,
     offerAcceptedAt: c.offerAcceptedAt,
