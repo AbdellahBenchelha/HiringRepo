@@ -11,6 +11,8 @@ import type { Candidate } from "@/lib/store";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
 import { verificationStatus, type VerificationStatus } from "@/lib/verification";
+import type { Offer } from "@/lib/offer";
+import type { VoiceStatus } from "@/lib/candidateStatus";
 
 export interface CandidateView {
   id: string;
@@ -54,6 +56,12 @@ export interface CandidateView {
   imagesDeletedAt?: string;
   verificationConsentAt?: string;
   verificationRequestedAt?: string;
+  voiceStatus?: VoiceStatus;
+  offer?: Offer;
+  offerSentAt?: string;
+  offerAcceptedAt?: string;
+  offerDeclinedAt?: string;
+  offerDeclineReason?: string;
 }
 
 /**
@@ -107,5 +115,11 @@ export function toCandidateView(
     imagesDeletedAt: c.imagesDeletedAt,
     verificationConsentAt: c.verificationConsentAt,
     verificationRequestedAt: c.verificationRequestedAt,
+    voiceStatus: c.voiceStatus,
+    offer: c.offer,
+    offerSentAt: c.offerSentAt,
+    offerAcceptedAt: c.offerAcceptedAt,
+    offerDeclinedAt: c.offerDeclinedAt,
+    offerDeclineReason: c.offerDeclineReason,
   };
 }

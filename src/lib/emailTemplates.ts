@@ -515,3 +515,181 @@ export function verificationRequestHtml({ fullName, interviewUrl, position }: In
 </body>
 </html>`;
 }
+
+export interface OfferEmail {
+  fullName: string;
+  position: string;
+  /** Already formatted, e.g. "$22 per hour". */
+  rate: string;
+  engagement: string;
+  hoursPerWeek?: number;
+  startDate?: string;
+  probation?: string;
+  note?: string;
+}
+
+/**
+ * The written job offer.
+ *
+ * Written, and by email, on purpose. An offer agreed only on a call is a
+ * disagreement waiting to happen about what the rate was, and a candidate
+ * about to leave another job deserves something they can re-read.
+ *
+ * It is an offer, not a contract. It says so, because a candidate who treats
+ * this as the final word and resigns on the strength of it is a problem for
+ * both sides.
+ */
+export function offerSubject(position: string): string {
+  return `Job offer — ${position} at ${siteConfig.company.name}`;
+}
+
+function offerRows(o: OfferEmail): [string, string][] {
+  const rows: [string, string][] = [
+    ["Position", o.position],
+    ["Pay", o.rate],
+    ["Engagement", o.engagement],
+  ];
+  if (o.hoursPerWeek) rows.push(["Hours", `${o.hoursPerWeek} per week`]);
+  if (o.startDate) {
+    rows.push([
+      "Start date",
+      new Date(`${o.startDate}T00:00:00Z`).toLocaleDateString("en-GB", {
+        day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
+      }),
+    ]);
+  }
+  if (o.probation) rows.push(["Probation", o.probation]);
+  return rows;
+}
+
+/** Plain-text part of the offer. */
+export function offerText(o: OfferEmail): string {
+  const name = firstNameOf(o.fullName);
+  return [
+    `Hi ${name},`,
+    ``,
+    `Following your interview, we are pleased to offer you the position of`,
+    `${o.position} at ${siteConfig.company.name}.`,
+    ``,
+    ...offerRows(o).map(([k, v]) => `  ${k}: ${v}`),
+    ...(o.note ? [``, o.note] : []),
+    ``,
+    `To accept, simply reply to this email and let us know. We will then send`,
+    `you the agreement to sign and arrange everything you need to start.`,
+    ``,
+    `This is an offer of engagement, not a contract of employment — the written`,
+    `agreement follows once you accept.`,
+    ``,
+    `We will never ask you for a payment, a bank card, or a password at any`,
+    `stage. Your bank details are needed only after the agreement is signed.`,
+    ``,
+    `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+/** HTML part of the offer. */
+export function offerHtml(o: OfferEmail): string {
+  const name = esc(firstNameOf(o.fullName));
+  const company = esc(siteConfig.company.name);
+
+  const rows = offerRows(o)
+    .map(
+      ([k, v]) => `
+          <tr>
+            <td style="padding:9px 0;border-bottom:1px solid ${BORDER};font:400 15px/1.5 Arial,Helvetica,sans-serif;color:${MUTED};width:40%;">${esc(k)}</td>
+            <td style="padding:9px 0;border-bottom:1px solid ${BORDER};font:700 15px/1.5 Arial,Helvetica,sans-serif;color:${NAVY};">${esc(v)}</td>
+          </tr>`,
+    )
+    .join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(offerSubject(o.position))}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your offer from ${company} — the details are inside.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Your offer from ${company}
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Following your interview, we are pleased to offer you the position of
+          <strong style="color:${NAVY};">${esc(o.position)}</strong>.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
+          ${rows}
+        </table>
+
+        ${
+          o.note
+            ? `<p style="margin:0 0 24px 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">${esc(o.note)}</p>`
+            : ""
+        }
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          To accept, simply <strong style="color:${NAVY};">reply to this email</strong> and let us
+          know. We will then send you the agreement to sign and arrange everything you need to
+          start.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+              This is an offer of engagement, not a contract &mdash; the written agreement follows
+              once you accept. We will <strong style="color:${NAVY};">never</strong> ask you for a
+              payment, a bank card, or a password at any stage, and your bank details are needed
+              only after the agreement is signed.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}

@@ -10,6 +10,7 @@ import { VerificationPanel, type VerificationState } from "@/components/admin/Ve
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
+import { OfferPanel } from "@/components/admin/OfferPanel";
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -172,6 +173,32 @@ export function CandidateProfileModal({
             }
           />
         </div>
+
+        {/* The live interview happens off-system, after the voice assessment
+            passes; this is where its outcome lands. */}
+        {candidate.voiceStatus === "Voice Assessment Passed" || candidate.offerSentAt ? (
+          <div className="mt-5">
+            <OfferPanel
+              id={candidate.id}
+              fullName={candidate.fullName}
+              position={candidate.position}
+              hasEmail={!!candidate.email}
+              initial={{
+                offer: candidate.offer,
+                offerSentAt: candidate.offerSentAt,
+                offerAcceptedAt: candidate.offerAcceptedAt,
+                offerDeclinedAt: candidate.offerDeclinedAt,
+                offerDeclineReason: candidate.offerDeclineReason,
+              }}
+              onChange={({ status, ...offerState }) =>
+                onChange({
+                  ...offerState,
+                  ...(status ? { status: status as CandidateStatus } : {}),
+                })
+              }
+            />
+          </div>
+        ) : null}
 
         <NotesEditor
           id={candidate.id}

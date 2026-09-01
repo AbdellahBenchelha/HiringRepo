@@ -6,6 +6,9 @@ export const CANDIDATE_STATUSES = [
   "Interview Completed",
   "Under Review",
   "Accepted",
+  // "Accepted" is a decision we made; these two are what happened next.
+  "Offer Sent",
+  "Hired",
   "Rejected",
 ] as const;
 

@@ -23,6 +23,7 @@ import type { CandidateDocument, DocumentKind } from "@/lib/documents";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
+import type { Offer } from "@/lib/offer";
 
 export interface LanguageRow {
   language: string;
@@ -63,6 +64,16 @@ export interface Candidate {
   successMessageSentAt?: string;
   voiceRequestedAt?: string;
   voiceStatus?: VoiceStatus;
+  /**
+   * The written offer, exactly as sent. Stored rather than rebuilt from the
+   * job listing: a listing's advertised pay changes, and what we offered one
+   * person on one day must not change with it.
+   */
+  offer?: Offer;
+  offerSentAt?: string;
+  offerAcceptedAt?: string;
+  offerDeclinedAt?: string;
+  offerDeclineReason?: string;
   /** Set once the assessment invitation email has gone out, so a resubmit
    *  or a retried request cannot send the candidate a second copy. */
   interviewEmailSentAt?: string;
@@ -467,6 +478,53 @@ export function requestVerification(id: string): Promise<Candidate | null> {
     c.verificationRequestedAt = new Date().toISOString();
     delete c.rejectedAt;
     delete c.rejectionReason;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Record an offer as sent, with the exact terms.
+ *
+ * The status moves to "Offer Sent" here rather than being left to the
+ * recruiter: an offer is out in the world, and a record still reading "Under
+ * review" would be wrong the moment the email leaves.
+ */
+export function recordOffer(id: string, offer: Offer): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.offer = offer;
+    c.offerSentAt = new Date().toISOString();
+    // A re-sent offer supersedes the previous answer; the terms just changed.
+    delete c.offerAcceptedAt;
+    delete c.offerDeclinedAt;
+    delete c.offerDeclineReason;
+    c.status = "Offer Sent";
+    return { list, result: c };
+  });
+}
+
+/** What the candidate said. Accepting moves them to Hired. */
+export function setOfferOutcome(
+  id: string,
+  outcome: "accepted" | "declined",
+  reason?: string,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || !c.offerSentAt) return { list, result: null };
+    const now = new Date().toISOString();
+    if (outcome === "accepted") {
+      c.offerAcceptedAt = now;
+      delete c.offerDeclinedAt;
+      delete c.offerDeclineReason;
+      c.status = "Hired";
+    } else {
+      c.offerDeclinedAt = now;
+      c.offerDeclineReason = reason?.slice(0, 300) || undefined;
+      delete c.offerAcceptedAt;
+      c.status = "Rejected";
+    }
     return { list, result: c };
   });
 }
