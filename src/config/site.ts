@@ -92,7 +92,8 @@ export const siteConfig = {
     recruitmentEmail: "careers@workroute.work",
     supportEmail: "support@workroute.work",
     privacyEmail: "privacy@workroute.work",
-    phone: "+44 78 3130 4534",
+    /** Also the WhatsApp Business number candidates send voice recordings to. */
+    phone: "+44 7451 272838",
     address: {
       line1: "65 Stroude Road",
       line2: "",

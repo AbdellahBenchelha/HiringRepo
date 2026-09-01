@@ -701,19 +701,44 @@ export interface VoiceAssessmentInvite {
 }
 
 /**
- * The script read aloud for the voice assessment, exactly as it was when this
- * lived in the editable WhatsApp message — carried over rather than reworded,
- * since the wording itself was never the part anyone asked to change.
+ * The passage read aloud for the voice assessment.
+ *
+ * Written as a support call rather than a paragraph about wanting the job,
+ * because the point is to hear the work: a greeting, an apology that has to
+ * sound sincere, a reference number and a date read back clearly, and a
+ * closing. Numbers and dates are where clarity actually breaks down, and they
+ * are what an agent says all day, so they are in here deliberately.
+ *
+ * Around 220 words — roughly ninety seconds at a natural pace. Long enough to
+ * hear fluency rather than one rehearsed sentence, short enough that nobody
+ * gives up halfway through recording it.
+ *
+ * Returned as paragraphs so both parts can lay it out; a wall of text is
+ * harder to read aloud well, and reading it aloud well is the whole exercise.
  */
-function voiceScript(fullName: string): string {
-  return (
-    `"Hello, my name is ${fullName}. I am interested in joining your customer-support team. ` +
-    `I enjoy communicating with customers, listening carefully to their concerns, and helping ` +
-    `them find the best possible solution. I understand that professional customer service ` +
-    `requires patience, respect, clear communication, and a positive attitude. I am comfortable ` +
-    `working as part of a team, following company procedures, and learning new skills. I am ` +
-    `motivated to provide customers with a helpful and professional experience."`
-  );
+function voiceScriptParagraphs(fullName: string, position?: string): string[] {
+  const first = firstNameOf(fullName);
+  const role = position ? `the position of ${position}` : "a customer-support position";
+  const company = siteConfig.company.name;
+  return [
+    `Hello, my name is ${fullName}, and I am applying for ${role} at ${company}. ` +
+      `Thank you for the opportunity to complete this voice assessment. ` +
+      `I will now read a short passage as though I were speaking with a customer.`,
+    `Good morning, and thank you for calling customer support. My name is ${first}, ` +
+      `and I will be assisting you today. May I please confirm your full name and the ` +
+      `email address registered to your account?`,
+    `Thank you for holding. I understand how frustrating this delay has been, and I ` +
+      `sincerely apologise for the inconvenience it has caused you. Allow me to review ` +
+      `your order details now.`,
+    `I can see that your reference number is four, seven, two, nine, B, and that the ` +
+      `order was placed on the fourteenth of March. The payment was received ` +
+      `successfully, but the shipment was held at our distribution centre.`,
+    `Here is what I will do for you. I will arrange for a replacement to be dispatched ` +
+      `today, and I will send written confirmation to your email within the next thirty ` +
+      `minutes. You should receive the parcel within three to five working days.`,
+    `Is there anything else I can help you with today? Thank you very much for your ` +
+      `patience, and thank you for choosing ${company}. I hope you have a wonderful day.`,
+  ];
 }
 
 /** Digits-only WhatsApp number for a wa.me link — no "+", spaces or dashes. */
@@ -766,10 +791,14 @@ export function voiceAssessmentText(invite: VoiceAssessmentInvite): string {
     `The next step is a short voice assessment. We use it to evaluate your pronunciation,`,
     `communication skills, fluency, and voice clarity.`,
     ``,
-    `Please record a voice message reading the text below — slowly, clearly and naturally:`,
+    `Please record a voice message reading the passage below — slowly, clearly and naturally,`,
+    `as though you were speaking with a customer. It takes about a minute and a half. There is`,
+    `no need to memorise it: read it at a comfortable pace, and start again if you need to.`,
     ``,
-    voiceScript(invite.fullName),
-    ``,
+    ...voiceScriptParagraphs(invite.fullName, invite.position).flatMap((para) => [
+      `    ${para}`,
+      ``,
+    ]),
     `Record it somewhere quiet, then send it to us on WhatsApp using the link below. It opens`,
     `WhatsApp with a message already addressed to us, so we know straight away it is you:`,
     ``,
@@ -792,9 +821,22 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
   const name = esc(firstNameOf(invite.fullName));
   const company = esc(siteConfig.company.name);
   const waUrl = voiceWhatsAppUrl(invite);
-  const script = esc(voiceScript(invite.fullName));
   const email = esc(invite.email);
   const WHATSAPP_GREEN = "#25d366";
+
+  // Each paragraph as its own row: one long block is harder to read aloud
+  // without losing your place, and losing your place is what makes an
+  // otherwise fluent candidate sound hesitant.
+  const script = voiceScriptParagraphs(invite.fullName, invite.position)
+    .map(
+      (para, i) => `
+          <tr>
+            <td style="padding:${i === 0 ? "0" : "14px"} 0 0 0;font:400 15px/1.65 Arial,Helvetica,sans-serif;color:${NAVY};">
+              ${esc(para)}
+            </td>
+          </tr>`,
+    )
+    .join("");
 
   return `<!doctype html>
 <html lang="en">
@@ -839,16 +881,23 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
           it to evaluate your pronunciation, communication skills, fluency, and voice clarity.
         </p>
 
-        <p style="margin:0 0 12px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Please record a voice message reading the text below &mdash; slowly, clearly and
-          naturally:
+        <p style="margin:0 0 6px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Please record a voice message reading the passage below &mdash; slowly, clearly and
+          naturally, as though you were speaking with a customer.
+        </p>
+
+        <p style="margin:0 0 14px 0;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          It takes about a minute and a half. There is no need to memorise it &mdash; read it at a
+          comfortable pace, and start again if you need to.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 26px 0;">
           <tr>
-            <td style="padding:18px 22px;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};font-style:italic;">
-              ${script}
+            <td style="padding:20px 22px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${script}
+              </table>
             </td>
           </tr>
         </table>
