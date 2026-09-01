@@ -13,7 +13,8 @@ import { ReminderActions } from "@/components/admin/ReminderActions";
 import { DocumentChips } from "@/components/admin/DocumentChips";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
-import { VerificationBadge } from "@/components/admin/VerificationPanel";
+import { VerificationBadge, verificationStateOf } from "@/components/admin/VerificationPanel";
+import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { VERIFICATION_FILTERS, type VerificationFilter, type VerificationStatus } from "@/lib/verification";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
@@ -58,6 +59,8 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [statusFilter, setStatusFilter] = useState<"all" | CandidateStatus>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [profile, setProfile] = useState<CandidateView | null>(null);
+  /** The candidate whose photos are open in the quick view, if any. */
+  const [quickView, setQuickView] = useState<CandidateView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CandidateView | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
@@ -182,6 +185,17 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
     setPage(next);
     // Page 4 opened halfway down page 3 is a page you have to scroll up to read.
     tableTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /**
+   * Applied by both the full profile and the verification quick view, so
+   * verifying someone from either place updates the row and whichever of the
+   * two dialogs happens to be open behind it.
+   */
+  function applyPatch(id: string, patch: Partial<CandidateView>) {
+    setRows((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    setProfile((p) => (p && p.id === id ? { ...p, ...patch } : p));
+    setQuickView((q) => (q && q.id === id ? { ...q, ...patch } : q));
   }
 
   async function changeStatus(id: string, status: CandidateStatus) {
@@ -407,6 +421,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                     <VerificationBadge
                       status={c.verificationStatus}
                       requestedAt={c.verificationRequestedAt}
+                      onOpenPhotos={() => setQuickView(c)}
                     />
                   </td>
                   <td className="sticky right-0 bg-white px-4 py-3 transition-colors group-hover:bg-cream-100 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
@@ -526,12 +541,28 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
           onOpenDocument={(doc) => setViewing({ c: profile, doc })}
           onStatusChange={changeStatus}
           onSendWhatsApp={sendWhatsApp}
-          onChange={(patch) => {
-            // Keep the row behind the profile in step, or closing this leaves
-            // the table showing what it said before.
-            setRows((prev) => prev.map((c) => (c.id === profile.id ? { ...c, ...patch } : c)));
-            setProfile((p) => (p ? { ...p, ...patch } : p));
-          }}
+          onChange={(patch) => applyPatch(profile.id, patch)}
+        />
+      ) : null}
+
+      {quickView ? (
+        <VerificationQuickView
+          id={quickView.id}
+          fullName={quickView.fullName}
+          documents={quickView.documents}
+          initial={verificationStateOf(quickView)}
+          onClose={() => setQuickView(null)}
+          onChange={(v) =>
+            applyPatch(quickView.id, {
+              verificationStatus: v.status,
+              verifiedAt: v.verifiedAt,
+              verifiedBy: v.verifiedBy,
+              rejectedAt: v.rejectedAt,
+              rejectionReason: v.rejectionReason,
+              imagesDeletedAt: v.imagesDeletedAt,
+              verificationRequestedAt: v.requestedAt,
+            })
+          }
         />
       ) : null}
     </div>

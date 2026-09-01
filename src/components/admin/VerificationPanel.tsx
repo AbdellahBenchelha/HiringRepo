@@ -34,25 +34,52 @@ const TONE: Record<VerificationStatus, string> = {
 export function VerificationBadge({
   status,
   requestedAt,
+  onOpenPhotos,
 }: {
   status: VerificationStatus;
   requestedAt?: string;
+  /**
+   * Opens the photos directly, skipping the profile. Only offered for
+   * "Ready to review" and "Verified" — the two states where there is
+   * definitely something to look at. Ignored for every other status, even if
+   * a caller passes it: "Awaiting upload" and "Rejected" have no photo to
+   * jump to (rejected clears the images), and turning the badge into a button
+   * there would be a click that does nothing.
+   */
+  onOpenPhotos?: () => void;
 }) {
   if (status === "not_required") {
     return <span className="text-xs text-navy-300">—</span>;
   }
   const unasked = status === "awaiting" && !requestedAt;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-        unasked ? "border-red-200 bg-red-50 text-red-700" : TONE[status]
-      }`}
-    >
+  const clickable = !!onOpenPhotos && (status === "provided" || status === "verified");
+
+  const className = `inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+    unasked ? "border-red-200 bg-red-50 text-red-700" : TONE[status]
+  } ${clickable ? "transition hover:brightness-95" : ""}`;
+
+  const content = (
+    <>
       {status === "verified" ? <Icon name="checkCircle" className="h-3 w-3" /> : null}
       {status === "rejected" ? <Icon name="shield" className="h-3 w-3" /> : null}
       {unasked ? <Icon name="mail" className="h-3 w-3" /> : null}
       {unasked ? "Not asked yet" : VERIFICATION_LABEL[status]}
-    </span>
+    </>
+  );
+
+  if (!clickable) {
+    return <span className={className}>{content}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpenPhotos}
+      title={status === "verified" ? "View the identity photos" : "Review the identity photos"}
+      className={className}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -66,6 +93,34 @@ export interface VerificationState {
   consentAt?: string;
   /** When we last asked them to upload, if we ever did. */
   requestedAt?: string;
+}
+
+/**
+ * Pull a panel's starting state out of a candidate view.
+ *
+ * One definition shared by the profile modal and the quick view, so the two
+ * ways of opening this panel can never disagree about which fields it reads.
+ */
+export function verificationStateOf(c: {
+  verificationStatus: VerificationStatus;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  imagesDeletedAt?: string;
+  verificationConsentAt?: string;
+  verificationRequestedAt?: string;
+}): VerificationState {
+  return {
+    status: c.verificationStatus,
+    verifiedAt: c.verifiedAt,
+    verifiedBy: c.verifiedBy,
+    rejectedAt: c.rejectedAt,
+    rejectionReason: c.rejectionReason,
+    imagesDeletedAt: c.imagesDeletedAt,
+    consentAt: c.verificationConsentAt,
+    requestedAt: c.verificationRequestedAt,
+  };
 }
 
 /**

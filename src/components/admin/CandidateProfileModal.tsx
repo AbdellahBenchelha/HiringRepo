@@ -6,7 +6,7 @@ import { InterviewBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { DocumentList } from "@/components/admin/DocumentChips";
 import { NotesEditor } from "@/components/admin/NotesEditor";
-import { VerificationPanel, type VerificationState } from "@/components/admin/VerificationPanel";
+import { VerificationPanel, verificationStateOf } from "@/components/admin/VerificationPanel";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
@@ -59,16 +59,7 @@ export function CandidateProfileModal({
   /** Omitted where the tab has no WhatsApp action of its own. */
   onSendWhatsApp?: (c: CandidateView) => void;
 }) {
-  const verification: VerificationState = {
-    status: candidate.verificationStatus,
-    verifiedAt: candidate.verifiedAt,
-    verifiedBy: candidate.verifiedBy,
-    rejectedAt: candidate.rejectedAt,
-    rejectionReason: candidate.rejectionReason,
-    imagesDeletedAt: candidate.imagesDeletedAt,
-    consentAt: candidate.verificationConsentAt,
-    requestedAt: candidate.verificationRequestedAt,
-  };
+  const verification = verificationStateOf(candidate);
 
   return (
     <div

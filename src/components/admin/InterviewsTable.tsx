@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { InterviewActions } from "@/components/admin/InterviewActions";
-import { VerificationBadge } from "@/components/admin/VerificationPanel";
+import { VerificationBadge, verificationStateOf } from "@/components/admin/VerificationPanel";
+import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
@@ -77,16 +78,20 @@ export function InterviewsTable({
   /**
    * Edits made since the page was rendered, by candidate id.
    *
-   * Each row has two independent client islands — the voice assessment
-   * controls and the profile dialog — and they describe the same person. Held
-   * separately they drift: marking someone as having passed in one leaves the
-   * other still showing what the server sent, which is why the offer form
-   * would not appear until a reload. One patch per row, both islands reading
-   * and writing it, and the filters see the edits too.
+   * Each row has up to three independent client islands describing the same
+   * person — the voice assessment controls, the profile dialog, and now the
+   * verification quick view. Held separately they drift: marking someone as
+   * having passed in one leaves the others still showing what the server
+   * sent, which is why the offer form would not appear until a reload. One
+   * patch per row, every island reading and writing it, and the filters see
+   * the edits too.
    */
   const [patches, setPatches] = useState<Record<string, Partial<CandidateView>>>({});
   const patch = (id: string, p: Partial<CandidateView>) =>
     setPatches((prev) => ({ ...prev, [id]: { ...prev[id], ...p } }));
+
+  /** The candidate whose photos are open in the quick view, if any. */
+  const [quickView, setQuickView] = useState<CandidateView | null>(null);
 
   const live = useMemo(
     () => rows.map((r) => (patches[r.view.id] ? { ...r, view: { ...r.view, ...patches[r.view.id] } } : r)),
@@ -298,6 +303,7 @@ export function InterviewsTable({
                       <VerificationBadge
                         status={c.verificationStatus}
                         requestedAt={c.verificationRequestedAt}
+                        onOpenPhotos={() => setQuickView(c)}
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -346,6 +352,32 @@ export function InterviewsTable({
         onPage={goToPage}
         onPageSize={setPageSize}
       />
+
+      {quickView ? (
+        <VerificationQuickView
+          id={quickView.id}
+          fullName={quickView.fullName}
+          documents={quickView.documents}
+          initial={verificationStateOf(quickView)}
+          onClose={() => setQuickView(null)}
+          onChange={(v) => {
+            const p = {
+              verificationStatus: v.status,
+              verifiedAt: v.verifiedAt,
+              verifiedBy: v.verifiedBy,
+              rejectedAt: v.rejectedAt,
+              rejectionReason: v.rejectionReason,
+              imagesDeletedAt: v.imagesDeletedAt,
+              verificationRequestedAt: v.requestedAt,
+            };
+            patch(quickView.id, p);
+            // The dialog reads its own snapshot, not the row's patch map, so
+            // it has to be told directly or verifying would show the old
+            // badge until the dialog is closed and reopened.
+            setQuickView((q) => (q ? { ...q, ...p } : q));
+          }}
+        />
+      ) : null}
     </>
   );
 }
