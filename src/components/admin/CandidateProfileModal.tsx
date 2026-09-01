@@ -12,6 +12,7 @@ import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
+import { canOffer } from "@/lib/offer";
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -200,9 +201,9 @@ export function CandidateProfileModal({
           />
         </div>
 
-        {/* The live interview happens off-system, after the voice assessment
-            passes; this is where its outcome lands. */}
-        {showOffer && (candidate.voiceStatus === "Voice Assessment Passed" || candidate.offerSentAt) ? (
+        {/* The live interview happens off-system, once the recording is in;
+            this is where its outcome lands. */}
+        {showOffer && canOffer(candidate.voiceStatus, candidate) ? (
           <div className="mt-5">
             <OfferPanel
               id={candidate.id}

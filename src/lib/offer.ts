@@ -53,6 +53,24 @@ export const OFFER_LABEL: Record<OfferStatus, string> = {
   declined: "Offer declined",
 };
 
+/**
+ * Whether the offer form belongs in front of this candidate yet.
+ *
+ * Opens as soon as their recording is in, not only once someone has ticked
+ * "Passed". In practice the recruiter listens to the recording, calls them,
+ * and decides — the "Passed" tick often happens afterwards or not at all, and
+ * a form that waits for it is a form that is not there when it is needed.
+ *
+ * "Failed" is deliberately excluded: whatever else the flow allows, it should
+ * not put an offer form in front of someone who was just turned down. Anyone
+ * already sent an offer keeps it regardless, or the terms and the accept /
+ * decline buttons would vanish the moment their status moved on.
+ */
+export function canOffer(voiceStatus: string | undefined, state: OfferState): boolean {
+  if (state.offerSentAt) return true;
+  return voiceStatus === "Voice Recording Received" || voiceStatus === "Voice Assessment Passed";
+}
+
 /** The advertised pay for a role, so the form can prefill and warn. */
 export function advertisedFor(position: string): Salary | undefined {
   return jobs.find((j) => j.title === position)?.salary;
