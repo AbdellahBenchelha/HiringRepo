@@ -92,14 +92,3 @@ export function VoiceBadge({ status }: { status: VoiceStatus }) {
   );
 }
 
-export function SuccessMessageBadge({ sent }: { sent: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-        sent ? "bg-green-50 text-green-700 border-green-200" : "bg-navy-50 text-navy-500 border-navy-200"
-      }`}
-    >
-      {sent ? "Success Message Sent" : "Success Message Not Sent"}
-    </span>
-  );
-}

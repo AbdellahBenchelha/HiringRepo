@@ -6,8 +6,6 @@ import { listCandidates } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
 import { toCandidateView } from "@/lib/candidateView";
 import { verificationStatus } from "@/lib/verification";
-import { getMessageTemplates } from "@/lib/messageStore";
-import { buildVars, TEMPLATE_KEYS, type TemplateKey } from "@/lib/messageTemplates";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { InterviewsTable, type InterviewRow } from "@/components/admin/InterviewsTable";
 
@@ -27,10 +25,9 @@ export default async function AdminInterviewsPage({
   searchParams: Promise<{ show?: string }>;
 }) {
   await requireAdmin();
-  const [params, all, saved, required, base] = await Promise.all([
+  const [params, all, required, base] = await Promise.all([
     searchParams,
     listCandidates(),
-    getMessageTemplates(),
     requiredCountries(),
     baseUrl(),
   ]);
@@ -52,20 +49,13 @@ export default async function AdminInterviewsPage({
   const hidden = finished.filter(notAsked);
   const listed = showAll ? finished : finished.filter((c) => !notAsked(c));
 
-  // Flatten to bodies once for the whole table rather than per row.
-  const templates = Object.fromEntries(TEMPLATE_KEYS.map((k) => [k, saved[k].body])) as Record<
-    TemplateKey,
-    string
-  >;
-
   const rows: InterviewRow[] = listed.map((c) => ({
     view: toCandidateView(c, base, required),
-    vars: buildVars(c),
   }));
 
   return (
     <AdminShell>
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <header className="mb-6">
         <div>
           <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">Interviews</h1>
           <p className="mt-1 text-sm text-navy-500">
@@ -94,12 +84,9 @@ export default async function AdminInterviewsPage({
             )}
           </p>
         </div>
-        <Link href="/admin/settings/messages" className="btn-secondary !px-4 !py-2 text-sm">
-          Edit WhatsApp messages
-        </Link>
       </header>
 
-      <InterviewsTable rows={rows} templates={templates} />
+      <InterviewsTable rows={rows} />
     </AdminShell>
   );
 }

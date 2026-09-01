@@ -1,24 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Icon } from "@/components/Icon";
-import { SuccessMessageBadge, VoiceBadge } from "@/components/admin/StatusBadge";
+import { VoiceBadge } from "@/components/admin/StatusBadge";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { VOICE_STATUSES, type VoiceStatus } from "@/lib/candidateStatus";
 import { adminPost } from "@/lib/adminClient";
-import {
-  LENGTH_HARD_LIMIT,
-  LENGTH_MAX,
-  renderTemplate,
-  type TemplateKey,
-  type TemplateVars,
-} from "@/lib/messageTemplates";
+
+/**
+ * Follow-up on a completed interview: one email, one status to track.
+ *
+ * The congratulations message and the voice-assessment request used to be two
+ * separate WhatsApp texts the recruiter sent by hand. They are now a single
+ * email, sent by the server the moment this is confirmed — no wording to
+ * preview or edit here, because the email is fixed in code, the way the offer
+ * and ID-verification emails already are.
+ */
 
 export interface InterviewActionsProps {
   id: string;
   fullName: string;
-  phone: string;
-  successMessageSentAt?: string;
+  email: string;
   voiceRequestedAt?: string;
   /**
    * Owned by the row, not by this component.
@@ -31,10 +33,6 @@ export interface InterviewActionsProps {
    */
   voiceStatus?: VoiceStatus;
   onVoiceStatusChange: (status: VoiceStatus) => void;
-  /** Saved wording for both messages, resolved on the server. */
-  templates: Record<TemplateKey, string>;
-  /** This candidate's substitution values. */
-  vars: TemplateVars;
 }
 
 function fmt(iso?: string) {
@@ -44,87 +42,44 @@ function fmt(iso?: string) {
   });
 }
 
-const DIALOG: Record<TemplateKey, { title: string; confirmLabel: string; endpoint: string }> = {
-  interviewSuccess: {
-    title: "Send the interview success message?",
-    confirmLabel: "Open WhatsApp",
-    endpoint: "success-message",
-  },
-  voiceAssessment: {
-    title: "Send the voice assessment request?",
-    confirmLabel: "Open WhatsApp",
-    endpoint: "voice-request",
-  },
-};
-
 export function InterviewActions(props: InterviewActionsProps) {
-  const [successAt, setSuccessAt] = useState(props.successMessageSentAt);
   const [voiceAt, setVoiceAt] = useState(props.voiceRequestedAt);
   const voiceStatus = props.voiceStatus ?? "Voice Assessment Not Requested";
-  const [error, setError] = useState("");
-
-  // Which message is being confirmed, the text as it currently stands, and
-  // whether the recruiter has opened it up for a one-off edit.
-  const [confirming, setConfirming] = useState<TemplateKey | null>(null);
-  const [draft, setDraft] = useState("");
-  const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const draftRef = useRef<HTMLTextAreaElement>(null);
+  /** "sent", or the reason the email did not go out. */
+  const [emailed, setEmailed] = useState("");
 
-  // Opening the editor should land the caret at the end, ready to add a line.
-  useEffect(() => {
-    if (!editing) return;
-    const el = draftRef.current;
-    if (!el) return;
-    el.focus();
-    el.setSelectionRange(el.value.length, el.value.length);
-  }, [editing]);
+  const hasEmail = props.email.includes("@");
 
-  const digits = props.phone.replace(/[^\d]/g, "");
-  const phoneValid = digits.length >= 8;
-
-  function ask(key: TemplateKey) {
-    setError("");
-    setDraft(renderTemplate(props.templates[key], props.vars));
-    setEditing(false);
-    setConfirming(key);
-  }
-
-  /**
-   * Open WhatsApp, then log the send.
-   *
-   * window.open has to run before the first await or the popup blocker
-   * suppresses it — a window opened after an await is no longer attributable
-   * to the click that started it.
-   */
-  function send(key: TemplateKey) {
-    if (busy || !phoneValid) return;
+  async function send() {
+    if (busy) return;
     setBusy(true);
-    const win = window.open(
-      `https://wa.me/${digits}?text=${encodeURIComponent(draft)}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
-    setConfirming(null);
-    if (!win) setError("Pop-up blocked — allow pop-ups to open WhatsApp.");
-
-    void adminPost(`/api/admin/candidates/${props.id}/${DIALOG[key].endpoint}`, {})
-      .then(() => {
-        if (key === "interviewSuccess") {
-          setSuccessAt(new Date().toISOString());
-        } else {
-          setVoiceAt(new Date().toISOString());
-          // Matches what the server does on a voice request: an untouched
-          // status moves to Requested, anything further along is left alone.
-          if (voiceStatus === "Voice Assessment Not Requested") {
-            props.onVoiceStatusChange("Voice Assessment Requested");
-          }
+    setConfirming(false);
+    try {
+      const res = await adminPost(`/api/admin/candidates/${props.id}/voice-request`, {});
+      const data = (await res.json()) as {
+        ok?: boolean;
+        voiceRequestedAt?: string;
+        voiceStatus?: VoiceStatus;
+        emailed?: boolean;
+        emailError?: string;
+      };
+      if (data.ok) {
+        setVoiceAt(data.voiceRequestedAt);
+        // Matches what the server does: an untouched status moves to
+        // Requested, anything further along is left alone.
+        if (voiceStatus === "Voice Assessment Not Requested") {
+          props.onVoiceStatusChange("Voice Assessment Requested");
         }
-      })
-      .catch(() => {
-        /* the message still opened; the log is secondary */
-      })
-      .finally(() => setBusy(false));
+        setEmailed(data.emailed ? "sent" : (data.emailError ?? "failed"));
+      } else {
+        setEmailed("failed");
+      }
+    } catch {
+      setEmailed("failed");
+    }
+    setBusy(false);
   }
 
   async function changeVoiceStatus(status: VoiceStatus) {
@@ -136,36 +91,18 @@ export function InterviewActions(props: InterviewActionsProps) {
     }
   }
 
-  const tooLong = draft.length > LENGTH_HARD_LIMIT;
-
   return (
     <div className="space-y-2.5">
-      {/* Success message */}
-      <div className="flex flex-wrap items-center gap-2">
-        <SuccessMessageBadge sent={!!successAt} />
-        <button
-          type="button"
-          onClick={() => ask("interviewSuccess")}
-          disabled={!phoneValid}
-          title="Send interview success message via WhatsApp"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-        >
-          <Icon name="chat" className="h-4 w-4" /> Success Message
-        </button>
-        {successAt ? <span className="text-[11px] text-navy-400">{fmt(successAt)}</span> : null}
-      </div>
-
-      {/* Voice assessment */}
       <div className="flex flex-wrap items-center gap-2">
         <VoiceBadge status={voiceStatus} />
         <button
           type="button"
-          onClick={() => ask("voiceAssessment")}
-          disabled={!phoneValid}
-          title="Send voice assessment request via WhatsApp"
+          onClick={() => setConfirming(true)}
+          disabled={!hasEmail || busy}
+          title="Email the voice assessment request"
           className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
         >
-          <Icon name="chat" className="h-4 w-4" /> Voice Assessment
+          <Icon name="mail" className="h-4 w-4" /> Send Voice Assessment
         </button>
         {voiceAt ? <span className="text-[11px] text-navy-400">{fmt(voiceAt)}</span> : null}
       </div>
@@ -182,65 +119,34 @@ export function InterviewActions(props: InterviewActionsProps) {
         ))}
       </select>
 
-      {!phoneValid ? (
-        <p className="text-[11px] font-medium text-red-500">No valid WhatsApp number.</p>
+      {!hasEmail ? <p className="text-[11px] font-medium text-red-500">No email on file.</p> : null}
+
+      {emailed === "sent" ? (
+        <p className="flex items-center gap-1.5 text-[11px] font-medium text-green-700">
+          <Icon name="checkCircle" className="h-3.5 w-3.5 shrink-0" /> Emailed.
+        </p>
+      ) : emailed ? (
+        <p className="text-[11px] font-medium text-amber-700">
+          Recorded, but the email did not go out ({emailed}). Contact them another way, or they
+          will never know to come back.
+        </p>
       ) : null}
-      {error ? <p className="text-[11px] font-medium text-red-500">{error}</p> : null}
 
       <ConfirmDialog
-        open={confirming !== null}
-        size="lg"
-        icon="chat"
-        title={confirming ? DIALOG[confirming].title : ""}
-        confirmLabel={confirming ? DIALOG[confirming].confirmLabel : "Send"}
+        open={confirming}
+        icon="mail"
+        title="Send the voice assessment request?"
+        confirmLabel="Send email"
         busy={busy}
-        warning={tooLong ? "This message may be too long for WhatsApp to accept in one link." : undefined}
-        onCancel={() => setConfirming(null)}
-        onConfirm={() => confirming && send(confirming)}
-        footer={
-          <button
-            type="button"
-            onClick={() => setEditing((e) => !e)}
-            className="rounded-full border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-600 transition hover:bg-navy-50"
-          >
-            {editing ? "Done editing" : "Edit for this candidate"}
-          </button>
-        }
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => void send()}
         body={
-          <div className="mt-1">
-            <p className="mb-2.5">
-              WhatsApp will open with this message to{" "}
-              <strong className="text-navy-900">{props.fullName || "this candidate"}</strong> on{" "}
-              <strong className="text-navy-900">{props.phone}</strong>. You still have to press send in
-              WhatsApp.
-            </p>
-
-            {editing ? (
-              <>
-                <textarea
-                  ref={draftRef}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  maxLength={LENGTH_MAX}
-                  rows={14}
-                  aria-label="Message text"
-                  className="w-full rounded-xl border border-navy-200 bg-white p-3 font-mono text-[12.5px] leading-relaxed text-navy-900 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                />
-                <p className="mt-1.5 text-xs text-navy-400">
-                  {draft.length} characters · this edit applies to this one message only and does not change
-                  your saved wording.
-                </p>
-              </>
-            ) : (
-              <div className="max-h-80 overflow-y-auto rounded-2xl bg-[#e5ddd5] p-3.5">
-                <div className="rounded-xl rounded-tr-sm bg-[#dcf8c6] px-3.5 py-2.5 shadow-sm">
-                  <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-navy-900">
-                    {draft}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          <>
+            <strong className="text-navy-900">{props.fullName || "This candidate"}</strong> will be
+            emailed at <strong className="text-navy-900">{props.email}</strong> with the
+            congratulations, the voice-assessment script, and instructions to record and send it
+            back on WhatsApp.
+          </>
         }
       />
     </div>

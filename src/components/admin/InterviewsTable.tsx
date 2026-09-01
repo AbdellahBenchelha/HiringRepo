@@ -13,7 +13,6 @@ import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { CANDIDATE_STATUSES, VOICE_STATUSES, type CandidateStatus, type VoiceStatus } from "@/lib/candidateStatus";
 import { VERIFICATION_FILTERS, type VerificationFilter } from "@/lib/verification";
 import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
-import type { TemplateKey, TemplateVars } from "@/lib/messageTemplates";
 import type { CandidateView } from "@/lib/candidateView";
 
 /**
@@ -35,8 +34,6 @@ import type { CandidateView } from "@/lib/candidateView";
 
 export interface InterviewRow {
   view: CandidateView;
-  /** Placeholder values for the WhatsApp templates, built server-side. */
-  vars: TemplateVars;
 }
 
 function fmt(iso?: string) {
@@ -58,13 +55,7 @@ const OFFER_FILTERS: { value: "all" | OfferStatus; label: string }[] = [
   { value: "declined", label: "Offer declined" },
 ];
 
-export function InterviewsTable({
-  rows,
-  templates,
-}: {
-  rows: InterviewRow[];
-  templates: Record<TemplateKey, string>;
-}) {
+export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
   const [voice, setVoice] = useState<"all" | VoiceStatus>("all");
@@ -247,8 +238,8 @@ export function InterviewsTable({
               <th className="px-4 py-3 font-semibold">%</th>
               <th className="px-4 py-3 font-semibold">Status</th>
               <th className="px-4 py-3 font-semibold">ID check</th>
-              <th className="px-4 py-3 font-semibold">Follow-up (WhatsApp)</th>
-              {/* Pinned right, as on the Candidates table: the follow-up
+              <th className="px-4 py-3 font-semibold">Voice assessment</th>
+              {/* Pinned right, as on the Candidates table: the voice-assessment
                   column is wide, and the actions must stay reachable without
                   scrolling sideways to find them. */}
               <th className="sticky right-0 whitespace-nowrap bg-navy-50 px-4 py-3 font-semibold shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
@@ -266,7 +257,7 @@ export function InterviewsTable({
                 </td>
               </tr>
             ) : (
-              visible.map(({ view: c, vars }) => {
+              visible.map(({ view: c }) => {
                 const p = pct(c.score ?? 0, c.total ?? 0);
                 return (
                   <tr key={c.id} className="align-top hover:bg-navy-50/40">
@@ -310,13 +301,10 @@ export function InterviewsTable({
                       <InterviewActions
                         id={c.id}
                         fullName={c.fullName}
-                        phone={c.phone}
-                        successMessageSentAt={c.successMessageSentAt}
+                        email={c.email}
                         voiceRequestedAt={c.voiceRequestedAt}
                         voiceStatus={c.voiceStatus}
                         onVoiceStatusChange={(voiceStatus) => patch(c.id, { voiceStatus })}
-                        templates={templates}
-                        vars={vars}
                       />
                     </td>
                     <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">

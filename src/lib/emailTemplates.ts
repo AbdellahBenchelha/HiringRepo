@@ -693,3 +693,218 @@ export function offerHtml(o: OfferEmail): string {
 </body>
 </html>`;
 }
+
+export interface VoiceAssessmentInvite {
+  fullName: string;
+  email: string;
+  position?: string;
+}
+
+/**
+ * The script read aloud for the voice assessment, exactly as it was when this
+ * lived in the editable WhatsApp message — carried over rather than reworded,
+ * since the wording itself was never the part anyone asked to change.
+ */
+function voiceScript(fullName: string): string {
+  return (
+    `"Hello, my name is ${fullName}. I am interested in joining your customer-support team. ` +
+    `I enjoy communicating with customers, listening carefully to their concerns, and helping ` +
+    `them find the best possible solution. I understand that professional customer service ` +
+    `requires patience, respect, clear communication, and a positive attitude. I am comfortable ` +
+    `working as part of a team, following company procedures, and learning new skills. I am ` +
+    `motivated to provide customers with a helpful and professional experience."`
+  );
+}
+
+/** Digits-only WhatsApp number for a wa.me link — no "+", spaces or dashes. */
+function waNumber(): string {
+  return siteConfig.contact.phone.replace(/[^\d]/g, "");
+}
+
+/**
+ * The message a candidate's WhatsApp opens to, pre-addressed to us.
+ *
+ * This is what solves identification without any new matching logic on our
+ * side: the recruiter did not start this conversation the way they do for a
+ * WhatsApp-sent request, so nothing about the incoming message says who it is
+ * from except what it actually says. Naming the candidate, their role and
+ * their email up front means a recruiter reading the message already knows —
+ * even if it arrives from a number that is not the one on file.
+ */
+function voiceWhatsAppPrefill({ fullName, email, position }: VoiceAssessmentInvite): string {
+  return (
+    `Hello, this is ${fullName}${position ? `, applying for ${position}` : ""}. ` +
+    `My email is ${email}. Here is my voice assessment recording:`
+  );
+}
+
+function voiceWhatsAppUrl(invite: VoiceAssessmentInvite): string {
+  return `https://wa.me/${waNumber()}?text=${encodeURIComponent(voiceWhatsAppPrefill(invite))}`;
+}
+
+/**
+ * Subject for the merged interview-success + voice-assessment email.
+ *
+ * This single email now carries what used to be two separate WhatsApp
+ * messages: the congratulations, and the request itself.
+ */
+export function voiceAssessmentSubject(): string {
+  return `Congratulations — next step: your voice assessment`;
+}
+
+/** Plain-text part. */
+export function voiceAssessmentText(invite: VoiceAssessmentInvite): string {
+  const name = firstNameOf(invite.fullName);
+  const waUrl = voiceWhatsAppUrl(invite);
+  return [
+    `Hi ${name},`,
+    ``,
+    `Congratulations! You have successfully completed the online interview, and you performed`,
+    `very well. Thank you for taking the time to answer all the questions carefully — we are`,
+    `pleased to move your application to the next stage.`,
+    ``,
+    `The next step is a short voice assessment. We use it to evaluate your pronunciation,`,
+    `communication skills, fluency, and voice clarity.`,
+    ``,
+    `Please record a voice message reading the text below — slowly, clearly and naturally:`,
+    ``,
+    voiceScript(invite.fullName),
+    ``,
+    `Record it somewhere quiet, then send it to us on WhatsApp using the link below. It opens`,
+    `WhatsApp with a message already addressed to us, so we know straight away it is you:`,
+    ``,
+    waUrl,
+    ``,
+    `Or message us on WhatsApp at ${siteConfig.contact.phone}.`,
+    ``,
+    `If you message us a different way instead, please make sure to say your full name and`,
+    `include your email address (${invite.email}) so we know which application it belongs to.`,
+    ``,
+    `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+/** HTML part. */
+export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
+  const name = esc(firstNameOf(invite.fullName));
+  const company = esc(siteConfig.company.name);
+  const waUrl = voiceWhatsAppUrl(invite);
+  const script = esc(voiceScript(invite.fullName));
+  const email = esc(invite.email);
+  const WHATSAPP_GREEN = "#25d366";
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(voiceAssessmentSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  You passed the interview — here is your voice assessment.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Congratulations, ${name}!
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          You have successfully completed the online interview, and you performed very well.
+          Thank you for taking the time to answer all the questions carefully — we are pleased to
+          move your application to the next stage.
+        </p>
+
+        <p style="margin:0 0 20px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          The next step is a short <strong style="color:${NAVY};">voice assessment</strong>. We use
+          it to evaluate your pronunciation, communication skills, fluency, and voice clarity.
+        </p>
+
+        <p style="margin:0 0 12px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Please record a voice message reading the text below &mdash; slowly, clearly and
+          naturally:
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 26px 0;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};font-style:italic;">
+              ${script}
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Record it somewhere quiet, then send it to us on WhatsApp using the button below. It
+          opens WhatsApp with a message already addressed to us, so we know straight away it is
+          you:
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px 0;">
+          <tr>
+            <td align="center" bgcolor="${WHATSAPP_GREEN}" style="border-radius:999px;">
+              <a href="${waUrl}" style="display:inline-block;padding:15px 34px;font:700 16px/1 Arial,Helvetica,sans-serif;color:#ffffff;text-decoration:none;border-radius:999px;">
+                Send my recording on WhatsApp
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <!-- The wa.me link is mostly percent-encoded message text, so printing
+             it raw here is three lines of %20 that help nobody. Someone whose
+             button does not work needs the number, which they can save and
+             message directly. -->
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Message us on WhatsApp at
+          <strong style="color:${NAVY};">${esc(siteConfig.contact.phone)}</strong>.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+              Messaging us a different way instead? Please say your full name and include your
+              email address (<strong style="color:${NAVY};">${email}</strong>) so we know which
+              application it belongs to.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}

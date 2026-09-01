@@ -60,8 +60,8 @@ export interface Candidate {
   submittedAt?: string;
   invitationSentAt?: string;
   interview?: InterviewResult;
-  // Post-interview WhatsApp follow-ups (Interviews section).
-  successMessageSentAt?: string;
+  // Post-interview follow-up (Interviews section). The congratulations and
+  // the voice-assessment request are now one email, sent when this is set.
   voiceRequestedAt?: string;
   voiceStatus?: VoiceStatus;
   /**
@@ -713,15 +713,6 @@ export function recordInvitation(id: string): Promise<Candidate | null> {
     if (!c) return { list, result: null };
     c.invitationSentAt = new Date().toISOString();
     if (c.status === "New Application") c.status = "Interview Invitation Sent";
-    return { list, result: c };
-  });
-}
-
-export function recordSuccessMessage(id: string): Promise<Candidate | null> {
-  return withWrite((list) => {
-    const c = list.find((x) => x.id === id);
-    if (!c) return { list, result: null };
-    c.successMessageSentAt = new Date().toISOString();
     return { list, result: c };
   });
 }
