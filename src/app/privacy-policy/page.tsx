@@ -33,6 +33,12 @@ export default function PrivacyPolicyPage() {
           retained.
         </li>
         <li>
+          If you are offered a role and accept it: the details you confirm at that point, which
+          include your nationality, your identity or passport document number, your full
+          residential address and postcode, and — if you are engaging through a company — that
+          company&rsquo;s name, registration number and tax number.
+        </li>
+        <li>
           Identity verification documents, where required: an image of an official identity
           document and a photograph of you holding it. This is requested only from applicants in
           certain countries, and only after the online assessment.
@@ -78,6 +84,21 @@ export default function PrivacyPolicyPage() {
         is never treated as a decision in itself — a VPN, a work network or simply travelling all
         produce one — and no application is rejected automatically because of it. We do not derive
         your city, region or location beyond the country, and we do not store your IP address.
+      </p>
+
+      <h2>2a. Details confirmed when you accept an offer</h2>
+      <p>
+        If we offer you a role, the acceptance link in your offer email asks you to check the
+        details we already hold and correct anything that is out of date, and to supply the few
+        further details needed to draw up an agreement — your nationality, your identity document
+        number, your full address, and your company details if you are engaging through one.
+      </p>
+      <p>
+        This information is used to prepare and administer your agreement with us, and for no
+        other purpose. Your earlier application record is kept alongside it rather than
+        overwritten, so that both remain accurate. We will never ask you for a payment, a bank
+        card, or a password at any stage; bank details are requested only after a written
+        agreement has been signed, and never through this form.
       </p>
 
       <h2>3. Recruitment-data processing</h2>

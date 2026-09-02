@@ -24,6 +24,7 @@ import type { CandidateDocument, DocumentKind } from "@/lib/documents";
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
 import type { Offer } from "@/lib/offer";
+import type { ConfirmedDetails } from "@/lib/hiring";
 
 export interface LanguageRow {
   language: string;
@@ -74,6 +75,16 @@ export interface Candidate {
   offerAcceptedAt?: string;
   offerDeclinedAt?: string;
   offerDeclineReason?: string;
+  /**
+   * What the candidate re-confirmed when they accepted.
+   *
+   * Kept beside the application rather than written over it. The application
+   * is what someone typed to get past a form; this is what they stated when
+   * it was about to become a contract, and the difference between the two is
+   * worth seeing.
+   */
+  confirmedDetails?: ConfirmedDetails;
+  confirmedDetailsAt?: string;
   /** Set once the assessment invitation email has gone out, so a resubmit
    *  or a retried request cannot send the candidate a second copy. */
   interviewEmailSentAt?: string;
@@ -501,12 +512,16 @@ export function requestVerification(id: string): Promise<Candidate | null> {
  * recruiter: an offer is out in the world, and a record still reading "Under
  * review" would be wrong the moment the email leaves.
  */
-export function recordOffer(id: string, offer: Offer): Promise<Candidate | null> {
+export function recordOffer(id: string, offer: Offer, sentAt?: string): Promise<Candidate | null> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
     c.offer = offer;
-    c.offerSentAt = new Date().toISOString();
+    // The caller may supply the timestamp because the acceptance link in the
+    // email is signed against it, and that email is built before this write
+    // happens — the offer is still only recorded once the mail has actually
+    // left, but both sides have to agree on which moment this offer is.
+    c.offerSentAt = sentAt ?? new Date().toISOString();
     // A re-sent offer supersedes the previous answer; the terms just changed.
     delete c.offerAcceptedAt;
     delete c.offerDeclinedAt;
@@ -538,6 +553,79 @@ export function setOfferOutcome(
       c.status = "Rejected";
     }
     return { list, result: c };
+  });
+}
+
+/**
+ * Why a candidate's own answer to an offer could not be recorded.
+ *
+ * "superseded" is the one worth having: a revised offer changes offerSentAt,
+ * and an older email still sitting in an inbox must not be able to accept the
+ * terms it was sent with.
+ */
+export type OfferAnswerResult =
+  | { ok: true; candidate: Candidate }
+  | { ok: false; reason: "not_found" | "no_offer" | "superseded" | "already_answered" };
+
+/**
+ * The candidate's own answer, from the link in their offer email.
+ *
+ * Separate from setOfferOutcome, which is the recruiter recording what they
+ * were told on a call. This one has to defend itself: every precondition is
+ * re-checked inside the same serialized write that acts on it, so two taps on
+ * a slow phone connection cannot both succeed, and a link cannot be redeemed
+ * against an offer that has since been replaced.
+ *
+ * Details and acceptance are written together or not at all. Half of this —
+ * a candidate marked Hired with no confirmed details, or details stored
+ * against an offer nobody accepted — would be worse than neither.
+ */
+export function acceptOfferWithDetails(
+  id: string,
+  offerSentAt: string,
+  details: ConfirmedDetails,
+): Promise<OfferAnswerResult> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: { ok: false, reason: "not_found" } as OfferAnswerResult };
+    if (!c.offerSentAt) return { list, result: { ok: false, reason: "no_offer" } as OfferAnswerResult };
+    if (c.offerSentAt !== offerSentAt) {
+      return { list, result: { ok: false, reason: "superseded" } as OfferAnswerResult };
+    }
+    if (c.offerAcceptedAt || c.offerDeclinedAt) {
+      return { list, result: { ok: false, reason: "already_answered" } as OfferAnswerResult };
+    }
+
+    const now = new Date().toISOString();
+    c.confirmedDetails = details;
+    c.confirmedDetailsAt = now;
+    c.offerAcceptedAt = now;
+    c.status = "Hired";
+    return { list, result: { ok: true, candidate: c } as OfferAnswerResult };
+  });
+}
+
+/** The candidate declining from their own link, with an optional reason. */
+export function declineOfferByCandidate(
+  id: string,
+  offerSentAt: string,
+  reason?: string,
+): Promise<OfferAnswerResult> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: { ok: false, reason: "not_found" } as OfferAnswerResult };
+    if (!c.offerSentAt) return { list, result: { ok: false, reason: "no_offer" } as OfferAnswerResult };
+    if (c.offerSentAt !== offerSentAt) {
+      return { list, result: { ok: false, reason: "superseded" } as OfferAnswerResult };
+    }
+    if (c.offerAcceptedAt || c.offerDeclinedAt) {
+      return { list, result: { ok: false, reason: "already_answered" } as OfferAnswerResult };
+    }
+
+    c.offerDeclinedAt = new Date().toISOString();
+    c.offerDeclineReason = reason?.trim().slice(0, 300) || undefined;
+    c.status = "Rejected";
+    return { list, result: { ok: true, candidate: c } as OfferAnswerResult };
   });
 }
 

@@ -48,7 +48,14 @@ export async function GET(_req: NextRequest) {
     "id", "First name", "Last name", "Date of birth", "Email", "Phone",
     "Country", "Sent from", "Country mismatch", "City", "Address", "LinkedIn", "Position", "Languages",
     "Status", "Applied", "Submitted", "Interview completed", "Score", "Total",
-    "Assessment email sent", "Possible duplicate", "Duplicate of", "Documents", "ID verification", "Verified on", "Notes",
+    "Assessment email sent", "Possible duplicate", "Duplicate of", "Documents", "ID verification", "Verified on",
+    // Everything the candidate re-stated on accepting. This is the record an
+    // agreement is written from, so a backup without it is not a backup.
+    "Offer accepted", "Details confirmed", "Engaged as", "Company name", "Company number",
+    "VAT number", "Confirmed first name", "Confirmed last name", "Confirmed date of birth",
+    "Nationality", "ID / passport number", "Confirmed phone", "Confirmed country",
+    "Confirmed city", "Confirmed address", "Postcode",
+    "Notes",
   ];
 
   const rows = candidates.map((c) =>
@@ -73,6 +80,22 @@ export async function GET(_req: NextRequest) {
         .join(" / "),
       VERIFICATION_LABEL[verificationStatus(c, required)],
       c.verifiedAt ?? c.rejectedAt ?? "",
+      c.offerAcceptedAt ?? "",
+      c.confirmedDetailsAt ?? "",
+      c.confirmedDetails?.engagedAs ?? "",
+      c.confirmedDetails?.companyName ?? "",
+      c.confirmedDetails?.companyNumber ?? "",
+      c.confirmedDetails?.companyVat ?? "",
+      c.confirmedDetails?.firstName ?? "",
+      c.confirmedDetails?.lastName ?? "",
+      c.confirmedDetails?.dob ?? "",
+      c.confirmedDetails?.nationality ?? "",
+      c.confirmedDetails?.idNumber ?? "",
+      c.confirmedDetails?.phone ?? "",
+      c.confirmedDetails?.country ?? "",
+      c.confirmedDetails?.city ?? "",
+      c.confirmedDetails?.address ?? "",
+      c.confirmedDetails?.postcode ?? "",
       c.notes ?? "",
     ].map(csv).join(","),
   );

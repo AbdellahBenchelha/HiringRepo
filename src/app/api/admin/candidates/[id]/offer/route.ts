@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { offerHtml, offerSubject, offerText } from "@/lib/emailTemplates";
 import { siteConfig } from "@/config/site";
 import { formatRate, offerProblems, ENGAGEMENT_TYPES, type Offer } from "@/lib/offer";
+import { createOfferToken } from "@/lib/token";
 
 /**
  * Send a written offer, and record what the candidate said.
@@ -22,6 +23,14 @@ export const runtime = "nodejs";
 
 function num(v: unknown): number | undefined {
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+/** Public base URL for the acceptance link (honours a proxy host). */
+function baseUrl(req: NextRequest): string {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, "");
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
+  return `${proto}://${host}`;
 }
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -89,6 +98,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ ok: false, error: "no_email" }, { status: 400 });
   }
 
+  /**
+   * Fixed before the email is built, because the acceptance link is signed
+   * against it — and written to storage afterwards, only if the mail left.
+   * One moment, agreed by the link and the record, with the existing "never
+   * record an offer that was not sent" rule intact.
+   */
+  const sentAt = new Date().toISOString();
+  const token = createOfferToken({ id, offerSentAt: sentAt });
+  const offerUrl = `${baseUrl(req)}/offer?t=${encodeURIComponent(token)}`;
+
   const payload = {
     fullName: candidate.fullName || "Candidate",
     position: offer.position,
@@ -98,6 +117,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     startDate: offer.startDate,
     probation: offer.probation,
     note: offer.note,
+    acceptUrl: offerUrl,
+    declineUrl: `${offerUrl}&a=decline`,
   };
 
   const result = await sendEmail({
@@ -117,7 +138,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ ok: false, error: reason }, { status: 502 });
   }
 
-  const updated = await recordOffer(id, offer);
+  const updated = await recordOffer(id, offer, sentAt);
   // eslint-disable-next-line no-console
   console.log(`[offer] ${id} sent to ${email} by ${session?.u ?? "admin"}`);
   return NextResponse.json({

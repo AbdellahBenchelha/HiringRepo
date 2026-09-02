@@ -12,11 +12,15 @@ import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
 import { verificationStatus, type VerificationStatus } from "@/lib/verification";
 import type { Offer } from "@/lib/offer";
+import type { ConfirmedDetails } from "@/lib/hiring";
 import type { VoiceStatus } from "@/lib/candidateStatus";
 
 export interface CandidateView {
   id: string;
   fullName: string;
+  /** Kept alongside fullName so the confirmed-details diff can compare parts. */
+  firstName: string;
+  lastName: string;
   dob: string;
   email: string;
   phone: string;
@@ -69,6 +73,9 @@ export interface CandidateView {
   offerAcceptedAt?: string;
   offerDeclinedAt?: string;
   offerDeclineReason?: string;
+  /** What they re-confirmed on accepting. Absent until they do. */
+  confirmedDetails?: ConfirmedDetails;
+  confirmedDetailsAt?: string;
 }
 
 /**
@@ -83,6 +90,8 @@ export function toCandidateView(
   return {
     id: c.id,
     fullName: c.fullName,
+    firstName: c.firstName,
+    lastName: c.lastName,
     dob: c.dob,
     email: c.email,
     phone: c.phone,
@@ -133,5 +142,7 @@ export function toCandidateView(
     offerAcceptedAt: c.offerAcceptedAt,
     offerDeclinedAt: c.offerDeclinedAt,
     offerDeclineReason: c.offerDeclineReason,
+    confirmedDetails: c.confirmedDetails,
+    confirmedDetailsAt: c.confirmedDetailsAt,
   };
 }

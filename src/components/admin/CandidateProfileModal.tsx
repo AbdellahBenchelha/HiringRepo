@@ -13,6 +13,7 @@ import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
 import { canOffer } from "@/lib/offer";
+import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -226,6 +227,10 @@ export function CandidateProfileModal({
             />
           </div>
         ) : null}
+
+        {/* What they stated when accepting, and what they corrected. Sits
+            directly under the offer, which is what prompted it. */}
+        <ConfirmedDetailsPanel candidate={candidate} />
 
         <NotesEditor
           id={candidate.id}

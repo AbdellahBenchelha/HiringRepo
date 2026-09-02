@@ -11,10 +11,18 @@ import { Footer } from "./Footer";
  * the site chrome put a second logo above it and a navigation bar around a task
  * meant to be finished in one sitting — and around the identity step, which a
  * candidate is told they cannot skip, it offered a row of links away from it.
+ *
+ * The offer page is the same kind of place: a private page reached from a
+ * signed link, where an "Apply Now" button in the header is nonsense for
+ * someone who has already been offered the job.
  */
 function hidden(pathname: string | null): boolean {
   if (!pathname) return false;
-  return pathname.startsWith("/admin") || pathname.startsWith("/interview");
+  return (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/interview") ||
+    pathname.startsWith("/offer")
+  );
 }
 
 export function SiteHeader() {

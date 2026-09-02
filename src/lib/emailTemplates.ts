@@ -11,6 +11,7 @@
  * require and which raises deliverability.
  */
 import { siteConfig } from "@/config/site";
+import { OFFER_LINK_TTL_DAYS } from "@/lib/token";
 
 const NAVY = "#0f1035";
 const AMBER = "#f5a623";
@@ -526,6 +527,10 @@ export interface OfferEmail {
   startDate?: string;
   probation?: string;
   note?: string;
+  /** Where "Accept this offer" leads. Absent only when a link cannot be built. */
+  acceptUrl?: string;
+  /** Same page, opened on the decline path. */
+  declineUrl?: string;
 }
 
 /**
@@ -566,25 +571,62 @@ function offerRows(o: OfferEmail): [string, string][] {
 export function offerText(o: OfferEmail): string {
   const name = firstNameOf(o.fullName);
   return [
-    `Hi ${name},`,
+    `Dear ${name},`,
     ``,
-    `Following your interview, we are pleased to offer you the position of`,
+    `Following your interview, it is our pleasure to offer you the position of`,
     `${o.position} at ${siteConfig.company.name}.`,
     ``,
+    `Your application stood out, and the team is looking forward to working with`,
+    `you. The agreed terms are set out below.`,
+    ``,
+    `TERMS OF THE OFFER`,
     ...offerRows(o).map(([k, v]) => `  ${k}: ${v}`),
     ...(o.note ? [``, o.note] : []),
     ``,
-    `To accept, simply reply to this email and let us know. We will then send`,
-    `you the agreement to sign and arrange everything you need to start.`,
+    ...(o.acceptUrl
+      ? [
+          `HOW TO ACCEPT`,
+          ``,
+          `Please confirm your acceptance using the link below. You will be asked to`,
+          `check the personal details we hold for you and correct anything that is`,
+          `out of date, so that your agreement can be drawn up accurately. It takes`,
+          `two or three minutes.`,
+          ``,
+          o.acceptUrl,
+          ``,
+          `This link is personal to you and remains valid for ${OFFER_LINK_TTL_DAYS} days.`,
+          ``,
+          ...(o.declineUrl
+            ? [
+                `If you have decided not to take up this offer, please let us know here:`,
+                o.declineUrl,
+                ``,
+              ]
+            : []),
+        ]
+      : [
+          `To accept, simply reply to this email and let us know.`,
+          ``,
+        ]),
+    `WHAT HAPPENS NEXT`,
     ``,
-    `This is an offer of engagement, not a contract of employment — the written`,
-    `agreement follows once you accept.`,
+    `Once you have confirmed, we will prepare your written agreement and send it`,
+    `for signature, together with everything you need for your first day.`,
     ``,
-    `We will never ask you for a payment, a bank card, or a password at any`,
-    `stage. Your bank details are needed only after the agreement is signed.`,
+    `Please note that this is an offer of engagement and not a contract of`,
+    `employment; the written agreement follows once you accept.`,
     ``,
-    `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
+    `For your security: we will never ask you for a payment, a bank card, or a`,
+    `password at any stage of this process. Your bank details are needed only`,
+    `after the written agreement has been signed.`,
     ``,
+    `If you have any questions about the offer, please reply to this email or`,
+    `write to ${siteConfig.contact.recruitmentEmail} and we will be glad to help.`,
+    ``,
+    `We very much hope you will join us.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
     `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
     siteConfig.url,
   ].join("\n");
@@ -594,6 +636,58 @@ export function offerText(o: OfferEmail): string {
 export function offerHtml(o: OfferEmail): string {
   const name = esc(firstNameOf(o.fullName));
   const company = esc(siteConfig.company.name);
+
+  /**
+   * The acceptance block.
+   *
+   * It says what the page will ask for before they click. A button that leads
+   * to an unexpected form asking for a passport number is exactly what a
+   * cautious candidate should refuse to click — so the email sets the
+   * expectation, and the anti-fraud note below reinforces what will never be
+   * asked. Falls back to "reply to this email" if no link could be built,
+   * because an offer with no way to accept it is worse than an old-fashioned
+   * one.
+   */
+  const accept = o.acceptUrl
+    ? `
+        <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+          How to accept
+        </p>
+
+        <p style="margin:0 0 20px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Please confirm your acceptance below. You will be asked to check the personal details we
+          hold for you and correct anything out of date, so your agreement can be drawn up
+          accurately. It takes two or three minutes.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${esc(o.acceptUrl)}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Accept this offer
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 6px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          This link is personal to you and remains valid for ${OFFER_LINK_TTL_DAYS} days.
+        </p>
+        ${
+          o.declineUrl
+            ? `<p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Decided not to take up this offer?
+          <a href="${esc(o.declineUrl)}" style="color:#b06e0c;">Let us know here</a>.
+        </p>`
+            : `<div style="height:20px;line-height:20px;">&nbsp;</div>`
+        }
+`
+    : `
+        <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          To accept, simply <strong style="color:${NAVY};">reply to this email</strong> and let us
+          know.
+        </p>
+`;
 
   const rows = offerRows(o)
     .map(
@@ -638,12 +732,21 @@ export function offerHtml(o: OfferEmail): string {
         </h1>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Hi ${name},
+          Dear ${name},
         </p>
 
-        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Following your interview, we are pleased to offer you the position of
-          <strong style="color:${NAVY};">${esc(o.position)}</strong>.
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Following your interview, it is our pleasure to offer you the position of
+          <strong style="color:${NAVY};">${esc(o.position)}</strong> at ${company}.
+        </p>
+
+        <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Your application stood out, and the team is looking forward to working with you. The
+          agreed terms are set out below.
+        </p>
+
+        <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+          Terms of the offer
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
@@ -652,27 +755,44 @@ export function offerHtml(o: OfferEmail): string {
 
         ${
           o.note
-            ? `<p style="margin:0 0 24px 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">${esc(o.note)}</p>`
+            ? `<p style="margin:0 0 26px 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">${esc(o.note)}</p>`
             : ""
         }
 
+        ${accept}
+
+        <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+          What happens next
+        </p>
+
         <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          To accept, simply <strong style="color:${NAVY};">reply to this email</strong> and let us
-          know. We will then send you the agreement to sign and arrange everything you need to
-          start.
+          Once you have confirmed, we will prepare your written agreement and send it for
+          signature, together with everything you need for your first day.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
           <tr>
             <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
-              This is an offer of engagement, not a contract &mdash; the written agreement follows
-              once you accept. We will <strong style="color:${NAVY};">never</strong> ask you for a
-              payment, a bank card, or a password at any stage, and your bank details are needed
-              only after the agreement is signed.
+              Please note this is an offer of engagement, not a contract &mdash; the written
+              agreement follows once you accept. For your security, we will
+              <strong style="color:${NAVY};">never</strong> ask you for a payment, a bank card, or
+              a password at any stage, and your bank details are needed only after the agreement
+              has been signed.
             </td>
           </tr>
         </table>
+
+        <p style="margin:24px 0 0 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          If you have any questions about the offer, simply reply to this email and we will be
+          glad to help. We very much hope you will join us.
+        </p>
+
+        <p style="margin:20px 0 0 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Kind regards,<br>
+          <strong style="color:${NAVY};">Recruitment Team</strong><br>
+          ${company}
+        </p>
 
       </td>
     </tr>

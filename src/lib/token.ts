@@ -47,6 +47,68 @@ export function createInterviewToken(identity: InterviewIdentity): string {
   return `${body}.${sign(body)}`;
 }
 
+/**
+ * Link a candidate to one specific offer.
+ *
+ * Deliberately not the plain `?c=<id>` the assessment link uses. That id is
+ * already in circulation — it is forwarded over WhatsApp and sits in the
+ * recruiter's Telegram — so anything guarding a page that collects a date of
+ * birth, a home address and a passport number has to be narrower than "knows
+ * the candidate id".
+ *
+ * Binding `offerSentAt` into the signature means a re-sent offer silently
+ * retires the previous link, which is what you want when terms change: the
+ * candidate cannot accept yesterday's rate from an email still in their inbox.
+ */
+export interface OfferLink {
+  id: string;
+  /** ISO timestamp of the offer this link belongs to. */
+  offerSentAt: string;
+}
+
+/** How long an acceptance link stays usable. */
+export const OFFER_LINK_TTL_DAYS = 14;
+
+export function createOfferToken(link: OfferLink): string {
+  const body = b64url(Buffer.from(JSON.stringify({ i: link.id, s: link.offerSentAt })));
+  return `${body}.${sign(body)}`;
+}
+
+export type OfferTokenResult =
+  | { ok: true; link: OfferLink }
+  /** Missing, malformed, or the signature does not match. */
+  | { ok: false; reason: "invalid" }
+  /** Signed correctly, but issued more than OFFER_LINK_TTL_DAYS ago. */
+  | { ok: false; reason: "expired" };
+
+export function readOfferToken(token: string | undefined | null): OfferTokenResult {
+  if (!token || !token.includes(".")) return { ok: false, reason: "invalid" };
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return { ok: false, reason: "invalid" };
+
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
+
+  try {
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as { i?: unknown; s?: unknown };
+    if (typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
+    if (typeof obj.s !== "string" || !obj.s) return { ok: false, reason: "invalid" };
+
+    const sentAt = Date.parse(obj.s);
+    if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
+    // Expiry is read from the signed payload, so it cannot be extended by
+    // editing the URL — a tampered timestamp fails the signature check above.
+    if (Date.now() - sentAt > OFFER_LINK_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      return { ok: false, reason: "expired" };
+    }
+    return { ok: true, link: { id: obj.i, offerSentAt: obj.s } };
+  } catch {
+    return { ok: false, reason: "invalid" };
+  }
+}
+
 /** Verify and decode a token. Returns null if missing, malformed, or tampered. */
 export function readInterviewToken(token: string | undefined | null): InterviewIdentity | null {
   if (!token || !token.includes(".")) return null;
