@@ -67,6 +67,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
   const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>("all");
   const [mismatchOnly, setMismatchOnly] = useState(false);
+  const [formFilter, setFormFilter] = useState<"all" | "yes" | "no">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -118,6 +119,11 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (followUpFilter !== "all" && followUps.get(c.id)?.kind !== followUpFilter) return false;
       if (verifyFilter !== "all" && c.verificationStatus !== verifyFilter) return false;
+      // Purely whether they submitted the application form. The "Stalled at
+      // step one" option under Interview status is a narrower question — it
+      // also excludes anyone who has since opened or done the assessment.
+      if (formFilter === "yes" && !c.formCompleted) return false;
+      if (formFilter === "no" && c.formCompleted) return false;
       if (mismatchOnly && !isCountryMismatch(c)) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
@@ -125,7 +131,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       }
       return true;
     });
-  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter, mismatchOnly]);
+  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter, mismatchOnly, formFilter]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -179,7 +185,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   // Any change to what is being listed sends you back to the front of it.
   useEffect(() => {
     setPage(1);
-  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, verifyFilter, mismatchOnly, pageSize, sort]);
+  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, verifyFilter, mismatchOnly, formFilter, pageSize, sort]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -271,7 +277,15 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
             <option value="completed">Completed</option>
             <option value="opened">Opened, not submitted</option>
             <option value="notopened">Not opened</option>
-            <option value="noform">Form not completed</option>
+            <option value="noform">Stalled at step one</option>
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="form">Application form</label>
+          <select id="form" className="select" value={formFilter} onChange={(e) => setFormFilter(e.target.value as typeof formFilter)}>
+            <option value="all">All</option>
+            <option value="yes">Completed</option>
+            <option value="no">Not completed</option>
           </select>
         </div>
         <div>
