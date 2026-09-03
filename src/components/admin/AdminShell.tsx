@@ -12,6 +12,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/interviews", label: "Interviews", icon: "chat" },
   { href: "/admin/accepted", label: "Accepted", icon: "checkCircle" },
   { href: "/admin/settings/verification", label: "ID checks", icon: "shield" },
+  { href: "/admin/settings/manual-invite", label: "Manual invites", icon: "clock" },
   { href: "/admin/settings/cv", label: "CV requirement", icon: "upload" },
 ];
 

@@ -51,6 +51,27 @@ export function phoneCountryMatches(
 }
 
 /**
+ * Does a per-country rule catch this candidate?
+ *
+ * Both signals, because one alone is a rule you can step around: selecting a
+ * country the rule does not name while entering a number from one it does is
+ * the obvious way past anything keyed only on the dropdown.
+ *
+ * Shared by every rule of this shape — identity verification, the CV
+ * requirement, and holding back the assessment invitation — so they cannot
+ * drift into answering the same question differently.
+ */
+export function countryRuleApplies(
+  country: string | undefined | null,
+  phone: string | undefined | null,
+  list: readonly string[],
+): boolean {
+  if (list.length === 0) return false;
+  const byCountry = !!country && list.includes(country);
+  return byCountry || phoneCountryMatches(phone, list);
+}
+
+/**
  * The phone's countries when they contradict the stated one, for the Admin
  * Panel to show.
  *

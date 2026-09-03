@@ -10,7 +10,7 @@
  * decision that changes without a deploy.
  */
 import type { CandidateDocument } from "@/lib/documents";
-import { phoneCountryMatches } from "@/lib/phoneCountry";
+import { countryRuleApplies } from "@/lib/phoneCountry";
 
 /** The two images a candidate provides. Both are required together. */
 export const VERIFICATION_KINDS = ["identity", "selfie"] as const;
@@ -70,8 +70,7 @@ export function verificationApplies(
   c: VerificationInput,
   requiredCountries: readonly string[],
 ): boolean {
-  const byCountry = !!c.country && requiredCountries.includes(c.country);
-  return byCountry || phoneCountryMatches(c.phone, requiredCountries);
+  return countryRuleApplies(c.country, c.phone, requiredCountries);
 }
 
 /**

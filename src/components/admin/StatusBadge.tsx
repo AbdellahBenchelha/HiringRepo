@@ -47,6 +47,24 @@ export function IncompleteFormBadge() {
   );
 }
 
+/**
+ * Their country is invited by hand, so nothing was emailed on submit.
+ *
+ * Worth its own marker rather than leaving a blank: an invitation that never
+ * went out looks exactly like one that failed to send, and the two want very
+ * different responses.
+ */
+export function InviteHeldBadge() {
+  return (
+    <span
+      title="Their country is set to manual invitations — the assessment link was not sent automatically"
+      className="inline-flex items-center whitespace-nowrap rounded-full border border-brand-300 bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-800"
+    >
+      Invitation held
+    </span>
+  );
+}
+
 export function InterviewBadge({ completed, opened }: { completed: boolean; opened?: boolean }) {
   if (completed) {
     return (

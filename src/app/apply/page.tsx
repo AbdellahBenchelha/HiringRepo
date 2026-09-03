@@ -5,6 +5,7 @@ import { siteConfig } from "@/config/site";
 import { recruitmentProcess } from "@/config/content";
 import { ApplicationForm } from "@/components/forms/ApplicationForm";
 import { cvRequiredCountries } from "@/lib/cvStore";
+import { manualInviteCountries } from "@/lib/manualInviteStore";
 import { Icon, type IconName } from "@/components/Icon";
 
 export const metadata = buildMetadata({
@@ -41,7 +42,10 @@ export default async function ApplyPage({
     requested && jobs.some((j) => j.title === requested) ? requested : undefined;
   // Read here rather than fetched by the form, so the rule is already known by
   // the time anyone reaches the documents step.
-  const cvRequired = await cvRequiredCountries();
+  const [cvRequired, manualInvite] = await Promise.all([
+    cvRequiredCountries(),
+    manualInviteCountries(),
+  ]);
 
   return (
     <>
@@ -112,6 +116,7 @@ export default async function ApplyPage({
                 <ApplicationForm
                   initialPosition={initialPosition}
                   cvRequiredCountries={cvRequired}
+                  manualInviteCountries={manualInvite}
                 />
               </div>
             </div>

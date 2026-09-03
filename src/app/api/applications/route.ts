@@ -17,6 +17,7 @@ import {
 } from "@/lib/emailTemplates";
 import { siteConfig } from "@/config/site";
 import { withSource } from "@/lib/followUp";
+import { manualInviteApplies, manualInviteCountries } from "@/lib/manualInviteStore";
 
 /**
  * Saves the full application for the Admin Panel when a candidate submits the
@@ -89,8 +90,14 @@ export async function POST(req: NextRequest) {
   // earlier candidate, and a recruiter compares the two before the assessment
   // goes out. Released from the Admin Panel with "Send assessment link".
   let flagged = false;
+  /** Their country is on the manual-invitation list, so the link waits. */
+  let held = false;
   try {
-    flagged = !!(await getCandidate(id))?.duplicateFlag;
+    const stored = await getCandidate(id);
+    flagged = !!stored?.duplicateFlag;
+    if (stored) {
+      held = manualInviteApplies(stored, await manualInviteCountries());
+    }
   } catch {
     /* storage is best-effort */
   }
@@ -98,9 +105,18 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line no-console
     console.log(`[applications] ${id} flagged as a possible duplicate; assessment email withheld`);
   }
+  if (held) {
+    // Logged, because an invitation that silently never goes out is
+    // indistinguishable from email being broken.
+    // eslint-disable-next-line no-console
+    console.log(`[applications] ${id} from a manual-invitation country; assessment email withheld`);
+  }
 
-  if (flagged) {
-    return NextResponse.json({ ok: true, flagged: true });
+  // Both hold the email for the same reason — a person decides — and both are
+  // released by the same button in the Admin Panel. The application itself is
+  // saved either way; only the invitation waits.
+  if (flagged || held) {
+    return NextResponse.json({ ok: true, flagged, held });
   }
 
   if (email.includes("@")) {

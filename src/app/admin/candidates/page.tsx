@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
+import { manualInviteCountries } from "@/lib/manualInviteStore";
 import { toCandidateView } from "@/lib/candidateView";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { CandidatesTable } from "@/components/admin/CandidatesTable";
@@ -20,10 +21,13 @@ async function baseUrl(): Promise<string> {
 export default async function AdminCandidatesPage() {
   await requireAdmin();
   const base = await baseUrl();
-  const candidates = await listCandidates();
-  const required = await requiredCountries();
+  const [candidates, required, manualInvite] = await Promise.all([
+    listCandidates(),
+    requiredCountries(),
+    manualInviteCountries(),
+  ]);
 
-  const views = candidates.map((c) => toCandidateView(c, base, required));
+  const views = candidates.map((c) => toCandidateView(c, base, required, manualInvite));
 
   return (
     <AdminShell>

@@ -23,7 +23,7 @@ import {
   Textarea,
   TextInput,
 } from "./fields";
-import { phoneCountryMatches } from "@/lib/phoneCountry";
+import { countryRuleApplies } from "@/lib/phoneCountry";
 
 interface LanguageRow {
   language: string;
@@ -49,6 +49,13 @@ interface ApplicationFormProps {
    * by the time anyone reaches the documents step.
    */
   cvRequiredCountries?: string[];
+  /**
+   * Countries whose assessment invitation is held for manual sending. Passed
+   * in for the same reason as the CV list: the confirmation screen has to know
+   * whether an email is actually coming before it tells anyone to watch for
+   * one.
+   */
+  manualInviteCountries?: string[];
 }
 
 const yesNo = ["Yes", "No"];
@@ -217,6 +224,7 @@ export function ApplicationForm({
   initialPosition,
   onSubmitted,
   cvRequiredCountries = [],
+  manualInviteCountries = [],
 }: ApplicationFormProps) {
   const positionOptions = useMemo(() => jobs.map((j) => j.title), []);
 
@@ -331,9 +339,14 @@ export function ApplicationForm({
   const step = STEPS[current];
   // The phone counts as well as the dropdown: picking a country that requires
   // nothing while entering a number from one that does is the obvious dodge.
-  const cvRequired =
-    (!!country && cvRequiredCountries.includes(country)) ||
-    phoneCountryMatches(phone, cvRequiredCountries);
+  const cvRequired = countryRuleApplies(country, phone, cvRequiredCountries);
+  /**
+   * Their invitation will be held, so the confirmation must not tell them to
+   * watch an inbox that will stay empty. The same rule runs on the server,
+   * which is what actually withholds the email; this only decides what they
+   * are told.
+   */
+  const inviteHeld = countryRuleApplies(country, phone, manualInviteCountries);
 
   function setField<T>(setter: (v: T) => void, key: string) {
     return (value: T) => {
@@ -599,9 +612,10 @@ export function ApplicationForm({
           {firstName ? `, ${firstName}` : ""}. Your application has been received.
         </p>
 
-        {/* A flagged application has its assessment email held for review, so
-            it must not be told to watch an inbox that will stay empty. */}
-        {duplicate ? (
+        {/* A held application — flagged as a possible duplicate, or from a
+            country invited by hand — must not be told to watch an inbox that
+            will stay empty. */}
+        {duplicate || inviteHeld ? (
           <div className="mt-8 rounded-3xl border border-cream-300 bg-white p-6 text-left shadow-soft">
             <div className="flex items-start gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-navy-900">
@@ -662,7 +676,7 @@ export function ApplicationForm({
         </div>
         )}
 
-        {duplicate ? null : (
+        {duplicate || inviteHeld ? null : (
           <p className="mt-6 text-sm leading-relaxed text-navy-500">
             Once you complete the assessment, our recruitment team will review your answers and
             contact you about the next steps.

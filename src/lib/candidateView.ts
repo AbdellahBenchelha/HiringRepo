@@ -13,6 +13,7 @@ import type { CandidateStatus } from "@/lib/candidateStatus";
 import { verificationStatus, type VerificationStatus } from "@/lib/verification";
 import type { Offer } from "@/lib/offer";
 import type { ConfirmedDetails } from "@/lib/hiring";
+import { countryRuleApplies } from "@/lib/phoneCountry";
 import type { VoiceStatus } from "@/lib/candidateStatus";
 
 export interface CandidateView {
@@ -76,6 +77,15 @@ export interface CandidateView {
   /** What they re-confirmed on accepting. Absent until they do. */
   confirmedDetails?: ConfirmedDetails;
   confirmedDetailsAt?: string;
+  /**
+   * Their assessment invitation is waiting for a person to send it.
+   *
+   * The whole condition in one place: they submitted, nothing has been
+   * emailed, and their country is on the manual-invitation list. Split across
+   * the tables this would drift, and a row that stopped offering the button
+   * would leave someone waiting indefinitely.
+   */
+  inviteHeld: boolean;
 }
 
 /**
@@ -86,6 +96,8 @@ export function toCandidateView(
   c: Candidate,
   base: string,
   required: readonly string[],
+  /** Countries whose assessment invitation is held for manual sending. */
+  manualInvite: readonly string[] = [],
 ): CandidateView {
   return {
     id: c.id,
@@ -144,5 +156,9 @@ export function toCandidateView(
     offerDeclineReason: c.offerDeclineReason,
     confirmedDetails: c.confirmedDetails,
     confirmedDetailsAt: c.confirmedDetailsAt,
+    inviteHeld:
+      !!c.submittedAt &&
+      !c.interviewEmailSentAt &&
+      countryRuleApplies(c.country, c.phone, manualInvite),
   };
 }

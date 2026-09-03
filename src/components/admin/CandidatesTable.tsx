@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { InterviewBadge, IncompleteFormBadge } from "@/components/admin/StatusBadge";
+import { InterviewBadge, IncompleteFormBadge, InviteHeldBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { siteConfig } from "@/config/site";
 import { adminPost, adminDelete } from "@/lib/adminClient";
@@ -68,6 +68,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>("all");
   const [mismatchOnly, setMismatchOnly] = useState(false);
   const [formFilter, setFormFilter] = useState<"all" | "yes" | "no">("all");
+  const [heldOnly, setHeldOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -125,13 +126,14 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       if (formFilter === "yes" && !c.formCompleted) return false;
       if (formFilter === "no" && c.formCompleted) return false;
       if (mismatchOnly && !isCountryMismatch(c)) return false;
+      if (heldOnly && !c.inviteHeld) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
         if (applied < from) return false;
       }
       return true;
     });
-  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter, mismatchOnly, formFilter]);
+  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter, mismatchOnly, formFilter, heldOnly]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -185,7 +187,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   // Any change to what is being listed sends you back to the front of it.
   useEffect(() => {
     setPage(1);
-  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, verifyFilter, mismatchOnly, formFilter, pageSize, sort]);
+  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, verifyFilter, mismatchOnly, formFilter, heldOnly, pageSize, sort]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -332,6 +334,21 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
             Country mismatch only
           </label>
         </div>
+        {/* The queue this feature creates. Without a way to list it you would
+            be scanning pages for a badge, and a held invitation nobody sends
+            is a candidate who quietly goes elsewhere. */}
+        <div className="flex items-end">
+          <label htmlFor="held" className="flex cursor-pointer items-center gap-2 pb-2 text-sm text-navy-700">
+            <input
+              id="held"
+              type="checkbox"
+              className="h-4 w-4 rounded border-navy-300 text-brand-600"
+              checked={heldOnly}
+              onChange={(e) => setHeldOnly(e.target.checked)}
+            />
+            Invitation held only
+          </label>
+        </div>
       </div>
 
       {/* Result count + export */}
@@ -393,6 +410,11 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                     {!c.formCompleted && !c.interviewCompleted && !c.interviewOpenedAt ? (
                       <div className="mt-1">
                         <IncompleteFormBadge />
+                      </div>
+                    ) : null}
+                    {c.inviteHeld ? (
+                      <div className="mt-1">
+                        <InviteHeldBadge />
                       </div>
                     ) : null}
                     {c.duplicateFlag ? (
@@ -467,7 +489,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                         <Icon name="trash" className="h-4 w-4" />
                       </button>
                     </div>
-                    {c.duplicateFlag || c.interviewEmailSentAt || !c.formCompleted ? (
+                    {c.duplicateFlag || c.interviewEmailSentAt || !c.formCompleted || c.inviteHeld ? (
                       <div className="mt-2">
                         <SendAssessmentButton
                           id={c.id}
