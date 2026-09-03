@@ -41,6 +41,19 @@ export const siteConfig = {
   /** Public site URL — used for canonical URLs, sitemap and Open Graph. */
   url: "https://workroute.work",
 
+  /**
+   * The timezone the business runs on, as an IANA name.
+   *
+   * Only the dashboard uses it, and only to decide where one day ends and the
+   * next begins: counted in UTC, "today" would reset at 1am local and every
+   * daily figure would be an hour out of step with the person reading it.
+   *
+   * An IANA name rather than a fixed offset on purpose — Morocco sits at UTC+1
+   * but drops to UTC+0 for Ramadan, so a hardcoded "+1" would be wrong for a
+   * month a year, and wrong differently each year.
+   */
+  timeZone: "Africa/Casablanca",
+
   company: {
     name: "WorkRoute",
     shortName: "WorkRoute",

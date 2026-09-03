@@ -28,6 +28,7 @@ export type IconName =
   | "menu"
   | "close"
   | "chevronDown"
+  | "chevronUp"
   | "upload"
   | "trash"
   | "plus"
@@ -86,6 +87,7 @@ const paths: Record<IconName, React.ReactNode> = {
   menu: <path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z" />,
   close: <path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 6.3 19.7 4.9 18.3 11.2 12 4.9 5.7 6.3 4.3l4.3 6.3 6.3-6.3 1.4 1.4Z" />,
   chevronDown: <path d="M12 15.5 5.5 9 7 7.5l5 5 5-5L18.5 9 12 15.5Z" />,
+  chevronUp: <path d="M12 8.5 18.5 15 17 16.5l-5-5-5 5L5.5 15 12 8.5Z" />,
   upload: <path d="M11 16V7.8L8.4 10.4 7 9l5-5 5 5-1.4 1.4L13 7.8V16h-2ZM5 18h14v2H5v-2Z" />,
   trash: <path d="M6 7h12l-1 14H7L6 7Zm3-3h6l1 2h4v2H4V6h4l1-2Z" />,
   plus: <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" />,

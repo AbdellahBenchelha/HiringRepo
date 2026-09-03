@@ -29,10 +29,21 @@ export default function CookiePolicyPage() {
         Required for the website to work, such as remembering your cookie choices and keeping the
         site secure. These are always active and cannot be switched off.
       </p>
-      <h3>Analytics cookies</h3>
+      <h3>Analytics</h3>
       <p>
-        Help us understand how visitors use the site so we can improve it. These are only used with
-        your consent.
+        We count visits to understand which pages are useful, but we do so{" "}
+        <strong>without a cookie and without storing anything on your device</strong>. Our own
+        server keeps a daily tally of page views. To avoid counting the same person twice in one
+        day, it derives a short identifier from your network address and browser using a secret
+        that is discarded and replaced every midnight — so your address is never recorded, the
+        identifier cannot be traced back to you, and you cannot be recognised from one day to the
+        next.
+      </p>
+      <p>
+        No analytics service, advertising network or other third party is involved, and nothing
+        about your visit leaves our server. Because none of this places a cookie or identifies you,
+        it does not depend on the choices below. Should we ever add analytics that do use cookies,
+        they would be switched off until you allowed them here.
       </p>
       <h3>Preference cookies</h3>
       <p>

@@ -53,7 +53,20 @@ function buildWhatsAppMessage(name: string, link: string): string {
   );
 }
 
-export function CandidatesTable({ candidates }: { candidates: CandidateView[] }) {
+export function CandidatesTable({
+  candidates,
+  initialVerify,
+  initialHeld,
+}: {
+  candidates: CandidateView[];
+  /**
+   * Filters the dashboard can arrive with already applied. Only the starting
+   * value — once here, the filters are the reader's, so changing one does not
+   * fight the URL it was opened from.
+   */
+  initialVerify?: string;
+  initialHeld?: boolean;
+}) {
   const [rows, setRows] = useState(candidates);
   const [search, setSearch] = useState("");
   const [interviewFilter, setInterviewFilter] = useState<"all" | "completed" | "opened" | "notopened" | "noform">("all");
@@ -65,10 +78,14 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [pendingDelete, setPendingDelete] = useState<CandidateView | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
-  const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>("all");
+  const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>(
+    VERIFICATION_FILTERS.some((f) => f.value === initialVerify)
+      ? (initialVerify as VerificationFilter)
+      : "all",
+  );
   const [mismatchOnly, setMismatchOnly] = useState(false);
   const [formFilter, setFormFilter] = useState<"all" | "yes" | "no">("all");
-  const [heldOnly, setHeldOnly] = useState(false);
+  const [heldOnly, setHeldOnly] = useState(!!initialHeld);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);

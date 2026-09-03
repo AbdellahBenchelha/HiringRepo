@@ -84,6 +84,29 @@ export default function PrivacyPolicyPage() {
         it is never the reason an application is refused.
       </p>
 
+      <h2>1c. Counting visits to this website</h2>
+      <p>
+        We keep a daily count of how many people visit this site and which pages they look at, so
+        we know which roles are of interest and whether the site is working. This is done entirely
+        on our own server: no analytics provider, no advertising network, and no information about
+        your visit is sent anywhere else.
+      </p>
+      <p>
+        No cookie is used and nothing is stored on your device. So that one person browsing several
+        pages is not counted as several visitors, our server derives a short identifier from your
+        network address and browser using a secret that is destroyed and replaced every midnight.
+        Your network address itself is never written down, the identifier cannot be turned back
+        into it, and because the secret changes daily you cannot be recognised from one day to the
+        next.
+      </p>
+      <p>
+        What we keep is a daily total — how many visits, to which pages, from which countries, on
+        which kind of device, and which website referred them. These are counts, not records: there
+        is no history of any individual&rsquo;s browsing, and nothing in them relates to a
+        particular person. Automated visitors such as search-engine crawlers and messaging-app link
+        previews are excluded.
+      </p>
+
       <h2>2. Why we collect information</h2>
       <p>We use personal information to:</p>
       <ul>

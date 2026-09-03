@@ -5,6 +5,7 @@ import { siteConfig } from "@/config/site";
 import { organizationJsonLd } from "@/lib/seo";
 import { SiteHeader, SiteFooter } from "@/components/layout/SiteChrome";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
+import { Beacon } from "@/components/Beacon";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main id="main">{children}</main>
         <SiteFooter />
         <CookieConsent />
+        <Beacon />
       </body>
     </html>
   );
