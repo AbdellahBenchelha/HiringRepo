@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { adminPost } from "@/lib/adminClient";
 
 /**
@@ -14,10 +14,16 @@ export function NotesEditor({
   id,
   initial,
   onSaved,
+  onDirtyChange,
 }: {
   id: string;
   initial: string;
   onSaved: (notes: string) => void;
+  /**
+   * Whether there is unsaved text. The dialog uses it to warn before stepping
+   * to another candidate, which would otherwise drop the note silently.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [value, setValue] = useState(initial);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -44,6 +50,14 @@ export function NotesEditor({
   }
 
   const dirty = value !== initial;
+
+  // Through a ref, so an inline callback from the parent cannot turn this into
+  // a report on every render.
+  const notify = useRef(onDirtyChange);
+  notify.current = onDirtyChange;
+  useEffect(() => {
+    notify.current?.(dirty);
+  }, [dirty]);
 
   return (
     <div className="mt-5">

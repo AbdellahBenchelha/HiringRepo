@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { InterviewBadge } from "@/components/admin/StatusBadge";
@@ -26,6 +27,12 @@ import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
  * It owns no data. Every change is reported through `onChange` so whichever
  * table opened it can keep its own row in step — a modal that silently knew
  * more than the page behind it is how a row ends up showing a stale badge.
+ *
+ * Callers must give it `key={candidate.id}`. The panels inside seed their own
+ * state from their props once, on mount, so swapping the candidate underneath
+ * a mounted dialog would leave the verification panel, the offer form and the
+ * Companies House result all describing the person you just navigated away
+ * from — and a save from any of them would write their data onto this one.
  */
 
 function fmt(iso?: string) {
@@ -35,9 +42,19 @@ function fmt(iso?: string) {
   });
 }
 
+/** Stepping to the next candidate without closing the dialog. */
+export interface ProfileNav {
+  /** Zero-based position in the filtered list. */
+  index: number;
+  total: number;
+  onPrev: () => void;
+  onNext: () => void;
+}
+
 export function CandidateProfileModal({
   candidate,
   showOffer,
+  nav,
   onClose,
   onChange,
   onOpenDocument,
@@ -45,6 +62,8 @@ export function CandidateProfileModal({
   onSendWhatsApp,
 }: {
   candidate: CandidateView;
+  /** Omitted where there is nothing to step through, which hides the controls. */
+  nav?: ProfileNav;
   /**
    * Whether to offer the job from here.
    *
@@ -63,6 +82,45 @@ export function CandidateProfileModal({
   onSendWhatsApp?: (c: CandidateView) => void;
 }) {
   const verification = verificationStateOf(candidate);
+
+  /**
+   * Notes are saved on a button, not on every keystroke, so a half-written note
+   * lives only in the textarea. Stepping to the next candidate would discard it
+   * without a word — so the first press warns and the second goes, the same
+   * two-step the offer and verification panels use for anything irreversible.
+   */
+  const [notesDirty, setNotesDirty] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState<"prev" | "next" | null>(null);
+
+  function move(dir: "prev" | "next") {
+    if (!nav) return;
+    if (notesDirty && confirmLeave !== dir) {
+      setConfirmLeave(dir);
+      return;
+    }
+    (dir === "prev" ? nav.onPrev : nav.onNext)();
+  }
+
+  const atStart = !nav || nav.index <= 0;
+  const atEnd = !nav || nav.index >= nav.total - 1;
+
+  // Read through a ref so the listener is registered once rather than being
+  // torn down and rebuilt on every render by an inline `nav` object.
+  const moveRef = useRef(move);
+  moveRef.current = move;
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      // While something is being typed in or chosen from, the arrows belong to
+      // it — navigating away mid-sentence is not what the key was pressed for.
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      e.preventDefault();
+      moveRef.current(e.key === "ArrowLeft" ? "prev" : "next");
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div
@@ -101,15 +159,53 @@ export function CandidateProfileModal({
               />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-navy-500 hover:bg-navy-100"
-            aria-label="Close"
-          >
-            <Icon name="close" className="h-5 w-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {nav ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => move("prev")}
+                  disabled={atStart}
+                  className="rounded-lg border border-navy-200 px-2 py-1.5 text-navy-600 transition hover:bg-navy-50 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Previous candidate"
+                  title="Previous candidate (←)"
+                >
+                  <Icon name="chevronLeft" className="h-4 w-4" />
+                </button>
+                {/* Position in the filtered list, so it answers "how many left". */}
+                <span className="whitespace-nowrap px-1 text-xs font-semibold tabular-nums text-navy-500">
+                  {nav.index + 1} of {nav.total}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => move("next")}
+                  disabled={atEnd}
+                  className="mr-1 rounded-lg border border-navy-200 px-2 py-1.5 text-navy-600 transition hover:bg-navy-50 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Next candidate"
+                  title="Next candidate (→)"
+                >
+                  <Icon name="chevronRight" className="h-4 w-4" />
+                </button>
+              </>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-navy-500 hover:bg-navy-100"
+              aria-label="Close"
+            >
+              <Icon name="close" className="h-5 w-5" />
+            </button>
+          </div>
         </div>
+
+        {confirmLeave ? (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+            Your notes have not been saved. Press{" "}
+            {confirmLeave === "prev" ? "Previous" : "Next"} again to leave them behind, or save
+            them first.
+          </p>
+        ) : null}
 
         <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <Field label="Email" value={candidate.email} />
@@ -245,6 +341,12 @@ export function CandidateProfileModal({
           id={candidate.id}
           initial={candidate.notes ?? ""}
           onSaved={(notes) => onChange({ notes })}
+          onDirtyChange={(dirty) => {
+            setNotesDirty(dirty);
+            // Saving them clears the warning, rather than leaving it standing
+            // over a note that is now safely stored.
+            if (!dirty) setConfirmLeave(null);
+          }}
         />
 
         <div className="mt-5 rounded-xl border border-navy-100 bg-navy-50/50 p-4">

@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ReminderActions } from "@/components/admin/ReminderActions";
 import { DocumentChips } from "@/components/admin/DocumentChips";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
+import { useProfileNav } from "@/components/admin/useProfileNav";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { VerificationBadge, verificationStateOf } from "@/components/admin/VerificationPanel";
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
@@ -58,7 +59,6 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   const [interviewFilter, setInterviewFilter] = useState<"all" | "completed" | "opened" | "notopened" | "noform">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | CandidateStatus>("all");
   const [dateFrom, setDateFrom] = useState("");
-  const [profile, setProfile] = useState<CandidateView | null>(null);
   /** The candidate whose photos are open in the quick view, if any. */
   const [quickView, setQuickView] = useState<CandidateView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -184,6 +184,21 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
     [sorted, current, pageSize],
   );
 
+  // Previous/Next walk `sorted` — the filtered list in the order on screen —
+  // so a reviewer works through exactly what they filtered down to.
+  const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
+    rows,
+    sorted,
+    pageSize,
+    setPage,
+  );
+
+  // A document reader belongs to the candidate it was opened from, so stepping
+  // to the next one closes it rather than leaving someone else's CV on screen.
+  useEffect(() => {
+    setViewing(null);
+  }, [profile?.id]);
+
   // Any change to what is being listed sends you back to the front of it.
   useEffect(() => {
     setPage(1);
@@ -198,17 +213,16 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
   /**
    * Applied by both the full profile and the verification quick view, so
    * verifying someone from either place updates the row and whichever of the
-   * two dialogs happens to be open behind it.
+   * two dialogs happens to be open behind it. The profile reads straight from
+   * `rows` by id, so patching the row is all it takes to update the dialog.
    */
   function applyPatch(id: string, patch: Partial<CandidateView>) {
     setRows((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-    setProfile((p) => (p && p.id === id ? { ...p, ...patch } : p));
     setQuickView((q) => (q && q.id === id ? { ...q, ...patch } : q));
   }
 
   async function changeStatus(id: string, status: CandidateStatus) {
     setRows((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
-    setProfile((p) => (p && p.id === id ? { ...p, status } : p));
     try {
       await adminPost(`/api/admin/candidates/${id}/status`, { status });
     } catch {
@@ -250,7 +264,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
       const res = await adminDelete(`/api/admin/candidates/${c.id}`);
       if (res.ok) {
         setRows((prev) => prev.filter((x) => x.id !== c.id));
-        setProfile((p) => (p && p.id === c.id ? null : p));
+        if (profile?.id === c.id) closeProfile();
       } else {
         window.alert("Could not delete this candidate. Please try again.");
       }
@@ -473,7 +487,7 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
                       </button>
                       <button
                         type="button"
-                        onClick={() => setProfile(c)}
+                        onClick={() => openProfile(c)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-navy-200 px-2.5 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50"
                       >
                         View
@@ -572,8 +586,10 @@ export function CandidatesTable({ candidates }: { candidates: CandidateView[] })
 
       {profile ? (
         <CandidateProfileModal
+          key={profile.id}
           candidate={profile}
-          onClose={() => setProfile(null)}
+          nav={nav}
+          onClose={closeProfile}
           onOpenDocument={(doc) => setViewing({ c: profile, doc })}
           onStatusChange={changeStatus}
           onSendWhatsApp={sendWhatsApp}

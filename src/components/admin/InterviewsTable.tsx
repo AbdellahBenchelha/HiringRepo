@@ -7,6 +7,11 @@ import { InterviewActions } from "@/components/admin/InterviewActions";
 import { VerificationBadge, verificationStateOf } from "@/components/admin/VerificationPanel";
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
+import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
+import { DocumentViewer } from "@/components/admin/DocumentViewer";
+import { useProfileNav } from "@/components/admin/useProfileNav";
+import { adminPost } from "@/lib/adminClient";
+import type { CandidateDocument } from "@/lib/documents";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
@@ -123,6 +128,35 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
     () => shown.slice((current - 1) * pageSize, current * pageSize),
     [shown, current, pageSize],
   );
+
+  // The dialog steps through the filtered list, so it needs both as plain
+  // candidates rather than as rows.
+  const everyone = useMemo(() => live.map((r) => r.view), [live]);
+  const ordered = useMemo(() => shown.map((r) => r.view), [shown]);
+  const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
+    everyone,
+    ordered,
+    pageSize,
+    setPage,
+  );
+
+  /** Which document is open in the reader, from whichever profile is showing. */
+  const [viewing, setViewing] = useState<CandidateDocument | null>(null);
+
+  async function changeStatus(id: string, next: CandidateStatus) {
+    patch(id, { status: next });
+    try {
+      await adminPost(`/api/admin/candidates/${id}/status`, { status: next });
+    } catch {
+      /* optimistic; the table reloads with the truth */
+    }
+  }
+
+  // A document reader belongs to the candidate it was opened from, so stepping
+  // to the next one closes it rather than leaving someone else's CV on screen.
+  useEffect(() => {
+    setViewing(null);
+  }, [profile?.id]);
 
   useEffect(() => {
     setPage(1);
@@ -315,12 +349,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                         >
                           View answers →
                         </Link>
-                        {/* Offers are made from this tab and only this tab. */}
-                        <CandidateInfoButton
-                          candidate={c}
-                          showOffer
-                          onChange={(p) => patch(c.id, p)}
-                        />
+                        <CandidateInfoButton onOpen={() => openProfile(c)} />
                       </div>
                     </td>
                   </tr>
@@ -364,6 +393,30 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
             // badge until the dialog is closed and reopened.
             setQuickView((q) => (q ? { ...q, ...p } : q));
           }}
+        />
+      ) : null}
+
+      {/* Owned by the table, not by each row, so Previous and Next have a list
+          to walk. Offers are made from this tab and only this tab. */}
+      {profile ? (
+        <CandidateProfileModal
+          key={profile.id}
+          candidate={profile}
+          showOffer
+          nav={nav}
+          onClose={closeProfile}
+          onOpenDocument={setViewing}
+          onStatusChange={changeStatus}
+          onChange={(p) => patch(profile.id, p)}
+        />
+      ) : null}
+
+      {viewing && profile ? (
+        <DocumentViewer
+          candidateId={profile.id}
+          candidateName={profile.fullName}
+          document={viewing}
+          onClose={() => setViewing(null)}
         />
       ) : null}
     </>

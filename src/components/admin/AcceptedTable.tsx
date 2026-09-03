@@ -3,8 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
+import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
+import { DocumentViewer } from "@/components/admin/DocumentViewer";
+import { useProfileNav } from "@/components/admin/useProfileNav";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
+import { adminPost } from "@/lib/adminClient";
 import { formatRate } from "@/lib/offer";
+import type { CandidateDocument } from "@/lib/documents";
+import type { CandidateStatus } from "@/lib/candidateStatus";
 import type { CandidateView } from "@/lib/candidateView";
 
 /**
@@ -75,6 +81,32 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
     () => shown.slice((current - 1) * pageSize, current * pageSize),
     [shown, current, pageSize],
   );
+
+  const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
+    live,
+    shown,
+    pageSize,
+    setPage,
+  );
+  const [viewing, setViewing] = useState<CandidateDocument | null>(null);
+
+  const patch = (id: string, p: Partial<CandidateView>) =>
+    setPatches((prev) => ({ ...prev, [id]: { ...prev[id], ...p } }));
+
+  async function changeStatus(id: string, next: CandidateStatus) {
+    patch(id, { status: next });
+    try {
+      await adminPost(`/api/admin/candidates/${id}/status`, { status: next });
+    } catch {
+      /* optimistic; the table reloads with the truth */
+    }
+  }
+
+  // A document reader belongs to the candidate it was opened from, so stepping
+  // to the next one closes it rather than leaving someone else's CV on screen.
+  useEffect(() => {
+    setViewing(null);
+  }, [profile?.id]);
 
   useEffect(() => {
     setPage(1);
@@ -240,11 +272,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                       )}
                     </td>
                     <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
-                      <CandidateInfoButton
-                        candidate={c}
-                        showOffer
-                        onChange={(p) => setPatches((prev) => ({ ...prev, [c.id]: { ...prev[c.id], ...p } }))}
-                      />
+                      <CandidateInfoButton onOpen={() => openProfile(c)} />
                     </td>
                   </tr>
                 );
@@ -263,6 +291,28 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
         onPage={goToPage}
         onPageSize={setPageSize}
       />
+
+      {profile ? (
+        <CandidateProfileModal
+          key={profile.id}
+          candidate={profile}
+          showOffer
+          nav={nav}
+          onClose={closeProfile}
+          onOpenDocument={setViewing}
+          onStatusChange={changeStatus}
+          onChange={(p) => patch(profile.id, p)}
+        />
+      ) : null}
+
+      {viewing && profile ? (
+        <DocumentViewer
+          candidateId={profile.id}
+          candidateName={profile.fullName}
+          document={viewing}
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
     </>
   );
 }
