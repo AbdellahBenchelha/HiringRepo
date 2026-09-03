@@ -69,6 +69,21 @@ export default function PrivacyPolicyPage() {
         unless we are required to keep them by law.
       </p>
 
+      <h2>1b. Public company records</h2>
+      <p>
+        For some applications we search the public register of company officers kept by Companies
+        House, the United Kingdom registrar, using your name and — where we hold it — the month and
+        year of your date of birth. This tells us whether you already act as a director or
+        secretary of a UK company, which affects how an engagement with us would be arranged.
+      </p>
+      <p>
+        We search only information Companies House publishes to anyone, we record the result
+        against your application, and a search is run by a member of our recruitment team when it
+        is relevant rather than automatically for every applicant. A name can be shared by many
+        people, so any match is treated as something to check and never as a fact about you, and
+        it is never the reason an application is refused.
+      </p>
+
       <h2>2. Why we collect information</h2>
       <p>We use personal information to:</p>
       <ul>

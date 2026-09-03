@@ -25,6 +25,7 @@ export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
 import type { Offer } from "@/lib/offer";
 import type { ConfirmedDetails } from "@/lib/hiring";
+import type { CompanyCheck } from "@/lib/companyCheck";
 
 export interface LanguageRow {
   language: string;
@@ -85,6 +86,14 @@ export interface Candidate {
    */
   confirmedDetails?: ConfirmedDetails;
   confirmedDetailsAt?: string;
+  /**
+   * Result of looking this candidate up in the UK register of company
+   * officers. Cached because it is a paid-for-with-requests lookup and a
+   * recruiter re-opening a profile should not trigger another one — and
+   * timestamped because companies are incorporated and dissolved, so an old
+   * answer must not read as a current one.
+   */
+  companyCheck?: CompanyCheck;
   /** Set once the assessment invitation email has gone out, so a resubmit
    *  or a retried request cannot send the candidate a second copy. */
   interviewEmailSentAt?: string;
@@ -645,6 +654,22 @@ export function setDetectedCountry(id: string, iso2: string, name: string): Prom
     c.detectedCountryName = name;
     c.detectedCountryAt = new Date().toISOString();
     return { list, result: true };
+  });
+}
+
+/**
+ * Store the outcome of a Companies House lookup.
+ *
+ * Overwrites any previous one: this is a snapshot of the register at a moment,
+ * not a history, and keeping stale snapshots beside a fresh one only invites
+ * reading the wrong one.
+ */
+export function recordCompanyCheck(id: string, check: CompanyCheck): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.companyCheck = check;
+    return { list, result: c };
   });
 }
 

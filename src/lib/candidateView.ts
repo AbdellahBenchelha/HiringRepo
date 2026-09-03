@@ -14,6 +14,7 @@ import { verificationStatus, type VerificationStatus } from "@/lib/verification"
 import type { Offer } from "@/lib/offer";
 import type { ConfirmedDetails } from "@/lib/hiring";
 import { countryRuleApplies } from "@/lib/phoneCountry";
+import type { CompanyCheck } from "@/lib/companyCheck";
 import type { VoiceStatus } from "@/lib/candidateStatus";
 
 export interface CandidateView {
@@ -77,6 +78,8 @@ export interface CandidateView {
   /** What they re-confirmed on accepting. Absent until they do. */
   confirmedDetails?: ConfirmedDetails;
   confirmedDetailsAt?: string;
+  /** Last Companies House lookup, if one has been run. */
+  companyCheck?: CompanyCheck;
   /**
    * Their assessment invitation is waiting for a person to send it.
    *
@@ -156,6 +159,7 @@ export function toCandidateView(
     offerDeclineReason: c.offerDeclineReason,
     confirmedDetails: c.confirmedDetails,
     confirmedDetailsAt: c.confirmedDetailsAt,
+    companyCheck: c.companyCheck,
     inviteHeld:
       !!c.submittedAt &&
       !c.interviewEmailSentAt &&

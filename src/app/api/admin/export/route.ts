@@ -5,6 +5,7 @@ import { DOCUMENT_SHORT } from "@/lib/documents";
 import { requiredCountries } from "@/lib/verificationStore";
 import { verificationStatus, VERIFICATION_LABEL } from "@/lib/verification";
 import { countryMatch } from "@/lib/countryCheck";
+import { summariseCheck } from "@/lib/companyCheck";
 
 /**
  * CSV export of every candidate.
@@ -55,6 +56,7 @@ export async function GET(_req: NextRequest) {
     "VAT number", "Confirmed first name", "Confirmed last name", "Confirmed date of birth",
     "Nationality", "ID / passport number", "Confirmed phone", "Confirmed country",
     "Confirmed city", "Confirmed address", "Postcode",
+    "UK companies checked", "UK companies result",
     "Notes",
   ];
 
@@ -96,6 +98,8 @@ export async function GET(_req: NextRequest) {
       c.confirmedDetails?.city ?? "",
       c.confirmedDetails?.address ?? "",
       c.confirmedDetails?.postcode ?? "",
+      c.companyCheck?.checkedAt ?? "",
+      summariseCheck(c.companyCheck),
       c.notes ?? "",
     ].map(csv).join(","),
   );

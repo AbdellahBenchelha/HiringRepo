@@ -14,6 +14,7 @@ import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
 import { canOffer } from "@/lib/offer";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
+import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -231,6 +232,14 @@ export function CandidateProfileModal({
         {/* What they stated when accepting, and what they corrected. Sits
             directly under the offer, which is what prompted it. */}
         <ConfirmedDetailsPanel candidate={candidate} />
+
+        {/* Whether they already trade through a UK limited company, which is
+            the same question the offer step asks them. */}
+        <CompanyCheckPanel
+          id={candidate.id}
+          initial={candidate.companyCheck}
+          hasDob={!!(candidate.dob || candidate.confirmedDetails?.dob)}
+        />
 
         <NotesEditor
           id={candidate.id}
