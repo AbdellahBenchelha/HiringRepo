@@ -16,7 +16,20 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/settings/cv", label: "CV requirement", icon: "upload" },
 ];
 
-const NAV_KEY = "wr_admin_nav";
+/**
+ * Versioned because the meaning of the value changed, not just the default.
+ *
+ * Under the old key, "0" was written every time the sidebar was expanded —
+ * including expanding it back to what was then the default. Once collapsed
+ * became the default, that same "0" started reading as "this person has
+ * deliberately chosen labels", so anyone who had ever touched the toggle kept
+ * getting the full menu and the new default never reached them.
+ *
+ * Reinterpreting stored values under their old key is how that happens. A new
+ * key retires the old meaning: everyone starts from the current default, and
+ * their next choice is recorded under the rules now in force.
+ */
+const NAV_KEY = "wr_admin_nav_v2";
 
 /**
  * Sets the sidebar's state before anything is painted.
