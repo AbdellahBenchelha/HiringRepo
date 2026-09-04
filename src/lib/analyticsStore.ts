@@ -235,19 +235,42 @@ export async function currentSalt(): Promise<string> {
 }
 
 /**
+ * The figures as they stand on disk, for reading rather than counting.
+ *
+ * Deliberately not the in-memory copy. Next bundles a route handler and a page
+ * separately, so `/api/track` and `/admin` can end up holding one of these
+ * modules each — and a dashboard reading its own instance's memory would show
+ * whatever the file happened to contain the first time that page was rendered,
+ * for as long as the server stayed up. It looked correct in isolation and went
+ * quietly stale in use, which is the worst way for a number to be wrong.
+ *
+ * Reading the file costs one small read per dashboard load. Our own unflushed
+ * counts are written out first, so nothing in hand is missed.
+ */
+async function snapshot(): Promise<StoreFile> {
+  if (dirty) await flush();
+  const today = dayKey(new Date());
+  try {
+    return parse(await fs.readFile(FILE, "utf8"), today);
+  } catch {
+    return fresh(today);
+  }
+}
+
+/**
  * Every day in the range, missing ones filled in as zeroes.
  *
  * Filled rather than skipped so a chart shows a quiet Sunday as a gap in the
  * traffic instead of closing up and pretending the week was six days long.
  */
 export async function readRange(from: string, to: string): Promise<DayStats[]> {
-  const file = await load();
+  const file = await snapshot();
   return daysInRange(from, to).map((day) => file.days[day] ?? emptyDay(day));
 }
 
 /** The first day anything was recorded, so the dashboard can say since when. */
 export async function firstRecordedDay(): Promise<string | null> {
-  const file = await load();
+  const file = await snapshot();
   const keys = Object.keys(file.days).sort();
   return keys[0] ?? null;
 }

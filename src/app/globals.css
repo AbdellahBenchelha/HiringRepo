@@ -183,3 +183,38 @@
   clip: auto;
   white-space: normal;
 }
+
+/* ---------------------------------------------------------------------------
+ * Admin sidebar, collapsed to icons.
+ *
+ * Driven by a class on <html> rather than by React state, for one reason: the
+ * class is restored by a tiny inline script before the sidebar is parsed, so a
+ * collapsed sidebar is already narrow at first paint. Held in React it would
+ * render full width, then jump — on every page load, since each admin page
+ * mounts its own shell.
+ *
+ * Desktop only. The class is global, and the mobile menu renders the same
+ * links; without this media query, collapsing on desktop would silently strip
+ * the labels off the phone menu too.
+ * ------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  html.nav-collapsed .admin-nav {
+    width: 5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  html.nav-collapsed .admin-nav-label {
+    display: none;
+  }
+  html.nav-collapsed .admin-nav-head,
+  html.nav-collapsed .admin-nav-item {
+    justify-content: center;
+  }
+}
+
+/* Which way the toggle's chevron points, decided in CSS so it cannot flicker
+   the wrong way round while React catches up. */
+html.nav-collapsed .admin-nav-collapse,
+html:not(.nav-collapsed) .admin-nav-expand {
+  display: none;
+}
