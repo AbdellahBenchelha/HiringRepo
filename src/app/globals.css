@@ -185,36 +185,46 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Admin sidebar, collapsed to icons.
+ * Admin sidebar.
  *
- * Driven by a class on <html> rather than by React state, for one reason: the
- * class is restored by a tiny inline script before the sidebar is parsed, so a
- * collapsed sidebar is already narrow at first paint. Held in React it would
- * render full width, then jump — on every page load, since each admin page
- * mounts its own shell.
+ * Icons are the RESTING STATE, not something JavaScript has to apply. The
+ * sidebar was previously wide by default with a script to narrow it, which
+ * meant anything that stopped that script — a policy, a cached page, an
+ * extension, a hydration quirk — left the full menu on screen. Now the default
+ * needs no script at all, and only opening the labels does.
  *
- * Desktop only. The class is global, and the mobile menu renders the same
- * links; without this media query, collapsing on desktop would silently strip
- * the labels off the phone menu too.
+ * Scoped to descendants of .admin-nav rather than to a screen width. The phone
+ * menu renders the very same links, outside the sidebar, so this leaves its
+ * labels alone without depending on a breakpoint matching Tailwind's.
  * ------------------------------------------------------------------------- */
-@media (min-width: 1024px) {
-  html.nav-collapsed .admin-nav {
-    width: 5rem;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
-  html.nav-collapsed .admin-nav-label {
-    display: none;
-  }
-  html.nav-collapsed .admin-nav-head,
-  html.nav-collapsed .admin-nav-item {
-    justify-content: center;
-  }
+.admin-nav .admin-nav-label {
+  display: none;
+}
+.admin-nav .admin-nav-item,
+.admin-nav .admin-nav-head {
+  justify-content: center;
+}
+
+html.nav-open .admin-nav {
+  width: 16rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+html.nav-open .admin-nav .admin-nav-label {
+  /* revert, not block: the labels are spans in the links and a div in the
+     header, and each should go back to what it naturally is. */
+  display: revert;
+}
+html.nav-open .admin-nav .admin-nav-item {
+  justify-content: flex-start;
+}
+html.nav-open .admin-nav .admin-nav-head {
+  justify-content: space-between;
 }
 
 /* Which way the toggle's chevron points, decided in CSS so it cannot flicker
    the wrong way round while React catches up. */
-html.nav-collapsed .admin-nav-collapse,
-html:not(.nav-collapsed) .admin-nav-expand {
+html:not(.nav-open) .admin-nav-collapse,
+html.nav-open .admin-nav-expand {
   display: none;
 }

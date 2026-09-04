@@ -16,26 +16,6 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/settings/cv", label: "CV requirement", icon: "upload" },
 ];
 
-/**
- * Collapses the sidebar before anything is painted, on every page load.
- *
- * **Not remembered, deliberately.** This started out saving the choice, which
- * sounds helpful and is the wrong behaviour here: opening the labels once to
- * read them meant every load afterwards showed the full bar, which is exactly
- * what collapsing by default was meant to stop. Loading the panel is supposed
- * to give the tables the width, every time, without anyone having to think
- * about it. Opening the labels is a look, not a setting.
- *
- * It also removes a whole class of problem — there is no stored value left to
- * go stale, be misread after a rule change, or differ between two browsers.
- *
- * An inline script rather than React state: every admin page mounts its own
- * shell, so a value applied in an effect would draw the sidebar full width and
- * then snap it narrow on every single load. This runs while the browser is
- * still parsing the markup above the sidebar, so it is never drawn wide.
- */
-const RESTORE = `document.documentElement.classList.add("nav-collapsed")`;
-
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -45,13 +25,18 @@ export function AdminShell({ children }: { children: ReactNode }) {
     href === "/admin" ? pathname === "/admin" : pathname?.startsWith(href);
 
   /**
-   * The class on <html> is the state; there is no React copy of it to drift,
-   * and nothing is written down. It survives moving between admin pages, which
-   * a value held in this component would not — the shell remounts with every
-   * page — but a reload starts collapsed again, which is the point.
+   * Opening the labels is the exception, so it is the thing that gets marked.
+   *
+   * Nothing is stored and nothing runs on load: without this class the sidebar
+   * is icons, which is what the stylesheet already says. That makes the state
+   * everyone wants the one that survives a script never running at all.
+   *
+   * The class sits on <html> rather than in React state because the shell
+   * remounts with every admin page — so it stays open while you move around
+   * the panel, and a reload puts it back to icons.
    */
   function toggleNav() {
-    document.documentElement.classList.toggle("nav-collapsed");
+    document.documentElement.classList.toggle("nav-open");
   }
 
   async function logout() {
@@ -91,8 +76,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-navy-50/60">
-      <script dangerouslySetInnerHTML={{ __html: RESTORE }} />
-
       {/* Mobile top bar */}
       <div className="flex items-center justify-between border-b border-navy-100 bg-white px-4 py-3 lg:hidden">
         <Logo className="h-7 w-auto" />
@@ -120,9 +103,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
           scrolling sideways while several hundred pixels sat empty either
           side. An admin table should use the screen it is given. */}
       <div className="flex w-full">
-        {/* Desktop sidebar. Its width and its labels are governed by the
-            nav-collapsed class on <html>; see globals.css. */}
-        <aside className="admin-nav sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-hidden border-r border-navy-100 bg-white p-5 transition-[width,padding] duration-200 lg:flex">
+        {/* Desktop sidebar. It rests at icon width; globals.css widens it only
+            when <html> carries nav-open, so no JavaScript is involved in the
+            state you get on load. */}
+        <aside className="admin-nav sticky top-0 hidden h-screen w-20 shrink-0 flex-col overflow-hidden border-r border-navy-100 bg-white px-3 py-5 transition-[width,padding] duration-200 lg:flex">
           <div className="admin-nav-head flex items-start justify-between gap-2 px-2 pb-6">
             <div className="admin-nav-label min-w-0">
               <Logo className="h-8 w-auto" />
