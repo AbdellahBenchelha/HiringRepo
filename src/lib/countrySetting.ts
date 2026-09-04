@@ -12,6 +12,7 @@
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { writeFileAtomic } from "@/lib/atomicWrite";
 import { countries } from "@/config/countries";
 
 export interface CountrySettings {
@@ -79,11 +80,9 @@ export function createCountrySetting(
     }
 
     const run = async () => {
-      await fs.mkdir(dir(), { recursive: true });
-      await fs.writeFile(
+      await writeFileAtomic(
         file(),
         JSON.stringify({ [key]: cleaned, updatedAt: new Date().toISOString() }, null, 2),
-        "utf8",
       );
       return { ok: true, settings: await get() };
     };

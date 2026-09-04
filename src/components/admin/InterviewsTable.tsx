@@ -10,6 +10,7 @@ import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
+import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { adminPost } from "@/lib/adminClient";
 import type { CandidateDocument } from "@/lib/documents";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
@@ -152,6 +153,12 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
     }
   }
 
+  // Scoped to the current page, not to everyone the filters left.
+  const companyCheck = useBulkCompanyCheck(
+    useMemo(() => visible.map((r) => r.view), [visible]),
+    (id, check) => patch(id, { companyCheck: check }),
+  );
+
   // A document reader belongs to the candidate it was opened from, so stepping
   // to the next one closes it rather than leaving someone else's CV on screen.
   useEffect(() => {
@@ -260,6 +267,15 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
           </div>
         ) : null}
       </div>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-navy-500">
+          <span className="font-semibold text-navy-900">{visible.length}</span> on this page
+        </p>
+        {companyCheck.control}
+      </div>
+
+      {companyCheck.panel}
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[1400px] text-left text-sm">

@@ -26,6 +26,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { dayKey, emptyDay, daysInRange, type DayStats } from "@/lib/analytics";
 import { newSalt } from "@/lib/visitorId";
+import { writeFileAtomic } from "@/lib/atomicWrite";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const FILE = path.join(DATA_DIR, "analytics.json");
@@ -167,8 +168,9 @@ export function flush(): Promise<void> {
     dirty = false;
     const snapshot = JSON.stringify(state);
     try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(FILE, snapshot, "utf8");
+      // Atomic, because the dashboard reads this file straight off disk while
+      // the tracker is writing it — a truncated read would show a day of zeroes.
+      await writeFileAtomic(FILE, snapshot);
     } catch {
       // Put the flag back so the next tick tries again rather than losing the
       // day's counts to one bad write.

@@ -6,6 +6,7 @@ import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
+import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { adminPost } from "@/lib/adminClient";
 import { formatRate } from "@/lib/offer";
@@ -101,6 +102,11 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       /* optimistic; the table reloads with the truth */
     }
   }
+
+  // Scoped to the current page, not to everyone the filters left.
+  const companyCheck = useBulkCompanyCheck(visible, (id, check) =>
+    patch(id, { companyCheck: check }),
+  );
 
   // A document reader belongs to the candidate it was opened from, so stepping
   // to the next one closes it rather than leaving someone else's CV on screen.
@@ -201,6 +207,15 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           details — their agreement would be drawn from what they typed on the application form.
         </p>
       ) : null}
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-navy-500">
+          <span className="font-semibold text-navy-900">{visible.length}</span> on this page
+        </p>
+        {companyCheck.control}
+      </div>
+
+      {companyCheck.panel}
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[1150px] text-left text-sm">

@@ -20,11 +20,15 @@ import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 export const runtime = "nodejs";
 
 /**
- * The register allows far more than this; the limit is about us. A button that
- * can be held down should not be able to spend a shared quota, and a real
- * reviewer clicks it a handful of times an hour.
+ * The register allows far more than this; the limit is about us — a button
+ * that can be held down should not be able to spend a shared quota.
+ *
+ * Raised from 60 for the page-at-a-time scan, which calls this once per
+ * visible row: at a hundred rows a page, 60 would stop a single scan halfway
+ * through. Three full pages in ten minutes is more than anyone reviews by
+ * hand, and still catches a loop that has run away.
  */
-const MAX_PER_IP = 60;
+const MAX_PER_IP = 300;
 const WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {

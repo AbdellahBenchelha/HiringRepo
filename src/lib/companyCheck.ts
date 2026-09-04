@@ -109,6 +109,26 @@ export function activeAppointments(m: CompanyOfficerMatch): CompanyAppointment[]
 }
 
 /**
+ * Which of four answers a stored check amounts to.
+ *
+ * Split out because scanning a page at a time makes the distinction matter
+ * more, not less. One name-only hit read on its own profile invites a second
+ * look; twenty-five of them in a list read as twenty-five findings unless
+ * something keeps them apart, and a common name will produce them all day.
+ * "Nothing found" and "we could not ask" have to stay separate for the same
+ * reason — folding a failed lookup into "no match" is how a rate limit turns
+ * into a page of clean bills of health.
+ */
+export type CheckOutcome = "confirmed" | "name-only" | "none" | "failed";
+
+export function classifyCheck(check: CompanyCheck | undefined): CheckOutcome | null {
+  if (!check) return null;
+  if (check.error) return "failed";
+  if (check.matches.length === 0) return "none";
+  return check.matches.every((m) => m.confidence === "dob") ? "confirmed" : "name-only";
+}
+
+/**
  * A one-line summary for the table and the CSV export.
  *
  * Says which kind of match it was, because "2 companies" read without that

@@ -13,6 +13,7 @@ import { ReminderActions } from "@/components/admin/ReminderActions";
 import { DocumentChips } from "@/components/admin/DocumentChips";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { useProfileNav } from "@/components/admin/useProfileNav";
+import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { VerificationBadge, verificationStateOf } from "@/components/admin/VerificationPanel";
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
@@ -210,6 +211,11 @@ export function CandidatesTable({
     setPage,
   );
 
+  // Scoped to `visible` — the current page — not to `sorted` or `rows`.
+  const companyCheck = useBulkCompanyCheck(visible, (id, check) =>
+    applyPatch(id, { companyCheck: check }),
+  );
+
   // A document reader belongs to the candidate it was opened from, so stepping
   // to the next one closes it rather than leaving someone else's CV on screen.
   useEffect(() => {
@@ -399,16 +405,23 @@ export function CandidatesTable({
             </>
           )}
         </p>
-        {/* Exports everyone, not this page and not this filter: it is the
-            backup route, and a backup of page 1 is not a backup. */}
-        <a
-          href="/api/admin/export"
-          className="inline-flex items-center gap-2 rounded-full bg-navy-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-navy-800"
-        >
-          <Icon name="upload" className="h-4 w-4 rotate-180" />
-          Export all as CSV
-        </a>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Beside the export, and deliberately the opposite scope: this one
+              covers only the rows on screen. */}
+          {companyCheck.control}
+          {/* Exports everyone, not this page and not this filter: it is the
+              backup route, and a backup of page 1 is not a backup. */}
+          <a
+            href="/api/admin/export"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-navy-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-navy-800"
+          >
+            <Icon name="upload" className="h-4 w-4 rotate-180" />
+            Export all as CSV
+          </a>
+        </div>
       </div>
+
+      {companyCheck.panel}
 
       {/* Table */}
       <div className="card overflow-x-auto p-0">

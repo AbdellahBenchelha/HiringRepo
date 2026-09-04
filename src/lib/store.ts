@@ -11,6 +11,7 @@
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { writeFileAtomic } from "@/lib/atomicWrite";
 import {
   CANDIDATE_STATUSES,
   VOICE_STATUSES,
@@ -172,12 +173,25 @@ const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const FILE = path.join(DATA_DIR, "candidates.json");
 
 async function readAll(): Promise<Candidate[]> {
+  let raw: string;
   try {
-    const raw = await fs.readFile(FILE, "utf8");
+    raw = await fs.readFile(FILE, "utf8");
+  } catch {
+    // No file yet. That is genuinely nobody, on a fresh install.
+    return [];
+  }
+
+  try {
     const data = JSON.parse(raw);
     return Array.isArray(data) ? (data as Candidate[]) : [];
   } catch {
-    return [];
+    /**
+     * A file that exists but will not parse is damage, not emptiness, and the
+     * two must not look the same. Returning [] here would show an empty
+     * candidate list — and if the caller were a write, it would then save that
+     * emptiness over the top of everyone. Better a visible failure.
+     */
+    throw new Error(`${FILE} exists but could not be parsed as JSON`);
   }
 }
 
@@ -188,8 +202,11 @@ function withWrite<T>(fn: (list: Candidate[]) => { list: Candidate[]; result: T 
   const run = async (): Promise<T> => {
     const list = await readAll();
     const { list: next, result } = fn(list);
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(FILE, JSON.stringify(next, null, 2), "utf8");
+    // Atomic: readers never see a half-written file. Writes are serialized
+    // against each other by the chain below, but reads are not serialized
+    // against writes at all — and a plain truncate-then-fill let a concurrent
+    // read parse nothing and conclude there were no candidates.
+    await writeFileAtomic(FILE, JSON.stringify(next, null, 2));
     return result;
   };
   const p = writeChain.then(run, run);
