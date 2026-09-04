@@ -19,7 +19,12 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
 const NAV_KEY = "wr_admin_nav";
 
 /**
- * Restores the collapsed sidebar before anything is painted.
+ * Sets the sidebar's state before anything is painted.
+ *
+ * **Collapsed is the default**, so the panel opens as a strip of icons and the
+ * wide tables get the width. Only someone who has explicitly opened the labels
+ * gets them back, which is why this asks whether the preference is "0" rather
+ * than whether it is "1" — an absent preference means collapsed, not expanded.
  *
  * Deliberately an inline script and not React state. Every admin page mounts
  * its own shell, so state read from storage in an effect would render the
@@ -27,10 +32,14 @@ const NAV_KEY = "wr_admin_nav";
  * runs while the browser is still parsing the markup above the sidebar, so a
  * collapsed sidebar is simply never drawn wide.
  *
- * Wrapped in try/catch because storage throws outright in some privacy modes,
- * and a sidebar preference is not worth a blank admin panel.
+ * The class goes on first and comes off only for a stored preference: storage
+ * throws outright in some privacy modes, and the fallback should be the
+ * default everyone else sees rather than the opposite of it.
  */
-const RESTORE = `try{if(localStorage.getItem(${JSON.stringify(NAV_KEY)})==="1")document.documentElement.classList.add("nav-collapsed")}catch(e){}`;
+const RESTORE =
+  `document.documentElement.classList.add("nav-collapsed");` +
+  `try{if(localStorage.getItem(${JSON.stringify(NAV_KEY)})==="0")` +
+  `document.documentElement.classList.remove("nav-collapsed")}catch(e){}`;
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
