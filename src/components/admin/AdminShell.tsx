@@ -17,42 +17,24 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
 ];
 
 /**
- * Versioned because the meaning of the value changed, not just the default.
+ * Collapses the sidebar before anything is painted, on every page load.
  *
- * Under the old key, "0" was written every time the sidebar was expanded —
- * including expanding it back to what was then the default. Once collapsed
- * became the default, that same "0" started reading as "this person has
- * deliberately chosen labels", so anyone who had ever touched the toggle kept
- * getting the full menu and the new default never reached them.
+ * **Not remembered, deliberately.** This started out saving the choice, which
+ * sounds helpful and is the wrong behaviour here: opening the labels once to
+ * read them meant every load afterwards showed the full bar, which is exactly
+ * what collapsing by default was meant to stop. Loading the panel is supposed
+ * to give the tables the width, every time, without anyone having to think
+ * about it. Opening the labels is a look, not a setting.
  *
- * Reinterpreting stored values under their old key is how that happens. A new
- * key retires the old meaning: everyone starts from the current default, and
- * their next choice is recorded under the rules now in force.
+ * It also removes a whole class of problem — there is no stored value left to
+ * go stale, be misread after a rule change, or differ between two browsers.
+ *
+ * An inline script rather than React state: every admin page mounts its own
+ * shell, so a value applied in an effect would draw the sidebar full width and
+ * then snap it narrow on every single load. This runs while the browser is
+ * still parsing the markup above the sidebar, so it is never drawn wide.
  */
-const NAV_KEY = "wr_admin_nav_v2";
-
-/**
- * Sets the sidebar's state before anything is painted.
- *
- * **Collapsed is the default**, so the panel opens as a strip of icons and the
- * wide tables get the width. Only someone who has explicitly opened the labels
- * gets them back, which is why this asks whether the preference is "0" rather
- * than whether it is "1" — an absent preference means collapsed, not expanded.
- *
- * Deliberately an inline script and not React state. Every admin page mounts
- * its own shell, so state read from storage in an effect would render the
- * sidebar full width and then snap it narrow — on every single page load. This
- * runs while the browser is still parsing the markup above the sidebar, so a
- * collapsed sidebar is simply never drawn wide.
- *
- * The class goes on first and comes off only for a stored preference: storage
- * throws outright in some privacy modes, and the fallback should be the
- * default everyone else sees rather than the opposite of it.
- */
-const RESTORE =
-  `document.documentElement.classList.add("nav-collapsed");` +
-  `try{if(localStorage.getItem(${JSON.stringify(NAV_KEY)})==="0")` +
-  `document.documentElement.classList.remove("nav-collapsed")}catch(e){}`;
+const RESTORE = `document.documentElement.classList.add("nav-collapsed")`;
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -63,18 +45,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
     href === "/admin" ? pathname === "/admin" : pathname?.startsWith(href);
 
   /**
-   * The class on <html> is the state; there is no React copy of it to drift.
-   * It also survives navigation between admin pages for free, which a value in
-   * this component would not — the shell remounts with every page.
+   * The class on <html> is the state; there is no React copy of it to drift,
+   * and nothing is written down. It survives moving between admin pages, which
+   * a value held in this component would not — the shell remounts with every
+   * page — but a reload starts collapsed again, which is the point.
    */
   function toggleNav() {
-    const root = document.documentElement;
-    const collapsed = root.classList.toggle("nav-collapsed");
-    try {
-      localStorage.setItem(NAV_KEY, collapsed ? "1" : "0");
-    } catch {
-      /* the sidebar still works, it just will not be remembered */
-    }
+    document.documentElement.classList.toggle("nav-collapsed");
   }
 
   async function logout() {
