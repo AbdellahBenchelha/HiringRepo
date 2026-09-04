@@ -610,8 +610,13 @@ export function offerText(o: OfferEmail): string {
         ]),
     `WHAT HAPPENS NEXT`,
     ``,
-    `Once you have confirmed, we will prepare your written agreement and send it`,
-    `for signature, together with everything you need for your first day.`,
+    `When you accept, you will be asked to confirm your details and — unless you`,
+    `have already sent them — a photo of your ID document and one of you holding`,
+    `it. We ask this of everyone before an agreement is drawn up. It takes about`,
+    `a minute.`,
+    ``,
+    `Once that is done, we will prepare your written agreement and send it for`,
+    `signature, together with everything you need for your first day.`,
     ``,
     `Please note that this is an offer of engagement and not a contract of`,
     `employment; the written agreement follows once you accept.`,
@@ -766,8 +771,14 @@ export function offerHtml(o: OfferEmail): string {
         </p>
 
         <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Once you have confirmed, we will prepare your written agreement and send it for
-          signature, together with everything you need for your first day.
+          When you accept, you will be asked to confirm your details and &mdash; unless you have
+          already sent them &mdash; a photo of your ID document and one of you holding it. We ask
+          this of everyone before an agreement is drawn up. It takes about a minute.
+        </p>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Once that is done, we will prepare your written agreement and send it for signature,
+          together with everything you need for your first day.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"

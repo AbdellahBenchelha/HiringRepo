@@ -104,6 +104,25 @@ export function verificationRequired(
   return status === "awaiting";
 }
 
+/**
+ * Does this person still owe us an identity check before we contract with them?
+ *
+ * The country list decides who is asked *early*, as a filter before the
+ * assessment. This is the second gate, at the offer: it applies to everyone,
+ * because signing an agreement with someone whose identity has never been
+ * checked is not something a country list should be able to permit.
+ *
+ * Three ways to already be finished, and the third is the one that is easy to
+ * miss: a verified candidate's images are **deleted** once the decision is
+ * made, and only the outcome is kept. Asking "are the files there?" alone
+ * would send everyone we had already verified round again for photographs we
+ * deliberately destroyed.
+ */
+export function identityStillNeeded(c: VerificationInput): boolean {
+  if (c.verifiedAt || c.rejectedAt) return false;
+  return !hasBothImages(c.documents);
+}
+
 export const VERIFICATION_FILTERS = [
   { value: "all", label: "All" },
   { value: "awaiting", label: "Awaiting upload" },

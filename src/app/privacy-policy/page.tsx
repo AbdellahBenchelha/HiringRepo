@@ -39,18 +39,23 @@ export default function PrivacyPolicyPage() {
           company&rsquo;s name, registration number and tax number.
         </li>
         <li>
-          Identity verification documents, where required: an image of an official identity
-          document and a photograph of you holding it. This is requested only from applicants in
-          certain countries, and only after the online assessment.
+          Identity verification documents: an image of an official identity document and a
+          photograph of you holding it. Applicants in certain countries are asked for these after
+          the online assessment; everyone else is asked when they accept an offer, before any
+          written agreement is drawn up.
         </li>
       </ul>
 
       <h2>1a. Identity verification</h2>
       <p>
-        For some roles and locations we ask applicants to confirm their identity before the
-        application continues. Where this applies, you are asked for an image of an official
-        identity document — a passport, national identity card or driver&rsquo;s licence — and a
-        photograph of yourself holding it.
+        We ask applicants to confirm their identity, and there are two points at which this
+        happens. For some roles and locations it is asked before the application continues. For
+        everyone else it is asked at the end, when an offer has been accepted and before a written
+        agreement is prepared &mdash; we do not enter into an agreement with someone whose identity
+        has not been confirmed. Either way you are asked for an image of an official identity
+        document &mdash; a passport, national identity card or driver&rsquo;s licence &mdash; and a
+        photograph of yourself holding it. You are only ever asked once: if you have already
+        provided them, or we have already verified you, you are not asked again.
       </p>
       <p>
         A photograph used to confirm that you are the person shown on a document is biometric

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
+import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
@@ -228,6 +229,9 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
               <th className="px-4 py-3 font-semibold">Start date</th>
               <th className="px-4 py-3 font-semibold">Accepted</th>
               <th className="px-4 py-3 font-semibold">Details</th>
+              {/* Whether we may draw up an agreement at all: everyone is asked
+                  for identity documents at the offer, whatever their country. */}
+              <th className="px-4 py-3 font-semibold">ID check</th>
               <th className="sticky right-0 whitespace-nowrap bg-navy-50 px-4 py-3 font-semibold shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
                 Actions
               </th>
@@ -285,6 +289,13 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                           Still waiting
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <VerificationBadge
+                        status={c.verificationStatus}
+                        requestedAt={c.verificationRequestedAt}
+                        onOpenPhotos={() => openProfile(c)}
+                      />
                     </td>
                     <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
                       <CandidateInfoButton onOpen={() => openProfile(c)} />

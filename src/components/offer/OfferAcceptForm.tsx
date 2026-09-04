@@ -7,6 +7,7 @@ import { CountrySelect } from "@/components/forms/CountrySelect";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { DateSelect } from "@/components/forms/DateSelect";
 import { ENGAGED_AS, validateConfirmed, type EngagedAs } from "@/lib/hiring";
+import { IdentityUpload } from "@/components/verify/IdentityUpload";
 
 /**
  * Accepting an offer, and correcting the record while doing it.
@@ -38,11 +39,26 @@ export interface OfferAcceptFormProps {
   };
   /** Open on the decline panel, for the "let us know" link in the email. */
   declineFirst?: boolean;
+  /**
+   * The candidate's id, and whether they still owe us an identity check.
+   *
+   * Only supplied when one is outstanding: many countries are not on the list
+   * that asks for identity documents before the assessment, so those people
+   * reach an offer with nothing on file — and an agreement should not be drawn
+   * up for someone whose identity has never been checked.
+   */
+  identity?: { candidateId: string; needed: boolean };
 }
 
 type Outcome = "accepted" | "declined";
 
-export function OfferAcceptForm({ token, email, initial, declineFirst }: OfferAcceptFormProps) {
+export function OfferAcceptForm({
+  token,
+  email,
+  initial,
+  declineFirst,
+  identity,
+}: OfferAcceptFormProps) {
   const [engagedAs, setEngagedAs] = useState<EngagedAs>("Individual");
   const [companyName, setCompanyName] = useState("");
   const [companyNumber, setCompanyNumber] = useState("");
@@ -64,6 +80,7 @@ export function OfferAcceptForm({ token, email, initial, declineFirst }: OfferAc
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState("");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [identityDone, setIdentityDone] = useState(false);
 
   const [declining, setDeclining] = useState(!!declineFirst);
   const [declineReason, setDeclineReason] = useState("");
@@ -100,6 +117,9 @@ export function OfferAcceptForm({ token, email, initial, declineFirst }: OfferAc
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; problems?: string[] };
       if (data.ok) {
+        // Recorded first, photographs second. Making the acceptance wait on a
+        // successful upload would mean a dropped connection loses both — and
+        // the acceptance is the part that cannot be asked for again.
         setOutcome("accepted");
       } else if (data.problems?.length) {
         setProblems(data.problems);
@@ -133,12 +153,34 @@ export function OfferAcceptForm({ token, email, initial, declineFirst }: OfferAc
   }
 
   if (outcome === "accepted") {
+    // Their acceptance is safely recorded either way; this is the second half.
+    if (identity?.needed && !identityDone) {
+      return (
+        <div className="space-y-4">
+          <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">
+            Your acceptance is confirmed. One last step.
+          </p>
+          <IdentityUpload
+            candidateId={identity.candidateId}
+            eyebrow="Step 2 of 2"
+            heading="Confirm your identity"
+            intro="Before we prepare your written agreement, we need to check that you are who you say you are. This takes about a minute."
+            submitLabel="Send and finish"
+            onDone={() => setIdentityDone(true)}
+          />
+        </div>
+      );
+    }
     return (
       <Done
         icon="checkCircle"
         tone="green"
         title="Thank you — your acceptance is confirmed"
-        body="We have everything we need. Our recruitment team will prepare your written agreement and send it to you for signature, along with everything you need for your first day."
+        body={
+          identity?.needed
+            ? "We have everything we need, including your identity documents. Our recruitment team will review them and send your written agreement for signature, along with everything you need for your first day."
+            : "We have everything we need. Our recruitment team will prepare your written agreement and send it to you for signature, along with everything you need for your first day."
+        }
       />
     );
   }

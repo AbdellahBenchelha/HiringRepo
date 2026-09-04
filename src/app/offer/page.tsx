@@ -4,6 +4,8 @@ import { readOfferToken, OFFER_LINK_TTL_DAYS } from "@/lib/token";
 import { getCandidate } from "@/lib/store";
 import { formatRate } from "@/lib/offer";
 import { siteConfig } from "@/config/site";
+import { IdentityStep } from "@/components/verify/IdentityStep";
+import { identityStillNeeded } from "@/lib/verification";
 import { Icon } from "@/components/Icon";
 import { OfferAcceptForm } from "@/components/offer/OfferAcceptForm";
 
@@ -82,7 +84,25 @@ export default async function OfferPage({
     );
   }
 
+  /**
+   * Everyone is asked for identity documents before an agreement, whatever
+   * their country — the country list only decides who is asked earlier, as a
+   * filter. Anyone who has already provided them, or already been decided on,
+   * is not asked twice.
+   */
+  const needsIdentity = identityStillNeeded(candidate);
+
   if (candidate.offerAcceptedAt) {
+    // Coming back to the link with the identity step outstanding resumes it.
+    // Without this, closing the browser between accepting and photographing a
+    // passport would lock them out of finishing, with no way back in.
+    if (needsIdentity) {
+      return (
+        <Shell>
+          <IdentityStep candidateId={candidate.id} firstName={candidate.firstName} />
+        </Shell>
+      );
+    }
     return (
       <Shell>
         <Notice
@@ -162,6 +182,7 @@ export default async function OfferPage({
         token={token ?? ""}
         email={candidate.email}
         declineFirst={declineFirst}
+        identity={{ candidateId: candidate.id, needed: needsIdentity }}
         initial={{
           firstName: candidate.firstName ?? "",
           lastName: candidate.lastName ?? "",

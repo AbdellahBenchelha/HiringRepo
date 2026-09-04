@@ -256,6 +256,12 @@ export default async function AdminDashboard({
               href="/admin/accepted"
               icon="users"
             />
+            <Attention
+              label="Accepted, no identity documents"
+              count={attention.acceptedNoIdentity}
+              href="/admin/accepted"
+              icon="shield"
+            />
           </div>
         </section>
       </div>

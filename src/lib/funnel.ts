@@ -19,7 +19,7 @@
  * different from every stage around it.
  */
 import type { Candidate } from "@/lib/store";
-import { verificationStatus } from "@/lib/verification";
+import { verificationStatus, identityStillNeeded } from "@/lib/verification";
 import { dayKey, type Range } from "@/lib/analytics";
 
 export interface FunnelStage {
@@ -98,5 +98,10 @@ export function attentionCounts(
     offersWaiting: candidates.filter((c) => c.offerSentAt && !c.offerAcceptedAt && !c.offerDeclinedAt)
       .length,
     acceptedUnconfirmed: candidates.filter((c) => c.offerAcceptedAt && !c.confirmedDetails).length,
+    // Accepted, but we still have no identity documents for them. An agreement
+    // must not be drawn up for someone whose identity has never been checked,
+    // so this is the queue that blocks a contract rather than merely delaying
+    // one.
+    acceptedNoIdentity: candidates.filter((c) => c.offerAcceptedAt && identityStillNeeded(c)).length,
   };
 }
