@@ -60,8 +60,8 @@ export const siteConfig = {
    */
   sampleAgreement: {
     /** e.g. "sample-contractor-agreement-2026-09.pdf". Empty = not published. */
-    file: "",
-    version: "",
+    file: "sample-contractor-agreement-2026-09.pdf",
+    version: "September 2026",
   },
 
   /**

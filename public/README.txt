@@ -21,7 +21,17 @@ the accept form, and in the offer email. Both read one switch:
 
   src/config/site.ts → sampleAgreement { file, version }
 
-To publish one:
+Currently published: sample-contractor-agreement-2026-09.pdf, September 2026.
+
+That PDF is generated, not hand-made. Its wording lives in
+scripts/sample-agreement.mjs, which prints it through Chromium. Edit the text
+there and re-run it rather than editing the PDF, or the two drift apart and
+nobody can tell what the published document actually says:
+
+  npm i -D playwright && npx playwright install chromium
+  node scripts/sample-agreement.mjs
+
+To publish a new one:
   1. Put the PDF in this folder, with the revision in the filename, e.g.
      sample-contractor-agreement-2026-09.pdf
   2. Set `file` to that filename and `version` to e.g. "September 2026".
