@@ -132,7 +132,7 @@ export const recruitmentProcess: ProcessStep[] = [
   {
     title: "Job Offer and Onboarding",
     description:
-      "Successful candidates receive an offer and begin our supportive, paid onboarding program.",
+      "Successful candidates receive a written offer together with a sample of our employment contract, so you can read the terms before you decide. Once you accept, our supportive, paid onboarding program begins.",
   },
 ];
 
@@ -190,6 +190,11 @@ export const faqs: FaqItem[] = [
     question: "Do I need previous call-center experience?",
     answer:
       "Not always. Many of our positions welcome motivated beginners and provide full paid training. Previous call-center or customer-support experience is an advantage for some roles, but a friendly, professional attitude and willingness to learn matter just as much.",
+  },
+  {
+    question: "Can I see the contract before I accept an offer?",
+    answer:
+      "Yes. Every job offer we send includes a link to a sample of our employment contract, so you can read our standard terms before you decide. It is an example document with personal details left blank — your own offer letter and the contract you are given to sign are the documents that count. Take the time you need and ask us about anything that is unclear; questions will never count against you.",
   },
   {
     question: "Can I apply without a CV?",
