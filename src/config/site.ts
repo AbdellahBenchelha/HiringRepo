@@ -49,10 +49,12 @@ export const siteConfig = {
    * which is the correct behaviour until there is a document to show, because
    * a link to a missing file reads worse to a candidate than no link at all.
    *
-   * `version` is printed beside the link. When the document is revised, change
-   * both the filename and the version: a candidate who read the old one should
-   * be identifiable, and a browser that cached the old file must not serve it
-   * in place of the new.
+   * `version` is printed beside the link, and is empty on purpose: the
+   * document itself carries no version, and a revision date shown next to a
+   * link but nowhere in the file it opens is worse than none — it looks like a
+   * mistake. The filename still carries the revision, which is what stops a
+   * browser serving a cached copy of the old document in place of the new.
+   * Change the filename whenever the wording changes.
    *
    * It must be marked as a specimen on its own pages. What is linked here is
    * information, not the agreement — the agreement is issued for signature
@@ -61,7 +63,7 @@ export const siteConfig = {
   sampleAgreement: {
     /** e.g. "sample-contractor-agreement-2026-09.pdf". Empty = not published. */
     file: "sample-contractor-agreement-2026-09.pdf",
-    version: "September 2026",
+    version: "",
   },
 
   /**

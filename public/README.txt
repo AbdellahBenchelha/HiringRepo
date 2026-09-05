@@ -21,7 +21,13 @@ the accept form, and in the offer email. Both read one switch:
 
   src/config/site.ts → sampleAgreement { file, version }
 
-Currently published: sample-contractor-agreement-2026-09.pdf, September 2026.
+Currently published: sample-contractor-agreement-2026-09.pdf
+
+`version` is deliberately empty. The document carries no version on its pages,
+and a revision date printed beside the link but nowhere inside the file it
+opens reads as a mistake. The revision lives in the filename instead, which is
+what actually matters: it stops a browser serving a cached copy of the old
+document in place of the new one.
 
 That PDF is generated, not hand-made. Its wording lives in
 scripts/sample-agreement.mjs, which prints it through Chromium. Edit the text
@@ -34,23 +40,21 @@ nobody can tell what the published document actually says:
 To publish a new one:
   1. Put the PDF in this folder, with the revision in the filename, e.g.
      sample-contractor-agreement-2026-09.pdf
-  2. Set `file` to that filename and `version` to e.g. "September 2026".
+  2. Set `file` to that filename. Set `version` only if the document itself
+     prints the same version on its pages; otherwise leave it empty.
 
 Leave `file` empty and nothing is shown anywhere. That is the correct state
 until there is a document: a link to a missing file reads worse to a candidate
 weighing up whether a remote offer is genuine than no link at all.
 
-Two things the document itself must do:
+One thing the document itself must do: say SPECIMEN on every page, along the
+lines of "not an offer and not binding; your personalised agreement is issued
+for signature after you accept". Without it, someone can argue the sample
+formed the contract — and if its figures differ from their offer, that is a
+real problem.
 
-  - Say SPECIMEN on every page, along the lines of "not an offer and not
-    binding; your personalised agreement is issued for signature after you
-    accept". Without it, someone can argue the sample formed the contract —
-    and if its figures differ from their offer, that is a real problem.
-  - Carry the same version date shown in the config, so you can tell which
-    revision any given candidate read.
-
-Change the filename as well as the version when you revise it, or a browser
-holding the old file in cache will keep serving it.
+Change the filename when you revise it, or a browser holding the old file in
+cache will keep serving it.
 
 This document should be drawn up by a lawyer. A contractor agreement written
 in-house is what creates employment-misclassification exposure, and these

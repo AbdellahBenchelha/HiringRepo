@@ -23,8 +23,24 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const VERSION = 'September 2026';
 const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-09.pdf');
+
+/**
+ * The one party that is not a placeholder.
+ *
+ * A candidate weighing up a remote offer can take these three facts to the
+ * Companies House register and see for themselves that we exist, which is
+ * worth more than any assurance in the text. Everything about *them* stays in
+ * brackets — this is a specimen, and nothing in it should read as their terms.
+ *
+ * Keep in step with `legal` in src/config/site.ts.
+ */
+const COMPANY = {
+  name: 'WorkRoute LIMITED',
+  country: 'United Kingdom',
+  number: 'SC238030',
+  address: '65 Stroude Road, Skeabrae, KW17 0AX, United Kingdom',
+};
 
 const NAVY = '#0f1035';
 const MUTED = '#4f4f80';
@@ -123,7 +139,7 @@ const html = `<!doctype html>
   <div class="sheet">
     <p class="eyebrow">WorkRoute · Customer Experience</p>
     <h1>Independent Contractor Agreement</h1>
-    <p class="sub">Specimen document · Version ${VERSION}</p>
+    <p class="sub">Specimen document</p>
 
     <div class="banner">
       <strong>This is an example, not an offer and not a contract.</strong>
@@ -138,11 +154,9 @@ const html = `<!doctype html>
     <h2>Parties</h2>
     <div class="parties">
       <p>
-        <strong>(1) The Company.</strong> <span class="fill">[REGISTERED COMPANY NAME]</span>, a
-        company registered in <span class="fill">[COUNTRY]</span> under company number
-        <span class="fill">[COMPANY NUMBER]</span>, whose registered office is at
-        <span class="fill">[REGISTERED ADDRESS]</span> (&ldquo;the Company&rdquo;, &ldquo;we&rdquo;,
-        &ldquo;us&rdquo;).
+        <strong>(1) The Company.</strong> ${COMPANY.name}, a company registered in
+        ${COMPANY.country} under company number ${COMPANY.number}, whose registered office is at
+        ${COMPANY.address} (&ldquo;the Company&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;).
       </p>
       <p>
         <strong>(2) The Contractor.</strong> <span class="fill">[FULL LEGAL NAME]</span> of
@@ -404,7 +418,7 @@ await page.pdf({
   footerTemplate: `
     <div style="width:100%;padding:0 18mm;font:400 7.5pt Helvetica,Arial,sans-serif;color:#7373a0;
                 display:flex;justify-content:space-between;">
-      <span>SPECIMEN — example only, not a contract · Version ${VERSION}</span>
+      <span>SPECIMEN — example only, not a contract</span>
       <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
     </div>`,
   margin: { top: '18mm', bottom: '20mm', left: '18mm', right: '18mm' },
