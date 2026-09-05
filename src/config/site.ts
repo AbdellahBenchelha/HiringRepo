@@ -42,6 +42,29 @@ export const siteConfig = {
   url: "https://workroute.work",
 
   /**
+   * The specimen contractor agreement candidates can read before accepting.
+   *
+   * Set `file` to a PDF placed in `public/` and it appears on the offer page
+   * and in the offer email. Leave it empty and nothing is shown anywhere —
+   * which is the correct behaviour until there is a document to show, because
+   * a link to a missing file reads worse to a candidate than no link at all.
+   *
+   * `version` is printed beside the link. When the document is revised, change
+   * both the filename and the version: a candidate who read the old one should
+   * be identifiable, and a browser that cached the old file must not serve it
+   * in place of the new.
+   *
+   * It must be marked as a specimen on its own pages. What is linked here is
+   * information, not the agreement — the agreement is issued for signature
+   * after acceptance, with their own details in it.
+   */
+  sampleAgreement: {
+    /** e.g. "sample-contractor-agreement-2026-09.pdf". Empty = not published. */
+    file: "",
+    version: "",
+  },
+
+  /**
    * The timezone the business runs on, as an IANA name.
    *
    * Only the dashboard uses it, and only to decide where one day ends and the

@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { offerHtml, offerSubject, offerText } from "@/lib/emailTemplates";
 import { siteConfig } from "@/config/site";
 import { formatRate, offerProblems, ENGAGEMENT_TYPES, type Offer } from "@/lib/offer";
+import { sampleAgreement } from "@/lib/sampleAgreement";
 import { createOfferToken } from "@/lib/token";
 
 /**
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const sentAt = new Date().toISOString();
   const token = createOfferToken({ id, offerSentAt: sentAt });
   const offerUrl = `${baseUrl(req)}/offer?t=${encodeURIComponent(token)}`;
+  const sample = sampleAgreement(baseUrl(req));
 
   const payload = {
     fullName: candidate.fullName || "Candidate",
@@ -119,6 +121,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     note: offer.note,
     acceptUrl: offerUrl,
     declineUrl: `${offerUrl}&a=decline`,
+    // Absolute, because a relative path in an email resolves against the mail
+    // client, not the site. Absent when nothing is published, and the email
+    // then says nothing about it.
+    sampleUrl: sample?.url,
+    sampleVersion: sample?.version,
   };
 
   const result = await sendEmail({

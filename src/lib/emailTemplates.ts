@@ -531,6 +531,14 @@ export interface OfferEmail {
   acceptUrl?: string;
   /** Same page, opened on the decline path. */
   declineUrl?: string;
+  /**
+   * The specimen agreement, when one is published. Linked rather than
+   * attached: a PDF attachment from a young sending domain is a well-known
+   * spam signal, and an offer that lands in junk is worse than one without a
+   * sample.
+   */
+  sampleUrl?: string;
+  sampleVersion?: string;
 }
 
 /**
@@ -608,6 +616,21 @@ export function offerText(o: OfferEmail): string {
           `To accept, simply reply to this email and let us know.`,
           ``,
         ]),
+    ...(o.sampleUrl
+      ? [
+          `THE TERMS IN FULL`,
+          ``,
+          `Before you decide, you can read the agreement an engagement with us is`,
+          `made on:`,
+          ``,
+          o.sampleUrl,
+          ``,
+          `That is a specimen for your information${o.sampleVersion ? ` (version ${o.sampleVersion})` : ""}. Your own agreement is`,
+          `drawn up after you accept, with your details in it, and is sent to you`,
+          `for signature.`,
+          ``,
+        ]
+      : []),
     `WHAT HAPPENS NEXT`,
     ``,
     `When you accept, you will be asked to confirm your details and — unless you`,
@@ -653,6 +676,30 @@ export function offerHtml(o: OfferEmail): string {
    * because an offer with no way to accept it is worse than an old-fashioned
    * one.
    */
+  /**
+   * The terms in full, before the button rather than after it.
+   *
+   * Candidates have asked for this repeatedly, and one declined to give an
+   * identity number until she had seen it. Rendered only when a document is
+   * published — a link to a file that is not there is evidence against you to
+   * someone deciding whether a remote offer is real.
+   */
+  const sample = o.sampleUrl
+    ? `
+        <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+          The terms in full
+        </p>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Before you decide, you are welcome to read the agreement an engagement with us is made
+          on: <a href="${esc(o.sampleUrl)}" style="color:#b06e0c;font-weight:bold;">the sample
+          contractor agreement</a>${o.sampleVersion ? ` (version ${esc(o.sampleVersion)})` : ""}. It is a specimen for your
+          information — your own agreement is drawn up after you accept, with your details in it,
+          and sent to you for signature.
+        </p>
+`
+    : "";
+
   const accept = o.acceptUrl
     ? `
         <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
@@ -765,6 +812,8 @@ export function offerHtml(o: OfferEmail): string {
         }
 
         ${accept}
+
+        ${sample}
 
         <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
           What happens next

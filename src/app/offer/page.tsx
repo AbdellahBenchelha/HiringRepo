@@ -6,6 +6,7 @@ import { formatRate } from "@/lib/offer";
 import { siteConfig } from "@/config/site";
 import { IdentityStep } from "@/components/verify/IdentityStep";
 import { identityStillNeeded } from "@/lib/verification";
+import { sampleAgreement } from "@/lib/sampleAgreement";
 import { Icon } from "@/components/Icon";
 import { OfferAcceptForm } from "@/components/offer/OfferAcceptForm";
 
@@ -91,6 +92,7 @@ export default async function OfferPage({
    * is not asked twice.
    */
   const needsIdentity = identityStillNeeded(candidate);
+  const sample = sampleAgreement("");
 
   if (candidate.offerAcceptedAt) {
     // Coming back to the link with the identity step outstanding resumes it.
@@ -177,6 +179,33 @@ export default async function OfferPage({
           accept.
         </p>
       </div>
+
+      {/* Directly above the form, because this is the moment the question is
+          actually asked: candidates have declined to hand over an identity
+          number until they had seen the terms, and they were right to. */}
+      {sample ? (
+        <a
+          href={sample.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="card mb-6 flex items-center gap-4 p-5 transition hover:border-brand-300 hover:shadow-md"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+            <Icon name="document" className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-navy-900">
+              Read the sample agreement first
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-navy-500">
+              The terms an engagement with us is made on, in full. This is a specimen for you to
+              read — your own agreement is drawn up after you accept, with your details in it.
+              {sample.version ? ` Version ${sample.version}.` : ""}
+            </span>
+          </span>
+          <span className="shrink-0 text-xs font-bold text-brand-700">PDF →</span>
+        </a>
+      ) : null}
 
       <OfferAcceptForm
         token={token ?? ""}
