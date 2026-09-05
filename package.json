@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:contract": "node scripts/build-contract-pdf.mjs"
   },
   "dependencies": {
     "next": "^16.2.9",

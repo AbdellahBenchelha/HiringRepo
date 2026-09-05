@@ -1,0 +1,14 @@
+{
+  "title": "Sample Employment Contract",
+  "subtitle": "Specimen document - not a binding offer",
+  "version": "2026-01",
+  "issued": "2026-01-15",
+  "language": "English",
+  "appliesTo": "Permanent, full-time customer-support and call-center roles",
+  "sourceFile": "docs/contracts/sample-employment-contract.md",
+  "downloadPath": "/documents/sample-employment-contract-specimen-v2026-01.pdf",
+  "generated": {
+    "pages": 5,
+    "bytes": 24952
+  }
+}

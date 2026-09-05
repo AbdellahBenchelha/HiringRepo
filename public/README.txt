@@ -6,3 +6,10 @@ REQUIRED BEFORE PUBLISHING:
 
 These are intentionally not included as binary placeholders. Add your real
 brand assets here before launch.
+
+documents/
+  Generated candidate documents. Do NOT edit these by hand.
+  sample-employment-contract-specimen-*.pdf is built from
+  docs/contracts/sample-employment-contract.md by `npm run build:contract`.
+  These files are unlisted: excluded from the sitemap and served with a
+  noindex X-Robots-Tag header (next.config.mjs).
