@@ -24,9 +24,12 @@ import { IdentityUpload } from "@/components/verify/IdentityUpload";
 export function IdentityVerification({
   candidateId,
   fullName,
+  notice,
 }: {
   candidateId: string;
   fullName?: string;
+  /** Why a recruiter sent them back here, when one did. */
+  notice?: string;
 }) {
   const [done, setDone] = useState(false);
 
@@ -54,9 +57,14 @@ export function IdentityVerification({
         </div>
         <IdentityUpload
           candidateId={candidateId}
-          eyebrow="Assessment submitted"
-          heading="One last step"
-          intro="Before we can continue with your application, we need to confirm your identity. This takes about a minute."
+          eyebrow={notice ? "Action needed" : "Assessment submitted"}
+          heading={notice ? "We need your ID again" : "One last step"}
+          intro={
+            notice
+              ? "We could not use the photos you sent. Please send them again — it takes about a minute."
+              : "Before we can continue with your application, we need to confirm your identity. This takes about a minute."
+          }
+          notice={notice}
           onDone={() => setDone(true)}
         />
       </div>

@@ -10,7 +10,12 @@
 import type { Candidate } from "@/lib/store";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
-import { verificationStatus, type VerificationStatus } from "@/lib/verification";
+import {
+  identityReuploadPending,
+  verificationStatus,
+  type VerificationStatus,
+} from "@/lib/verification";
+import type { IdDocumentType } from "@/lib/identityDocuments";
 import type { Offer } from "@/lib/offer";
 import type { ConfirmedDetails } from "@/lib/hiring";
 import { countryRuleApplies } from "@/lib/phoneCountry";
@@ -66,6 +71,16 @@ export interface CandidateView {
   imagesDeletedAt?: string;
   verificationConsentAt?: string;
   verificationRequestedAt?: string;
+  /** Which of the three documents they sent. Absent for older uploads. */
+  identityDocumentType?: IdDocumentType;
+  identityReuploadRequestedAt?: string;
+  identityReuploadReason?: string;
+  /**
+   * Derived, not stored: a request for new photographs that has not been
+   * answered yet. Computed here so the tables and the panel cannot disagree
+   * about whether someone still owes us a photograph.
+   */
+  identityReuploadPending: boolean;
   voiceStatus?: VoiceStatus;
   /** Interview follow-up state, for the Interviews tab's own filters. */
   interviewCompletedAt?: string;
@@ -149,6 +164,10 @@ export function toCandidateView(
     imagesDeletedAt: c.imagesDeletedAt,
     verificationConsentAt: c.verificationConsentAt,
     verificationRequestedAt: c.verificationRequestedAt,
+    identityDocumentType: c.identityDocumentType,
+    identityReuploadRequestedAt: c.identityReuploadRequestedAt,
+    identityReuploadReason: c.identityReuploadReason,
+    identityReuploadPending: identityReuploadPending(c),
     voiceStatus: c.voiceStatus,
     interviewCompletedAt: c.interview?.completedAt,
     voiceRequestedAt: c.voiceRequestedAt,

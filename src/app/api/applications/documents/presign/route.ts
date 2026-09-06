@@ -29,12 +29,13 @@ export const runtime = "nodejs";
 /**
  * Two budgets, because one address is not one person.
  *
- * A candidate may send five files — CV, cover letter, certificate, ID document
- * and the photo holding it — and will retry a few of them, so the ceiling that
- * matters is per candidate. Applying it per IP instead punishes the wrong
- * people: mobile networks in the countries we hire from put thousands of
- * subscribers behind a handful of addresses, so a per-IP cap tight enough to
- * bound one person locks out everyone who shares their carrier.
+ * A candidate may send six files — CV, cover letter, certificate, both sides
+ * of an ID card and the photo holding it — and will retry a few of them, so
+ * the ceiling that matters is per candidate. Applying it per IP instead
+ * punishes the wrong people: mobile networks in the countries we hire from put
+ * thousands of subscribers behind a handful of addresses, so a per-IP cap
+ * tight enough to bound one person locks out everyone who shares their
+ * carrier.
  *
  * The per-IP limit therefore stays, but only as a ceiling on someone spraying
  * candidate ids — high enough that ordinary shared connections never reach it.

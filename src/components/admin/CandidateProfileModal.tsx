@@ -7,7 +7,11 @@ import { InterviewBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { DocumentList } from "@/components/admin/DocumentChips";
 import { NotesEditor } from "@/components/admin/NotesEditor";
-import { VerificationPanel, verificationStateOf } from "@/components/admin/VerificationPanel";
+import {
+  VerificationPanel,
+  verificationPatch,
+  verificationStateOf,
+} from "@/components/admin/VerificationPanel";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
@@ -286,15 +290,7 @@ export function CandidateProfileModal({
             documents={candidate.documents}
             initial={verification}
             onChange={(v) =>
-              onChange({
-                verificationStatus: v.status,
-                verifiedAt: v.verifiedAt,
-                verifiedBy: v.verifiedBy,
-                rejectedAt: v.rejectedAt,
-                rejectionReason: v.rejectionReason,
-                imagesDeletedAt: v.imagesDeletedAt,
-                verificationRequestedAt: v.requestedAt,
-              })
+              onChange(verificationPatch(v))
             }
           />
         </div>

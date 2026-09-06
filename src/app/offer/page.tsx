@@ -5,7 +5,7 @@ import { getCandidate } from "@/lib/store";
 import { formatRate } from "@/lib/offer";
 import { siteConfig } from "@/config/site";
 import { IdentityStep } from "@/components/verify/IdentityStep";
-import { identityStillNeeded } from "@/lib/verification";
+import { identityStillNeeded, identityReuploadPending } from "@/lib/verification";
 import { sampleAgreement } from "@/lib/sampleAgreement";
 import { Icon } from "@/components/Icon";
 import { OfferAcceptForm } from "@/components/offer/OfferAcceptForm";
@@ -92,6 +92,12 @@ export default async function OfferPage({
    * is not asked twice.
    */
   const needsIdentity = identityStillNeeded(candidate);
+  // Only while the request is still outstanding. Once they have sent new
+  // photographs the reason is history, and repeating it would tell someone who
+  // has already done as they were asked that their documents are still wrong.
+  const reuploadNotice = identityReuploadPending(candidate)
+    ? candidate.identityReuploadReason
+    : undefined;
   const sample = sampleAgreement("");
 
   if (candidate.offerAcceptedAt) {
@@ -101,7 +107,11 @@ export default async function OfferPage({
     if (needsIdentity) {
       return (
         <Shell>
-          <IdentityStep candidateId={candidate.id} firstName={candidate.firstName} />
+          <IdentityStep
+            candidateId={candidate.id}
+            firstName={candidate.firstName}
+            notice={reuploadNotice}
+          />
         </Shell>
       );
     }
@@ -211,7 +221,7 @@ export default async function OfferPage({
         token={token ?? ""}
         email={candidate.email}
         declineFirst={declineFirst}
-        identity={{ candidateId: candidate.id, needed: needsIdentity }}
+        identity={{ candidateId: candidate.id, needed: needsIdentity, notice: reuploadNotice }}
         initial={{
           firstName: candidate.firstName ?? "",
           lastName: candidate.lastName ?? "",

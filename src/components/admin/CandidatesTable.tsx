@@ -15,7 +15,11 @@ import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal"
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
-import { VerificationBadge, verificationStateOf } from "@/components/admin/VerificationPanel";
+import {
+  VerificationBadge,
+  verificationPatch,
+  verificationStateOf,
+} from "@/components/admin/VerificationPanel";
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { VERIFICATION_FILTERS, type VerificationFilter, type VerificationStatus } from "@/lib/verification";
 import type { CandidateDocument } from "@/lib/documents";
@@ -636,13 +640,7 @@ export function CandidatesTable({
           onClose={() => setQuickView(null)}
           onChange={(v) =>
             applyPatch(quickView.id, {
-              verificationStatus: v.status,
-              verifiedAt: v.verifiedAt,
-              verifiedBy: v.verifiedBy,
-              rejectedAt: v.rejectedAt,
-              rejectionReason: v.rejectionReason,
-              imagesDeletedAt: v.imagesDeletedAt,
-              verificationRequestedAt: v.requestedAt,
+              ...verificationPatch(v),
             })
           }
         />

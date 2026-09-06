@@ -6,7 +6,13 @@ import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ImageZoom } from "@/components/admin/ImageZoom";
 import { DOCUMENT_LABEL, type CandidateDocument } from "@/lib/documents";
-import { VERIFICATION_LABEL, type VerificationStatus } from "@/lib/verification";
+import {
+  REUPLOAD_REASONS,
+  VERIFICATION_LABEL,
+  isVerificationKind,
+  type VerificationStatus,
+} from "@/lib/verification";
+import { ID_DOCUMENT_LABEL, type IdDocumentType } from "@/lib/identityDocuments";
 
 /**
  * Review a candidate's identity photographs.
@@ -93,6 +99,12 @@ export interface VerificationState {
   consentAt?: string;
   /** When we last asked them to upload, if we ever did. */
   requestedAt?: string;
+  /** Which document they sent. Absent for uploads made before the picker. */
+  documentType?: IdDocumentType;
+  /** An outstanding request for new photographs, and why it was made. */
+  reuploadRequestedAt?: string;
+  reuploadReason?: string;
+  reuploadPending?: boolean;
 }
 
 /**
@@ -110,6 +122,10 @@ export function verificationStateOf(c: {
   imagesDeletedAt?: string;
   verificationConsentAt?: string;
   verificationRequestedAt?: string;
+  identityDocumentType?: IdDocumentType;
+  identityReuploadRequestedAt?: string;
+  identityReuploadReason?: string;
+  identityReuploadPending?: boolean;
 }): VerificationState {
   return {
     status: c.verificationStatus,
@@ -120,6 +136,34 @@ export function verificationStateOf(c: {
     imagesDeletedAt: c.imagesDeletedAt,
     consentAt: c.verificationConsentAt,
     requestedAt: c.verificationRequestedAt,
+    documentType: c.identityDocumentType,
+    reuploadRequestedAt: c.identityReuploadRequestedAt,
+    reuploadReason: c.identityReuploadReason,
+    reuploadPending: c.identityReuploadPending,
+  };
+}
+
+/**
+ * The inverse of verificationStateOf: what to write back onto the row.
+ *
+ * One definition, because there are three tables doing this and each one that
+ * forgets a field leaves a row silently stale — the panel says the candidate
+ * has been asked for new photographs and the list behind it still says
+ * "Verified" until the page is reloaded.
+ */
+export function verificationPatch(v: VerificationState) {
+  return {
+    verificationStatus: v.status,
+    verifiedAt: v.verifiedAt,
+    verifiedBy: v.verifiedBy,
+    rejectedAt: v.rejectedAt,
+    rejectionReason: v.rejectionReason,
+    imagesDeletedAt: v.imagesDeletedAt,
+    verificationRequestedAt: v.requestedAt,
+    identityDocumentType: v.documentType,
+    identityReuploadRequestedAt: v.reuploadRequestedAt,
+    identityReuploadReason: v.reuploadReason,
+    identityReuploadPending: !!v.reuploadPending,
   };
 }
 
@@ -134,6 +178,14 @@ export function verificationStateOf(c: {
  * optional for them.
  */
 function askAction(state: VerificationState): { label: string; hint: string } | null {
+  // Already asked and still waiting. Asking a third time is a nudge, not a new
+  // reason, and the reason they were given the first time still stands.
+  if (state.reuploadPending) {
+    return {
+      label: "Ask again",
+      hint: "Sends the same request again, with the reason already given.",
+    };
+  }
   if (state.status === "not_required") {
     return {
       label: "Request verification",
@@ -189,13 +241,17 @@ export function VerificationPanel({
   const [reason, setReason] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmAsk, setConfirmAsk] = useState(false);
+  /** The re-request dialog, and the reason chosen in it. */
+  const [askingAgain, setAskingAgain] = useState(false);
+  const [reuploadReason, setReuploadReason] = useState<string>(REUPLOAD_REASONS[0].value);
+  const [reuploadCustom, setReuploadCustom] = useState("");
   /** Which photo the inspector is showing, or null when it is closed. */
   const [zoomAt, setZoomAt] = useState<number | null>(null);
   /** "sent", or the reason the request email did not go out. */
   const [requestEmailed, setRequestEmailed] = useState("");
 
   const images = (documents ?? []).filter(
-    (d) => (d.kind === "identity" || d.kind === "selfie") && d.status !== "blocked" && d.key,
+    (d) => isVerificationKind(d.kind) && d.status !== "blocked" && d.key,
   );
   const hasImages = images.length > 0;
   const ask = askAction(state);
@@ -216,6 +272,8 @@ export function VerificationPanel({
         emailed?: boolean;
         emailError?: string;
         verificationRequestedAt?: string;
+        identityReuploadRequestedAt?: string;
+        identityReuploadReason?: string;
       };
       // One place that applies the change, so the panel and the row behind it
       // can never disagree about what just happened.
@@ -259,6 +317,22 @@ export function VerificationPanel({
         // The request is recorded either way, but a candidate who was never
         // told is a request that will never be answered.
         setRequestEmailed(data.emailed ? "sent" : (data.emailError ?? "failed"));
+      } else if (action === "reupload") {
+        // Back to awaiting, and any decision withdrawn — the server has done
+        // the same, and a panel still showing "Verified" beside "we have asked
+        // for new photographs" is two contradictory statements at once.
+        apply({
+          status: "awaiting",
+          requestedAt: data.verificationRequestedAt,
+          reuploadRequestedAt: data.identityReuploadRequestedAt,
+          reuploadReason: data.identityReuploadReason,
+          reuploadPending: true,
+          verifiedAt: undefined,
+          verifiedBy: undefined,
+          rejectedAt: undefined,
+          rejectionReason: undefined,
+        });
+        setRequestEmailed(data.emailed ? "sent" : (data.emailError ?? "failed"));
       }
     } catch {
       setError("Could not save. Please try again.");
@@ -276,7 +350,17 @@ export function VerificationPanel({
         {ask ? (
           <button
             type="button"
-            onClick={() => setConfirmAsk(true)}
+            onClick={() => {
+              if (state.reuploadPending) {
+                // Nudging, not re-deciding. Their reason stands, so it is
+                // carried into the dialog rather than asked for again.
+                setReuploadReason("custom");
+                setReuploadCustom(state.reuploadReason ?? "");
+                setAskingAgain(true);
+              } else {
+                setConfirmAsk(true);
+              }
+            }}
             disabled={busy}
             title={ask.hint}
             className="inline-flex items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-800 transition hover:bg-brand-100 disabled:opacity-50"
@@ -287,7 +371,37 @@ export function VerificationPanel({
         ) : null}
       </div>
 
-      {state.status === "awaiting" ? (
+      {/* Outranks the generic "awaiting" line below: this is a specific thing
+          we are waiting for, from someone who has already sent something. */}
+      {state.reuploadPending ? (
+        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="text-sm font-semibold text-amber-900">
+            New photos asked for on {fmt(state.reuploadRequestedAt)} — not arrived yet.
+          </p>
+          {state.reuploadReason ? (
+            <p className="mt-1 text-xs leading-relaxed text-amber-800">
+              Told them: {state.reuploadReason}
+            </p>
+          ) : null}
+          {images.length ? (
+            <p className="mt-1 text-xs text-amber-700">
+              The photos below are the ones being replaced.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {state.documentType ? (
+        <p className="mt-2 text-xs text-navy-500">
+          Document sent: <strong className="text-navy-700">{ID_DOCUMENT_LABEL[state.documentType]}</strong>
+        </p>
+      ) : images.length ? (
+        <p className="mt-2 text-xs text-navy-400">
+          Document type not recorded — sent before we started asking which it was.
+        </p>
+      ) : null}
+
+      {state.status === "awaiting" && !state.reuploadPending ? (
         <p className="mt-2 text-sm text-navy-500">
           {state.requestedAt ? (
             <>
@@ -324,7 +438,9 @@ export function VerificationPanel({
 
       {hasImages ? (
         <>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div
+            className={`mt-3 grid gap-3 ${images.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+          >
             {images.map((doc, i) => (
               <button
                 key={doc.kind}
@@ -395,17 +511,45 @@ export function VerificationPanel({
               >
                 Reject
               </button>
-              <button
-                type="button"
-                onClick={() => setConfirmClear(true)}
-                disabled={busy}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-navy-200 px-3.5 py-1.5 text-xs font-bold text-navy-600 transition hover:bg-navy-50 disabled:opacity-40"
-              >
-                <Icon name="trash" className="h-3.5 w-3.5" />
-                Delete photos
-              </button>
             </>
           ) : null}
+
+          {/* The way back when what arrived cannot be used. Offered wherever
+              there is something to complain about — including for a verified
+              candidate whose photographs have since been deleted, because a
+              doubt raised later still has to have somewhere to go. Kept with
+              the everyday actions rather than beside Delete: asking for a
+              better photograph is the ordinary outcome of a bad one, and
+              erasing the evidence is not. */}
+          {!state.reuploadPending ? (
+            <button
+              type="button"
+              onClick={() => {
+                setReuploadReason(REUPLOAD_REASONS[0].value);
+                setReuploadCustom("");
+                setAskingAgain(true);
+              }}
+              disabled={busy}
+              title="Emails them a reason and reopens the upload step."
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-40"
+            >
+              <Icon name="mail" className="h-3.5 w-3.5" />
+              Ask for new photos
+            </button>
+          ) : null}
+
+          {hasImages ? (
+            <button
+              type="button"
+              onClick={() => setConfirmClear(true)}
+              disabled={busy}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-navy-200 px-3.5 py-1.5 text-xs font-bold text-navy-600 transition hover:bg-navy-50 disabled:opacity-40"
+            >
+              <Icon name="trash" className="h-3.5 w-3.5" />
+              Delete photos
+            </button>
+          ) : null}
+
           {error ? <p className="w-full text-xs font-medium text-red-600">{error}</p> : null}
         </div>
       ) : null}
@@ -435,6 +579,70 @@ export function VerificationPanel({
               placeholder="Reason (e.g. photo unreadable)"
               className="input mt-3 !py-2 text-sm"
             />
+          </div>
+        }
+      />
+
+      {/* Asking for new photographs. The reason is picked, not typed, because
+          it goes to the candidate word for word — and a reason typed in a
+          hurry lands in someone's inbox as the official word on why their
+          passport was refused. */}
+      <ConfirmDialog
+        open={askingAgain}
+        icon="mail"
+        title="Ask for new identity photos?"
+        confirmLabel="Send request"
+        busy={busy}
+        warning={
+          state.status === "verified"
+            ? "This withdraws the existing verification until new photos arrive."
+            : undefined
+        }
+        onCancel={() => setAskingAgain(false)}
+        onConfirm={() => {
+          setAskingAgain(false);
+          void act("reupload", { reason: reuploadReason, customReason: reuploadCustom });
+        }}
+        body={
+          <div>
+            <p>
+              <strong className="text-navy-900">{fullName || "This candidate"}</strong> will be
+              emailed the reason below and a link back to the upload step. Their current photos are
+              kept until new ones arrive.
+            </p>
+
+            <label className="mt-3 block text-xs font-bold text-navy-700">
+              What was wrong?
+              <select
+                value={reuploadReason}
+                onChange={(e) => setReuploadReason(e.target.value)}
+                className="input mt-1.5 !py-2 text-sm font-normal"
+              >
+                {REUPLOAD_REASONS.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+                <option value="custom">Something else — write it myself</option>
+              </select>
+            </label>
+
+            {reuploadReason === "custom" ? (
+              <textarea
+                value={reuploadCustom}
+                onChange={(e) => setReuploadCustom(e.target.value)}
+                rows={3}
+                maxLength={400}
+                placeholder="Say what is wrong and what they should send instead."
+                className="input mt-2 !py-2 text-sm"
+              />
+            ) : (
+              // Shown, not summarised. This is the exact text that will be in
+              // their inbox, and it should be read before it is sent.
+              <p className="mt-2 rounded-lg border border-navy-200 bg-navy-50 p-3 text-xs leading-relaxed text-navy-700">
+                {REUPLOAD_REASONS.find((r) => r.value === reuploadReason)?.message}
+              </p>
+            )}
           </div>
         }
       />

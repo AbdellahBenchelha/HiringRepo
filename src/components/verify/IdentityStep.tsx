@@ -14,9 +14,12 @@ import { IdentityUpload } from "@/components/verify/IdentityUpload";
 export function IdentityStep({
   candidateId,
   firstName,
+  notice,
 }: {
   candidateId: string;
   firstName?: string;
+  /** Why a recruiter asked for the photographs again, when one did. */
+  notice?: string;
 }) {
   const [done, setDone] = useState(false);
 
@@ -37,18 +40,44 @@ export function IdentityStep({
     );
   }
 
+  return <IdentityAsk candidateId={candidateId} notice={notice} onDone={() => setDone(true)} />;
+}
+
+/**
+ * The ask itself, without the screen that follows it.
+ *
+ * Shared with the accept form, which reaches the same point inside a form it
+ * still owns and so cannot use the wrapper above. Two copies of this wording
+ * drifted apart within a day of the second one existing — the re-request
+ * variants were added to one and not the other — which is the argument for it
+ * living in one place.
+ */
+export function IdentityAsk({
+  candidateId,
+  notice,
+  onDone,
+}: {
+  candidateId: string;
+  notice?: string;
+  onDone: () => void;
+}) {
   return (
     <>
       <p className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">
-        Your acceptance is confirmed. One last step.
+        Your acceptance is confirmed.{notice ? " One thing still outstanding." : " One last step."}
       </p>
       <IdentityUpload
         candidateId={candidateId}
-        eyebrow="Step 2 of 2"
-        heading="Confirm your identity"
-        intro="Before we prepare your written agreement, we need to check that you are who you say you are. This takes about a minute."
+        eyebrow={notice ? "Action needed" : "Step 2 of 2"}
+        heading={notice ? "We need your ID again" : "Confirm your identity"}
+        intro={
+          notice
+            ? "We could not use the photos you sent, so we cannot prepare your agreement yet. Sending new ones takes about a minute."
+            : "Before we prepare your written agreement, we need to check that you are who you say you are. This takes about a minute."
+        }
         submitLabel="Send and finish"
-        onDone={() => setDone(true)}
+        notice={notice}
+        onDone={onDone}
       />
     </>
   );

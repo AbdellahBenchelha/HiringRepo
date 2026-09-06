@@ -7,7 +7,7 @@ import { CountrySelect } from "@/components/forms/CountrySelect";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { DateSelect } from "@/components/forms/DateSelect";
 import { ENGAGED_AS, validateConfirmed, type EngagedAs } from "@/lib/hiring";
-import { IdentityUpload } from "@/components/verify/IdentityUpload";
+import { IdentityAsk } from "@/components/verify/IdentityStep";
 
 /**
  * Accepting an offer, and correcting the record while doing it.
@@ -47,7 +47,7 @@ export interface OfferAcceptFormProps {
    * reach an offer with nothing on file — and an agreement should not be drawn
    * up for someone whose identity has never been checked.
    */
-  identity?: { candidateId: string; needed: boolean };
+  identity?: { candidateId: string; needed: boolean; notice?: string };
 }
 
 type Outcome = "accepted" | "declined";
@@ -156,19 +156,11 @@ export function OfferAcceptForm({
     // Their acceptance is safely recorded either way; this is the second half.
     if (identity?.needed && !identityDone) {
       return (
-        <div className="space-y-4">
-          <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">
-            Your acceptance is confirmed. One last step.
-          </p>
-          <IdentityUpload
-            candidateId={identity.candidateId}
-            eyebrow="Step 2 of 2"
-            heading="Confirm your identity"
-            intro="Before we prepare your written agreement, we need to check that you are who you say you are. This takes about a minute."
-            submitLabel="Send and finish"
-            onDone={() => setIdentityDone(true)}
-          />
-        </div>
+        <IdentityAsk
+          candidateId={identity.candidateId}
+          notice={identity.notice}
+          onDone={() => setIdentityDone(true)}
+        />
       );
     }
     return (

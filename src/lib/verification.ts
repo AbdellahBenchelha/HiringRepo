@@ -11,9 +11,20 @@
  */
 import type { CandidateDocument } from "@/lib/documents";
 import { countryRuleApplies } from "@/lib/phoneCountry";
+import { hasIdentityImages, type IdDocumentType } from "@/lib/identityDocuments";
 
-/** The two images a candidate provides. Both are required together. */
-export const VERIFICATION_KINDS = ["identity", "selfie"] as const;
+/**
+ * Every image kind the identity check can involve.
+ *
+ * Which of them a given candidate owes depends on the document they chose —
+ * see requiredKinds in identityDocuments.ts. This is the superset, for code
+ * that has to recognise an identity photograph without knowing whose it is.
+ */
+export const VERIFICATION_KINDS = ["identity", "identityBack", "selfie"] as const;
+
+export function isVerificationKind(kind: string): boolean {
+  return (VERIFICATION_KINDS as readonly string[]).includes(kind);
+}
 
 export type VerificationStatus =
   /** Their country does not require it and nobody has asked. */
@@ -50,13 +61,100 @@ export interface VerificationInput {
   imagesDeletedAt?: string;
   /** Set when a recruiter asks someone whose country is not on the list. */
   verificationRequestedAt?: string;
+  /** Which document they chose. Absent for anyone who uploaded before the picker. */
+  identityDocumentType?: IdDocumentType;
+  /** When a recruiter last asked for the photographs to be taken again. */
+  identityReuploadRequestedAt?: string;
+  /** What was wrong with them, in words the candidate is shown. */
+  identityReuploadReason?: string;
 }
 
-/** Are both images present and usable? */
-export function hasBothImages(documents?: CandidateDocument[]): boolean {
-  const usable = (kind: string) =>
-    (documents ?? []).some((d) => d.kind === kind && d.status !== "blocked" && !!d.key);
-  return usable("identity") && usable("selfie");
+/** Are the photographs their chosen document requires present and usable? */
+export function hasBothImages(
+  documents?: CandidateDocument[],
+  type?: IdDocumentType,
+): boolean {
+  return hasIdentityImages(documents, type);
+}
+
+/**
+ * Has a recruiter asked for new photographs that have not arrived yet?
+ *
+ * Compared against the newest photograph on file rather than stored as a flag
+ * someone has to remember to clear. A flag would leave a candidate stuck on
+ * "please upload again" after they already had, and the one thing worse than
+ * asking twice is asking again after they did as they were told.
+ *
+ * Ties count as pending. Same-second timestamps mean the upload and the
+ * request crossed, and in that case the photographs are the ones the recruiter
+ * was looking at when they asked — not an answer to the request.
+ */
+export function identityReuploadPending(c: VerificationInput): boolean {
+  const asked = c.identityReuploadRequestedAt;
+  if (!asked) return false;
+  const newest = (c.documents ?? [])
+    .filter((d) => (VERIFICATION_KINDS as readonly string[]).includes(d.kind) && !!d.key)
+    .map((d) => d.uploadedAt)
+    .sort()
+    .at(-1);
+  return !newest || newest <= asked;
+}
+
+/**
+ * The reasons a recruiter can give for asking again.
+ *
+ * A fixed list rather than free text alone, because these go to the candidate
+ * verbatim: a reason typed in a hurry lands in someone's inbox as the official
+ * word on why their documents were refused. Each one says what to do next,
+ * since "rejected" without an instruction just produces a reply asking what to
+ * send instead.
+ */
+export const REUPLOAD_REASONS = [
+  {
+    value: "unreadable",
+    label: "ID photo not clear enough",
+    message:
+      "The photo of your ID document is not clear enough for us to read. Please take a new one in good light, with all four corners of the document in the picture and no glare across it.",
+  },
+  {
+    value: "wrong-document",
+    label: "Wrong kind of document",
+    message:
+      "The document you sent is not one we can accept. We can only accept a passport, a national identity card or a driver's licence. Please send one of those three.",
+  },
+  {
+    value: "missing-back",
+    label: "Back of the card missing",
+    message:
+      "We have the front of your card but not the back. Please send both sides — for an identity card or a driver's licence we need each side as a separate photo.",
+  },
+  {
+    value: "selfie-unclear",
+    label: "Photo holding the ID not clear",
+    message:
+      "The photo of you holding your ID is not clear enough. Please take a new one where your face and the document are both in focus, and the details on the document can be read.",
+  },
+  {
+    value: "expired",
+    label: "Document has expired",
+    message:
+      "The document you sent has expired. Please send a current one — a passport, a national identity card or a driver's licence that is still valid.",
+  },
+  {
+    value: "mismatch",
+    label: "Details do not match the application",
+    message:
+      "The name or date of birth on the document does not match the details on your application. Please send a document in your own name, or reply to this email and tell us which is correct.",
+  },
+] as const;
+
+export type ReuploadReasonValue = (typeof REUPLOAD_REASONS)[number]["value"];
+
+/** The wording for a preset, or the recruiter's own words, trimmed and capped. */
+export function reuploadMessage(value: string, custom?: string): string {
+  const preset = REUPLOAD_REASONS.find((r) => r.value === value);
+  if (preset) return preset.message;
+  return (custom ?? "").trim().slice(0, 400);
 }
 
 /**
@@ -84,9 +182,14 @@ export function verificationStatus(
   c: VerificationInput,
   requiredCountries: readonly string[],
 ): VerificationStatus {
+  // A pending re-request outranks everything below it. Someone asked for a
+  // clearer photograph is waiting on us for nothing and on themselves for a
+  // photograph — showing them as "Ready to review" would put them back in the
+  // review queue with the very images that were just refused.
+  if (identityReuploadPending(c)) return "awaiting";
   if (c.verifiedAt) return "verified";
   if (c.rejectedAt) return "rejected";
-  if (hasBothImages(c.documents)) return "provided";
+  if (hasBothImages(c.documents, c.identityDocumentType)) return "provided";
 
   // Either signal is enough. Someone genuinely living abroad on their old
   // mobile is asked too; that is a deliberate trade, since the ask is one
@@ -119,8 +222,12 @@ export function verificationRequired(
  * deliberately destroyed.
  */
 export function identityStillNeeded(c: VerificationInput): boolean {
+  // Asked again beats all three. A recruiter looking at a passport photograph
+  // too blurred to read has to be able to reopen this for someone already
+  // marked verified, or the only route left is deleting the evidence first.
+  if (identityReuploadPending(c)) return true;
   if (c.verifiedAt || c.rejectedAt) return false;
-  return !hasBothImages(c.documents);
+  return !hasBothImages(c.documents, c.identityDocumentType);
 }
 
 export const VERIFICATION_FILTERS = [

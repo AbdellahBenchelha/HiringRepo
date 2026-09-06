@@ -21,6 +21,8 @@ import {
 import { normaliseEmail, normalisePhone } from "@/lib/identity";
 import { isCandidateOpen, type OpenSource } from "@/lib/followUp";
 import type { CandidateDocument, DocumentKind } from "@/lib/documents";
+import type { IdDocumentType } from "@/lib/identityDocuments";
+import { isVerificationKind } from "@/lib/verification";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
@@ -150,6 +152,22 @@ export interface Candidate {
   imagesDeletedAt?: string;
   /** Set when a recruiter asks someone whose country is not on the list. */
   verificationRequestedAt?: string;
+  /**
+   * Which of the three documents they chose to send.
+   *
+   * Absent on every record made before the picker existed. That absence is
+   * meaningful and must not be filled in with a guess — it says "front and
+   * selfie, document unknown", which is exactly what those records hold.
+   */
+  identityDocumentType?: IdDocumentType;
+  /**
+   * When a recruiter last asked for the photographs to be taken again, and the
+   * reason the candidate is shown. Kept as a timestamp rather than a flag so
+   * it can be compared against the newest photograph on file — that comparison
+   * is what stops the request outliving the answer to it.
+   */
+  identityReuploadRequestedAt?: string;
+  identityReuploadReason?: string;
   /**
    * The country the application was actually sent from, as the server saw it.
    *
@@ -501,7 +519,7 @@ export function clearVerificationImages(id: string): Promise<string[]> {
     if (!c) return { list, result: [] as string[] };
     const removed: string[] = [];
     c.documents = (c.documents ?? []).filter((d) => {
-      if (d.kind !== "identity" && d.kind !== "selfie") return true;
+      if (!isVerificationKind(d.kind)) return true;
       if (d.key) removed.push(d.key);
       return false;
     });
@@ -528,6 +546,66 @@ export function requestVerification(id: string): Promise<Candidate | null> {
     delete c.rejectedAt;
     delete c.rejectionReason;
     return { list, result: c };
+  });
+}
+
+/**
+ * Ask for the identity photographs to be taken again, with a reason.
+ *
+ * For the candidate who already sent something and whose something is no good:
+ * unreadable, the wrong document, an expired card, a back that never arrived.
+ * Distinct from requestVerification because that one asks someone who has sent
+ * nothing, and the two need opposite things from the record.
+ *
+ * The existing photographs stay. Deleting them here would be the tidier code
+ * and the wrong behaviour: the old picture is the only evidence of what was
+ * actually sent, and it has to survive until a replacement arrives — otherwise
+ * a candidate who never answers leaves a record showing they sent nothing at
+ * all.
+ *
+ * Any decision is withdrawn. A verified candidate whose passport turns out to
+ * be illegible is not verified, and a rejected one being given another go is
+ * not barred; leaving either in place would stop the upload step from ever
+ * appearing for them again.
+ */
+export function requestIdentityReupload(
+  id: string,
+  reason: string,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    c.identityReuploadRequestedAt = now;
+    c.identityReuploadReason = reason.trim().slice(0, 400) || undefined;
+    // Also counted as a request, so the panel shows "Awaiting upload" rather
+    // than the louder "Not asked yet" — they have been asked, twice now.
+    c.verificationRequestedAt = now;
+    delete c.verifiedAt;
+    delete c.verifiedBy;
+    delete c.rejectedAt;
+    delete c.rejectionReason;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Record which of the three documents a candidate chose.
+ *
+ * Written when they submit, alongside consent, rather than when they pick:
+ * someone flicking between the options while deciding is not information, and
+ * a value stored on every click would leave "driver's licence" against a
+ * record holding a passport photograph.
+ */
+export function setIdentityDocumentType(
+  id: string,
+  type: IdDocumentType,
+): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: false };
+    c.identityDocumentType = type;
+    return { list, result: true };
   });
 }
 

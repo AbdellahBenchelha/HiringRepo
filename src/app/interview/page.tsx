@@ -3,7 +3,11 @@ import Link from "next/link";
 import { readInterviewToken } from "@/lib/token";
 import { isOpenSource } from "@/lib/followUp";
 import { requiredCountries } from "@/lib/verificationStore";
-import { verificationRequired, verificationStatus } from "@/lib/verification";
+import {
+  identityReuploadPending,
+  verificationRequired,
+  verificationStatus,
+} from "@/lib/verification";
 import { IdentityVerification } from "@/components/interview/IdentityVerification";
 import { getCandidate } from "@/lib/store";
 import { publicQuestions, sections } from "@/config/interviewQuestions";
@@ -37,6 +41,8 @@ export default async function InterviewPage({
   let needsVerification = false;
   /** True once their photographs are in, so the notice can acknowledge them. */
   let verificationSent = false;
+  /** Set only while a recruiter's request for new photographs is outstanding. */
+  let reuploadNotice: string | undefined;
   if (candidateId) {
     const cand = await getCandidate(candidateId);
     if (cand) {
@@ -45,6 +51,7 @@ export default async function InterviewPage({
       const required = await requiredCountries();
       needsVerification = verificationRequired(cand, required);
       verificationSent = verificationStatus(cand, required) === "provided";
+      if (identityReuploadPending(cand)) reuploadNotice = cand.identityReuploadReason;
     }
   }
   if (!identity && tokenParam) {
@@ -59,6 +66,7 @@ export default async function InterviewPage({
           const required = await requiredCountries();
           needsVerification = verificationRequired(cand, required);
           verificationSent = verificationStatus(cand, required) === "provided";
+          if (identityReuploadPending(cand)) reuploadNotice = cand.identityReuploadReason;
         }
       }
     }
@@ -69,7 +77,13 @@ export default async function InterviewPage({
   // "you have already completed this" would strand their application with no
   // way to move it forward.
   if (identity?.id && alreadyCompleted && needsVerification) {
-    return <IdentityVerification candidateId={identity.id} fullName={identity.name} />;
+    return (
+      <IdentityVerification
+        candidateId={identity.id}
+        fullName={identity.name}
+        notice={reuploadNotice}
+      />
+    );
   }
 
   // Already submitted — show a confirmation instead of letting them retake it.

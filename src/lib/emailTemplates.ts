@@ -517,6 +517,179 @@ export function verificationRequestHtml({ fullName, interviewUrl, position }: In
 </html>`;
 }
 
+export interface IdentityReuploadEmail {
+  fullName: string;
+  /** Where the upload step is — their offer link, or their assessment link. */
+  url: string;
+  /** What was wrong, in the recruiter's words. Shown verbatim. */
+  reason: string;
+}
+
+/**
+ * Asking someone to send their identity photographs again.
+ *
+ * A separate message from the first request, because the first one opens by
+ * thanking them for finishing their assessment — which to someone who has
+ * already accepted an offer reads as though we have lost track of them.
+ *
+ * The reason is the whole message. "Your documents were not accepted, please
+ * try again" produces the same photograph a second time and a reply asking
+ * what was wrong; saying it was too dark to read produces a better photograph.
+ * It also says plainly that nothing else has changed about their offer —
+ * being asked for a passport twice is unsettling enough without wondering
+ * whether the job is still there.
+ */
+export function identityReuploadSubject(): string {
+  return `We need your ID photos again — ${siteConfig.company.name}`;
+}
+
+export function identityReuploadText({ fullName, url, reason }: IdentityReuploadEmail): string {
+  const name = firstNameOf(fullName);
+  return [
+    `Hi ${name},`,
+    ``,
+    `We were not able to use the identity photographs you sent us, so we need`,
+    `to ask you for them one more time.`,
+    ``,
+    `What we need you to fix:`,
+    ``,
+    reason,
+    ``,
+    `Please open your link and send them again:`,
+    ``,
+    url,
+    ``,
+    `We accept a passport, a national identity card or a driver's licence. For`,
+    `an identity card or a driver's licence we need both sides, as two separate`,
+    `photos. You will also be asked for a photo of you holding the document.`,
+    ``,
+    `Nothing else has changed and there is nothing wrong with your application.`,
+    `It takes about a minute from a phone.`,
+    ``,
+    `Your photographs are stored privately, seen only by our recruitment team,`,
+    `and used only to confirm your identity. We will never ask you for a`,
+    `payment, a bank card, or a password.`,
+    ``,
+    `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function identityReuploadHtml({ fullName, url, reason }: IdentityReuploadEmail): string {
+  const name = esc(firstNameOf(fullName));
+  const href = esc(url);
+  const company = esc(siteConfig.company.name);
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(identityReuploadSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  One more minute from your phone — nothing else has changed.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          We need your ID photos again
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 20px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          We were not able to use the identity photographs you sent us, so we need to ask you
+          for them one more time.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:18px 22px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+              ${esc(reason)}
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${href}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Send my photos again
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 12px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          We accept a <strong style="color:${NAVY};">passport</strong>, a
+          <strong style="color:${NAVY};">national identity card</strong> or a
+          <strong style="color:${NAVY};">driver's licence</strong>. For a card or a licence we
+          need both sides, as two separate photos. You will also be asked for a photo of you
+          holding the document.
+        </p>
+
+        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Nothing else has changed and there is nothing wrong with your application.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+              Your photographs are stored privately, seen only by our recruitment team, and used
+              only to confirm your identity. We will <strong style="color:${NAVY};">never</strong>
+              ask you for a payment, a bank card, or a password.
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:20px 0 0 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${href}" style="color:#b06e0c;word-break:break-all;">${href}</a>
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export interface OfferEmail {
   fullName: string;
   position: string;

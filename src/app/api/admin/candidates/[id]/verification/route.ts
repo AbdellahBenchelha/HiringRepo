@@ -2,16 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest, getAdminSession } from "@/lib/adminAuth";
 import {
   clearVerificationImages,
+  requestIdentityReupload,
   requestVerification,
   setVerificationDecision,
+  type Candidate,
 } from "@/lib/store";
 import { deleteObjects } from "@/lib/r2";
 import { sendEmail } from "@/lib/email";
 import {
+  identityReuploadHtml,
+  identityReuploadSubject,
+  identityReuploadText,
   verificationRequestHtml,
   verificationRequestSubject,
   verificationRequestText,
 } from "@/lib/emailTemplates";
+import { reuploadMessage } from "@/lib/verification";
+import { createOfferToken } from "@/lib/token";
 import { siteConfig } from "@/config/site";
 
 /**
@@ -19,7 +26,13 @@ import { siteConfig } from "@/config/site";
  *
  *   verify / reject   record the decision
  *   request           ask someone whose country does not require it
+ *   reupload          ask again, with a reason, when what arrived is no good
  *   clear-images      forget the photographs, keep the decision
+ *
+ * `request` and `reupload` are separate actions rather than one that guesses
+ * which it is. They ask different people — one who has sent nothing and one
+ * whose documents were refused — and get the wording, the reason and the
+ * record wrong if they are conflated.
  *
  * Clearing is a separate action and never automatic: deciding when the images
  * are no longer needed is a judgement, and a rule that deleted them on a timer
@@ -35,6 +48,27 @@ function baseUrl(req: NextRequest): string {
   return `${proto}://${host}`;
 }
 
+/**
+ * Where to send someone to take the photographs again.
+ *
+ * Their offer link when they have a live offer, because that is the page they
+ * are actually on: the assessment link shows an accepted candidate a
+ * confirmation that their assessment is finished, with no way through to an
+ * upload. The offer page resumes the identity step for anyone who still owes
+ * one, which a pending re-request makes true.
+ *
+ * The assessment link otherwise — anyone earlier in the process reaches the
+ * upload there, and it is a link they have already used and have reason to
+ * trust.
+ */
+function uploadUrlFor(c: Candidate, base: string): string {
+  if (c.offerSentAt && c.offer) {
+    const token = createOfferToken({ id: c.id, offerSentAt: c.offerSentAt });
+    return `${base}/offer?t=${encodeURIComponent(token)}`;
+  }
+  return `${base}/interview?c=${c.id}`;
+}
+
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await verifyAdminRequest(req.headers.get("x-csrf-token")))) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -42,7 +76,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const session = await getAdminSession();
   const { id } = await ctx.params;
 
-  let body: { action?: string; reason?: string };
+  let body: { action?: string; reason?: string; customReason?: string };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -110,6 +144,57 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     return NextResponse.json({
       ok: true,
+      verificationRequestedAt: updated.verificationRequestedAt,
+      emailed,
+      emailError,
+    });
+  }
+
+  if (body.action === "reupload") {
+    const message = reuploadMessage(body.reason ?? "", body.customReason);
+    if (!message) {
+      return NextResponse.json({ ok: false, error: "reason_required" }, { status: 400 });
+    }
+
+    const updated = await requestIdentityReupload(id, message);
+    if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    // eslint-disable-next-line no-console
+    console.log(`[verification] ${id} re-upload requested by ${by} (${body.reason ?? "custom"})`);
+
+    // The record is what makes the upload step reappear; the email is what
+    // makes anyone look at it. A candidate who is not told has been asked in
+    // a room with nobody in it.
+    const email = (updated.email || "").trim();
+    let emailed = false;
+    let emailError: string | undefined;
+    if (email.includes("@")) {
+      const payload = {
+        fullName: updated.fullName || "Candidate",
+        url: uploadUrlFor(updated, baseUrl(req)),
+        reason: message,
+      };
+      const result = await sendEmail({
+        to: email,
+        toName: updated.fullName || undefined,
+        subject: identityReuploadSubject(),
+        html: identityReuploadHtml(payload),
+        text: identityReuploadText(payload),
+        replyTo: siteConfig.contact.recruitmentEmail,
+      });
+      emailed = result.ok;
+      if (!result.ok) {
+        emailError = "skipped" in result ? result.skipped : result.error;
+        // eslint-disable-next-line no-console
+        console.warn(`[verification] ${id} re-upload asked but email not sent: ${emailError}`);
+      }
+    } else {
+      emailError = "no_email";
+    }
+
+    return NextResponse.json({
+      ok: true,
+      identityReuploadRequestedAt: updated.identityReuploadRequestedAt,
+      identityReuploadReason: updated.identityReuploadReason,
       verificationRequestedAt: updated.verificationRequestedAt,
       emailed,
       emailError,

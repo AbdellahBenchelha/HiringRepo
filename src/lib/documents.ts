@@ -9,7 +9,22 @@
  * candidate's CV to it would make one disk failure considerably worse.
  */
 
-export const DOCUMENT_KINDS = ["cv", "cover", "certificate", "identity", "selfie"] as const;
+export const DOCUMENT_KINDS = [
+  "cv",
+  "cover",
+  "certificate",
+  "identity",
+  /**
+   * The reverse of an ID card or a driver's licence.
+   *
+   * A separate kind rather than a second entry under "identity", because the
+   * store keeps one document per kind and replaces on re-upload — two under
+   * one kind would mean the back silently deleting the front. A passport never
+   * has one: its details are all on the photo page.
+   */
+  "identityBack",
+  "selfie",
+] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export function isDocumentKind(v: unknown): v is DocumentKind {
@@ -21,6 +36,7 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   cover: "Cover letter",
   certificate: "Supporting certificate",
   identity: "ID document",
+  identityBack: "ID document — back",
   selfie: "Photo holding ID",
 };
 
@@ -30,6 +46,7 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   cover: "Cover",
   certificate: "Cert",
   identity: "ID",
+  identityBack: "ID back",
   selfie: "Photo",
 };
 
@@ -63,7 +80,7 @@ export const IMAGE_MIME = ["image/jpeg", "image/png"] as const;
 
 /** Which kinds are photographs rather than documents. */
 export function isImageKind(kind: DocumentKind): boolean {
-  return kind === "identity" || kind === "selfie";
+  return kind === "identity" || kind === "identityBack" || kind === "selfie";
 }
 
 export function maxBytesFor(kind: DocumentKind): number {

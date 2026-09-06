@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { InterviewActions } from "@/components/admin/InterviewActions";
-import { VerificationBadge, verificationStateOf } from "@/components/admin/VerificationPanel";
+import {
+  VerificationBadge,
+  verificationPatch,
+  verificationStateOf,
+} from "@/components/admin/VerificationPanel";
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
@@ -395,13 +399,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
           onClose={() => setQuickView(null)}
           onChange={(v) => {
             const p = {
-              verificationStatus: v.status,
-              verifiedAt: v.verifiedAt,
-              verifiedBy: v.verifiedBy,
-              rejectedAt: v.rejectedAt,
-              rejectionReason: v.rejectionReason,
-              imagesDeletedAt: v.imagesDeletedAt,
-              verificationRequestedAt: v.requestedAt,
+              ...verificationPatch(v),
             };
             patch(quickView.id, p);
             // The dialog reads its own snapshot, not the row's patch map, so
