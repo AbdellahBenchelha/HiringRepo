@@ -25,18 +25,26 @@ export function Field({
   const errorId = error ? `${htmlFor}-error` : undefined;
   const hintId = hint ? `${htmlFor}-hint` : undefined;
   return (
-    <div className={className}>
+    // Column with the input pushed to the bottom. Side by side in a grid, two
+    // fields stretch to the taller of the pair, and a one-line hint next to a
+    // two-line one otherwise leaves their inputs at different heights — the
+    // row reads as a mistake rather than as a row. `mt-auto` aligns them
+    // whatever the hints say, with no height to keep in sync by hand.
+    //
+    // h-full does nothing outside a stretched container, so every other use of
+    // this component is unaffected.
+    <div className={`flex h-full flex-col ${className}`}>
       <label htmlFor={htmlFor} className="label">
         {label}
         {required ? <span className="text-red-600"> *</span> : null}
         {optional ? <span className="font-normal text-navy-400"> (optional)</span> : null}
       </label>
       {hint ? (
-        <p id={hintId} className="mb-1.5 text-xs text-navy-500">
+        <p id={hintId} className="mb-1.5 text-xs leading-snug text-navy-500">
           {hint}
         </p>
       ) : null}
-      {children}
+      <div className="mt-auto">{children}</div>
       {error ? (
         <p id={errorId} role="alert" className="field-error">
           {error}

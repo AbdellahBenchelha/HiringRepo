@@ -274,7 +274,7 @@ export function OfferAcceptForm({
             </div>
 
             {engagedAs === "Company" ? (
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2">
                 <Field label="Company name" htmlFor="companyName" required>
                   <TextInput
                     id="companyName"
@@ -314,7 +314,7 @@ export function OfferAcceptForm({
               wrong or out of date — they will be used to draw up your agreement.
             </p>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field label="First name" htmlFor="firstName" required>
                 <TextInput
                   id="firstName"
@@ -336,6 +336,11 @@ export function OfferAcceptForm({
                 <DateSelect id="dob" value={dob} onChange={setDob} />
               </Field>
 
+              {/* Paired by what they answer together: the two countries, the
+                  two ways to reach them, the two halves of a postal address.
+                  Full address last and across both columns — it is the longest
+                  value on the form and the one a cramped box makes hardest to
+                  check. */}
               <Field
                 label="Nationality"
                 htmlFor="nationality"
@@ -349,13 +354,6 @@ export function OfferAcceptForm({
                   placeholder="Select your nationality"
                 />
               </Field>
-              <Field label="Phone number" htmlFor="phone" required>
-                <PhoneInput id="phone" value={phone} onChange={setPhone} />
-              </Field>
-              <Field label="Email address" htmlFor="email" hint="Contact us if this is wrong.">
-                <TextInput id="email" value={email} readOnly disabled />
-              </Field>
-
               <Field
                 label="Country you live in"
                 htmlFor="country"
@@ -364,12 +362,28 @@ export function OfferAcceptForm({
               >
                 <CountrySelect id="country" value={country} onChange={setCountry} />
               </Field>
+
+              <Field label="Email address" htmlFor="email" hint="Contact us if this is wrong.">
+                <TextInput id="email" value={email} readOnly disabled />
+              </Field>
+              <Field label="Phone number" htmlFor="phone" required>
+                <PhoneInput id="phone" value={phone} onChange={setPhone} />
+              </Field>
+
               <Field label="City" htmlFor="city" required>
                 <TextInput
                   id="city"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   autoComplete="address-level2"
+                />
+              </Field>
+              <Field label="Postcode / ZIP code" htmlFor="postcode" required>
+                <TextInput
+                  id="postcode"
+                  value={postcode}
+                  onChange={(e) => setPostcode(e.target.value)}
+                  autoComplete="postal-code"
                 />
               </Field>
 
@@ -380,14 +394,6 @@ export function OfferAcceptForm({
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Street, building and number"
                   autoComplete="street-address"
-                />
-              </Field>
-              <Field label="Postcode / ZIP code" htmlFor="postcode" required>
-                <TextInput
-                  id="postcode"
-                  value={postcode}
-                  onChange={(e) => setPostcode(e.target.value)}
-                  autoComplete="postal-code"
                 />
               </Field>
             </div>
