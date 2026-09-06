@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
+import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
@@ -53,9 +54,21 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   // Edits made in the profile dialog, so a note or a status change is
   // reflected without a reload — same pattern as the Interviews tab.
   const [patches, setPatches] = useState<Record<string, Partial<CandidateView>>>({});
+  /**
+   * Rows deleted since this page was rendered.
+   *
+   * Kept beside the patches rather than by holding a copy of `rows`: the list
+   * arrives as a prop from the server, and a second copy of it would go stale
+   * against every other reason it changes. A deleted record is gone — a list
+   * still showing it is lying.
+   */
+  const [deleted, setDeleted] = useState<string[]>([]);
   const live = useMemo(
-    () => rows.map((r) => (patches[r.id] ? { ...r, ...patches[r.id] } : r)),
-    [rows, patches],
+    () =>
+      rows
+        .filter((r) => !deleted.includes(r.id))
+        .map((r) => (patches[r.id] ? { ...r, ...patches[r.id] } : r)),
+    [rows, patches, deleted],
   );
 
   const countries = useMemo(
@@ -91,6 +104,11 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
     setPage,
   );
   const [viewing, setViewing] = useState<CandidateDocument | null>(null);
+
+  function dropRow(id: string) {
+    setDeleted((prev) => [...prev, id]);
+    if (profile?.id === id) closeProfile();
+  }
 
   const patch = (id: string, p: Partial<CandidateView>) =>
     setPatches((prev) => ({ ...prev, [id]: { ...prev[id], ...p } }));
@@ -298,7 +316,10 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                       />
                     </td>
                     <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
-                      <CandidateInfoButton onOpen={() => openProfile(c)} />
+                      <div className="flex items-center gap-2">
+                        <CandidateInfoButton onOpen={() => openProfile(c)} />
+                        <DeleteCandidateButton candidate={c} onDeleted={dropRow} />
+                      </div>
                     </td>
                   </tr>
                 );

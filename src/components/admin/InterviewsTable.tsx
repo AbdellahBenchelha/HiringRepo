@@ -11,6 +11,7 @@ import {
 } from "@/components/admin/VerificationPanel";
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
+import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
@@ -94,9 +95,22 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   /** The candidate whose photos are open in the quick view, if any. */
   const [quickView, setQuickView] = useState<CandidateView | null>(null);
 
+  /**
+   * Rows deleted since this page was rendered.
+   *
+   * Kept beside the patches rather than by holding a copy of `rows`: the list
+   * arrives as a prop from the server, and a second copy of it would go stale
+   * against every other reason it changes. A deleted record is gone — a list
+   * still showing it is lying.
+   */
+  const [deleted, setDeleted] = useState<string[]>([]);
+
   const live = useMemo(
-    () => rows.map((r) => (patches[r.view.id] ? { ...r, view: { ...r.view, ...patches[r.view.id] } } : r)),
-    [rows, patches],
+    () =>
+      rows
+        .filter((r) => !deleted.includes(r.view.id))
+        .map((r) => (patches[r.view.id] ? { ...r, view: { ...r.view, ...patches[r.view.id] } } : r)),
+    [rows, patches, deleted],
   );
 
   // Only offer countries that actually appear, so the filter never lists
@@ -144,6 +158,12 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
     pageSize,
     setPage,
   );
+
+  /** The row is gone from the server; drop it here and close it if it is open. */
+  function dropRow(id: string) {
+    setDeleted((prev) => [...prev, id]);
+    if (profile?.id === id) closeProfile();
+  }
 
   /** Which document is open in the reader, from whichever profile is showing. */
   const [viewing, setViewing] = useState<CandidateDocument | null>(null);
@@ -369,7 +389,10 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                         >
                           View answers →
                         </Link>
-                        <CandidateInfoButton onOpen={() => openProfile(c)} />
+                        <div className="flex items-center gap-2">
+                          <CandidateInfoButton onOpen={() => openProfile(c)} />
+                          <DeleteCandidateButton candidate={c} onDeleted={dropRow} />
+                        </div>
                       </div>
                     </td>
                   </tr>

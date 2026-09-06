@@ -6,9 +6,9 @@ import { Icon } from "@/components/Icon";
 import { InterviewBadge, IncompleteFormBadge, InviteHeldBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { siteConfig } from "@/config/site";
-import { adminPost, adminDelete } from "@/lib/adminClient";
+import { adminPost } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
-import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { ReminderActions } from "@/components/admin/ReminderActions";
 import { DocumentChips } from "@/components/admin/DocumentChips";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
@@ -80,7 +80,6 @@ export function CandidatesTable({
   /** The candidate whose photos are open in the quick view, if any. */
   const [quickView, setQuickView] = useState<CandidateView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<CandidateView | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
   const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>(
@@ -284,21 +283,10 @@ export function CandidatesTable({
     window.open(`https://wa.me/${phone}?text=${text}`, "_blank", "noopener,noreferrer");
   }
 
-  async function removeCandidate(c: CandidateView) {
-    setPendingDelete(null);
-    setBusy(c.id);
-    try {
-      const res = await adminDelete(`/api/admin/candidates/${c.id}`);
-      if (res.ok) {
-        setRows((prev) => prev.filter((x) => x.id !== c.id));
-        if (profile?.id === c.id) closeProfile();
-      } else {
-        window.alert("Could not delete this candidate. Please try again.");
-      }
-    } catch {
-      window.alert("Could not delete this candidate. Please try again.");
-    }
-    setBusy(null);
+  /** The row is gone from the server; a list still showing it is lying. */
+  function dropRow(id: string) {
+    setRows((prev) => prev.filter((x) => x.id !== id));
+    if (profile?.id === id) closeProfile();
   }
 
   function toggleSort(key: SortKey) {
@@ -526,16 +514,7 @@ export function CandidatesTable({
                       >
                         View
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setPendingDelete(c)}
-                        disabled={busy === c.id}
-                        title="Delete this candidate permanently"
-                        aria-label={`Delete ${c.fullName || "candidate"}`}
-                        className="inline-flex items-center justify-center rounded-lg border border-red-200 px-2 py-1.5 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                      >
-                        <Icon name="trash" className="h-4 w-4" />
-                      </button>
+                      <DeleteCandidateButton candidate={c} onDeleted={dropRow} />
                     </div>
                     {c.duplicateFlag || c.interviewEmailSentAt || !c.formCompleted || c.inviteHeld ? (
                       <div className="mt-2">
@@ -580,33 +559,6 @@ export function CandidatesTable({
         noun="candidate"
         onPage={goToPage}
         onPageSize={setPageSize}
-      />
-
-      {/* Profile modal */}
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        tone="danger"
-        icon="trash"
-        title="Delete this candidate?"
-        confirmLabel="Delete permanently"
-        busy={busy === pendingDelete?.id}
-        warning="This cannot be undone."
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={() => pendingDelete && removeCandidate(pendingDelete)}
-        body={
-          <>
-            <strong className="text-navy-900">
-              {pendingDelete?.fullName || "This candidate"}
-            </strong>
-            {pendingDelete?.email ? (
-              <>
-                {" "}
-                (<span className="break-all">{pendingDelete.email}</span>)
-              </>
-            ) : null}{" "}
-            will be erased, along with their application, interview answers and notes.
-          </>
-        }
       />
 
       {viewing ? (
