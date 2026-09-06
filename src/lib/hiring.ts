@@ -32,8 +32,22 @@ export interface ConfirmedDetails {
   /** ISO yyyy-mm-dd. */
   dob: string;
   nationality: string;
-  /** Passport, national ID or driver's licence number, as written on the document. */
-  idNumber: string;
+  /**
+   * No longer collected. Present only on records made before the identity
+   * photographs were introduced.
+   *
+   * Typing a passport number added nothing once the document itself is
+   * photographed and checked by a person — the picture is the evidence, and a
+   * number typed into a box is only a claim about it. It also asked for a
+   * national identifier at the moment a candidate is deciding whether we are
+   * genuine, which is the moment they are most right to hesitate; one of them
+   * refused, and was correct to.
+   *
+   * Kept on the type so the values already on file still display. Nothing
+   * writes it any more — validateConfirmed does not read it, so a client that
+   * sends one is simply ignored.
+   */
+  idNumber?: string;
   phone: string;
   country: string;
   city: string;
@@ -58,6 +72,7 @@ export const CONFIRMED_LABELS: Record<keyof ConfirmedDetails, string> = {
   lastName: "Last name",
   dob: "Date of birth",
   nationality: "Nationality",
+  /** Historic only — see ConfirmedDetails.idNumber. */
   idNumber: "ID / passport number",
   phone: "Phone",
   country: "Country",
@@ -91,7 +106,6 @@ export function validateConfirmed(
     ["lastName", "Last name"],
     ["dob", "Date of birth"],
     ["nationality", "Nationality"],
-    ["idNumber", "ID or passport number"],
     ["phone", "Phone number"],
     ["country", "Country"],
     ["city", "City"],

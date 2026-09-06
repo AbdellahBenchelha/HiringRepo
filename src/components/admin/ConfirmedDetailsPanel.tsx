@@ -34,13 +34,16 @@ function rowsFor(d: ConfirmedDetails): [string, string][] {
     [CONFIRMED_LABELS.lastName, d.lastName],
     [CONFIRMED_LABELS.dob, d.dob],
     [CONFIRMED_LABELS.nationality, d.nationality],
-    [CONFIRMED_LABELS.idNumber, d.idNumber],
     [CONFIRMED_LABELS.phone, d.phone],
     [CONFIRMED_LABELS.country, d.country],
     [CONFIRMED_LABELS.city, d.city],
     [CONFIRMED_LABELS.address, d.address],
     [CONFIRMED_LABELS.postcode, d.postcode],
   );
+  // No longer asked for. Shown where one is already on file, because a value
+  // we hold should be visible to the person responsible for it — but never as
+  // an empty row, which would read as a question the candidate skipped.
+  if (d.idNumber) rows.push([CONFIRMED_LABELS.idNumber, d.idNumber]);
   return rows;
 }
 

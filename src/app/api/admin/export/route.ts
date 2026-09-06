@@ -54,7 +54,10 @@ export async function GET(_req: NextRequest) {
     // agreement is written from, so a backup without it is not a backup.
     "Offer accepted", "Details confirmed", "Engaged as", "Company name", "Company number",
     "VAT number", "Confirmed first name", "Confirmed last name", "Confirmed date of birth",
-    "Nationality", "ID / passport number", "Confirmed phone", "Confirmed country",
+    // No longer collected. The column stays for the records that already have
+    // one: dropping it would silently lose data from every backup taken after
+    // the change, which is the opposite of what an export is for.
+    "Nationality", "ID / passport number (historic)", "Confirmed phone", "Confirmed country",
     "Confirmed city", "Confirmed address", "Postcode",
     "UK companies checked", "UK companies result",
     "Notes",

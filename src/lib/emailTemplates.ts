@@ -842,7 +842,7 @@ export function offerHtml(o: OfferEmail): string {
    * The acceptance block.
    *
    * It says what the page will ask for before they click. A button that leads
-   * to an unexpected form asking for a passport number is exactly what a
+   * to an unexpected form asking for identity details is exactly what a
    * cautious candidate should refuse to click — so the email sets the
    * expectation, and the anti-fraud note below reinforces what will never be
    * asked. Falls back to "reply to this email" if no link could be built,

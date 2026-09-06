@@ -68,7 +68,6 @@ export function OfferAcceptForm({
   const [lastName, setLastName] = useState(initial.lastName);
   const [dob, setDob] = useState(initial.dob);
   const [nationality, setNationality] = useState("");
-  const [idNumber, setIdNumber] = useState("");
   const [phone, setPhone] = useState(initial.phone);
   const [country, setCountry] = useState(initial.country);
   const [city, setCity] = useState(initial.city);
@@ -88,7 +87,7 @@ export function OfferAcceptForm({
   function details() {
     return {
       engagedAs, companyName, companyNumber, companyVat,
-      firstName, lastName, dob, nationality, idNumber,
+      firstName, lastName, dob, nationality,
       phone, country, city, address, postcode,
     };
   }
@@ -350,19 +349,6 @@ export function OfferAcceptForm({
                   placeholder="Select your nationality"
                 />
               </Field>
-              <Field
-                label="ID or passport number"
-                htmlFor="idNumber"
-                required
-                hint="Exactly as written on the document."
-              >
-                <TextInput
-                  id="idNumber"
-                  value={idNumber}
-                  onChange={(e) => setIdNumber(e.target.value)}
-                />
-              </Field>
-
               <Field label="Phone number" htmlFor="phone" required>
                 <PhoneInput id="phone" value={phone} onChange={setPhone} />
               </Field>
