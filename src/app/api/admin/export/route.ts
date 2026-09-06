@@ -77,8 +77,20 @@ export async function GET(_req: NextRequest) {
       c.duplicateFlag ? "Yes" : "No", c.duplicateOfName ?? "",
       // Which documents exist, not links: a signed URL expires in minutes and
       // would be dead long before anyone opened the spreadsheet.
-      (c.documents ?? [])
-        .map((d) => `${DOCUMENT_SHORT[d.kind]}${d.status === "clean" ? "" : ` (${d.status})`}`)
+      //
+      // Current versions only, with a count of what came before. Listing every
+      // superseded identity photograph would print "ID / ID / ID" against
+      // anyone asked twice, which says less than the number does.
+      [
+        (c.documents ?? [])
+          .filter((d) => !d.supersededAt)
+          .map((d) => `${DOCUMENT_SHORT[d.kind]}${d.status === "clean" ? "" : ` (${d.status})`}`)
+          .join(" / "),
+        (c.documents ?? []).filter((d) => d.supersededAt).length
+          ? `+${(c.documents ?? []).filter((d) => d.supersededAt).length} earlier`
+          : "",
+      ]
+        .filter(Boolean)
         .join(" / "),
       VERIFICATION_LABEL[verificationStatus(c, required)],
       c.verifiedAt ?? c.rejectedAt ?? "",

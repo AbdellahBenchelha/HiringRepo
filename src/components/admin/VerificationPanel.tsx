@@ -5,9 +5,14 @@ import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ImageZoom } from "@/components/admin/ImageZoom";
-import { DOCUMENT_LABEL, type CandidateDocument } from "@/lib/documents";
+import {
+  DOCUMENT_LABEL,
+  supersededDocuments,
+  type CandidateDocument,
+} from "@/lib/documents";
 import {
   REUPLOAD_REASONS,
+  VERIFICATION_KINDS,
   VERIFICATION_LABEL,
   isVerificationKind,
   type VerificationStatus,
@@ -250,10 +255,28 @@ export function VerificationPanel({
   /** "sent", or the reason the request email did not go out. */
   const [requestEmailed, setRequestEmailed] = useState("");
 
-  const images = (documents ?? []).filter(
-    (d) => isVerificationKind(d.kind) && d.status !== "blocked" && d.key,
-  );
+  const usable = (d: CandidateDocument) =>
+    isVerificationKind(d.kind) && d.status !== "blocked" && !!d.key;
+  // What they sent most recently, and what they sent before that. Split rather
+  // than merged: the review is of the current set, and a replaced photograph
+  // shown alongside it would be verified by accident.
+  const images = (documents ?? []).filter((d) => usable(d) && !d.supersededAt);
+  const previous = supersededDocuments(documents, VERIFICATION_KINDS).filter(usable);
   const hasImages = images.length > 0;
+
+  /** ?v= names a specific version; without it the route serves the current one. */
+  const viewUrl = (d: CandidateDocument) =>
+    `/api/admin/documents/${id}/${d.kind}?mode=view${
+      d.supersededAt ? `&v=${encodeURIComponent(d.key ?? "")}` : ""
+    }`;
+  const labelOf = (d: CandidateDocument) =>
+    d.supersededAt
+      ? `${DOCUMENT_LABEL[d.kind]} — replaced ${fmt(d.supersededAt)}`
+      : DOCUMENT_LABEL[d.kind];
+  // Current first, then history. The inspector steps through both, so an
+  // "is this the same document photographed better?" comparison is arrow keys
+  // rather than two windows.
+  const zoomable = [...images, ...previous];
   const ask = askAction(state);
 
   async function act(action: string, extra?: Record<string, unknown>) {
@@ -452,7 +475,7 @@ export function VerificationPanel({
                 <div className="relative aspect-[4/3] overflow-hidden bg-navy-50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/api/admin/documents/${id}/${doc.kind}?mode=view`}
+                    src={viewUrl(doc)}
                     alt={DOCUMENT_LABEL[doc.kind]}
                     className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                   />
@@ -475,6 +498,46 @@ export function VerificationPanel({
             not expired.
           </p>
         </>
+      ) : null}
+
+      {/* Everything they sent before. Kept because it is the only record of
+          what was actually submitted, and because the question worth asking
+          about a second attempt is whether it is the same document
+          photographed better or a different document altogether. Nothing here
+          is part of the review; it goes when someone deletes it. */}
+      {previous.length ? (
+        <details className="mt-4 rounded-xl border border-navy-100 bg-navy-50/50 p-3">
+          <summary className="cursor-pointer text-xs font-bold text-navy-700">
+            Earlier submissions ({previous.length} photo{previous.length === 1 ? "" : "s"}) — kept
+            until deleted
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {previous.map((doc, i) => (
+              <button
+                key={doc.key}
+                type="button"
+                onClick={() => setZoomAt(images.length + i)}
+                title={`Open ${labelOf(doc)} to zoom in`}
+                className="group overflow-hidden rounded-xl border border-navy-200 bg-white text-left transition hover:border-brand-400"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-navy-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={viewUrl(doc)}
+                    alt={labelOf(doc)}
+                    className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100"
+                  />
+                </div>
+                <p className="px-2.5 py-2 text-[11px] font-semibold leading-snug text-navy-600">
+                  {DOCUMENT_LABEL[doc.kind]}
+                  <span className="mt-0.5 block font-medium text-navy-400">
+                    Sent {fmt(doc.uploadedAt)}
+                  </span>
+                </p>
+              </button>
+            ))}
+          </div>
+        </details>
       ) : null}
 
       {state.status === "verified" ? (
@@ -689,20 +752,25 @@ export function VerificationPanel({
         }}
         body={
           <>
-            The ID and photo for{" "}
+            {/* Named precisely. Earlier submissions are kept on purpose, and
+                this is the one action that removes them, so the count has to
+                be in front of whoever is about to confirm it. */}
+            All {images.length + previous.length} identity photo
+            {images.length + previous.length === 1 ? "" : "s"} for{" "}
             <strong className="text-navy-900">{fullName || "this candidate"}</strong> will be erased
-            from storage. The verification decision, who made it and when, is kept.
+            from storage
+            {previous.length
+              ? `, including the ${previous.length} earlier submission${previous.length === 1 ? "" : "s"}`
+              : ""}
+            . The verification decision, who made it and when, is kept.
           </>
         }
       />
 
       {/* Enlarged view, for reading small print on a document. */}
-      {zoomAt !== null && images[zoomAt] ? (
+      {zoomAt !== null && zoomable[zoomAt] ? (
         <ImageZoom
-          images={images.map((d) => ({
-            src: `/api/admin/documents/${id}/${d.kind}?mode=view`,
-            label: DOCUMENT_LABEL[d.kind],
-          }))}
+          images={zoomable.map((d) => ({ src: viewUrl(d), label: labelOf(d) }))}
           index={zoomAt}
           onIndex={setZoomAt}
           onClose={() => setZoomAt(null)}

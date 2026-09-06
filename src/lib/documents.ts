@@ -138,6 +138,48 @@ export interface CandidateDocument {
    * the same person.
    */
   sha256?: string;
+  /**
+   * When a newer document of the same kind arrived and took its place.
+   *
+   * Only identity photographs keep their predecessors — see addDocument. The
+   * old picture is evidence: what a candidate sent the first time, and whether
+   * the second attempt is the same document photographed better or a
+   * completely different one. Set once and never cleared; the file goes when a
+   * recruiter deletes it by hand.
+   */
+  supersededAt?: string;
+}
+
+/**
+ * The one that counts, for a kind that can have more than one.
+ *
+ * Superseded documents stay in the list, so "find the document of this kind"
+ * is no longer the same question as "find the first one" — and answering it
+ * wrongly means the Admin Panel reviewing a photograph that was already
+ * replaced.
+ */
+export function currentDocument(
+  documents: CandidateDocument[] | undefined,
+  kind: DocumentKind,
+): CandidateDocument | null {
+  const mine = (documents ?? []).filter((d) => d.kind === kind);
+  // The unsuperseded one is the answer. Newest-by-date is the fallback for
+  // records written before any of this existed, where nothing is marked.
+  return (
+    mine.find((d) => !d.supersededAt) ??
+    [...mine].sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt)).at(-1) ??
+    null
+  );
+}
+
+/** Everything that came before, newest first. */
+export function supersededDocuments(
+  documents: CandidateDocument[] | undefined,
+  kinds: readonly DocumentKind[],
+): CandidateDocument[] {
+  return (documents ?? [])
+    .filter((d) => kinds.includes(d.kind) && !!d.supersededAt)
+    .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 }
 
 /**

@@ -10,7 +10,7 @@
  * and is not. Someone holding none of the three is a conversation with a
  * recruiter, not a form field.
  */
-import type { CandidateDocument, DocumentKind } from "@/lib/documents";
+import { currentDocument, type CandidateDocument, type DocumentKind } from "@/lib/documents";
 
 export const ID_DOCUMENT_TYPES = ["passport", "national-id", "drivers-licence"] as const;
 export type IdDocumentType = (typeof ID_DOCUMENT_TYPES)[number];
@@ -65,8 +65,13 @@ export function hasIdentityImages(
   documents: CandidateDocument[] | undefined,
   type?: IdDocumentType,
 ): boolean {
-  const usable = (kind: DocumentKind) =>
-    (documents ?? []).some((d) => d.kind === kind && d.status !== "blocked" && !!d.key);
+  // The current one only. A superseded photograph is history, not an answer:
+  // counting it would leave someone "provided" on the strength of the picture
+  // that was replaced.
+  const usable = (kind: DocumentKind) => {
+    const doc = currentDocument(documents, kind);
+    return !!doc && doc.status !== "blocked" && !!doc.key;
+  };
   const kinds = type ? requiredKinds(type) : (["identity", "selfie"] as DocumentKind[]);
   return kinds.every(usable);
 }

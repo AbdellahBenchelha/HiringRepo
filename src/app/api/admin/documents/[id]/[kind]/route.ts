@@ -33,7 +33,13 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "bad_kind" }, { status: 400 });
   }
 
-  const doc = await getDocument(id, kind);
+  // ?v=<key> reaches a superseded identity photograph. The key is matched
+  // against this candidate's own documents inside getDocument, so it selects
+  // among their files and can never name anybody else's — and without it the
+  // current one is served, which is what every existing link asks for.
+  const version = req.nextUrl.searchParams.get("v") ?? undefined;
+
+  const doc = await getDocument(id, kind, version);
   if (!doc) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }

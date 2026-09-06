@@ -20,8 +20,8 @@ import {
 } from "@/lib/candidateStatus";
 import { normaliseEmail, normalisePhone } from "@/lib/identity";
 import { isCandidateOpen, type OpenSource } from "@/lib/followUp";
-import type { CandidateDocument, DocumentKind } from "@/lib/documents";
-import type { IdDocumentType } from "@/lib/identityDocuments";
+import { currentDocument, type CandidateDocument, type DocumentKind } from "@/lib/documents";
+import { needsBack, type IdDocumentType } from "@/lib/identityDocuments";
 import { isVerificationKind } from "@/lib/verification";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
@@ -417,11 +417,22 @@ export function deleteCandidate(id: string): Promise<Candidate | null> {
 }
 
 /**
- * Record an uploaded document, replacing any earlier one of the same kind.
+ * Record an uploaded document.
  *
- * Returns the key of the document it replaced, if any, so the caller can
- * delete the orphan from R2 — re-uploading a CV should not quietly leave the
- * old one paid for and unreachable forever.
+ * Two behaviours, deliberately different.
+ *
+ * An identity photograph never displaces its predecessor. When a recruiter
+ * sends someone back for a clearer picture, what they sent the first time is
+ * the only record of what was actually submitted — and the interesting
+ * question is often whether the second attempt is the same document
+ * photographed better or a different document entirely, which cannot be asked
+ * at all once the first one is gone. The old record is marked superseded and
+ * kept; it leaves when a recruiter deletes it by hand.
+ *
+ * Everything else — a CV, a cover letter, a certificate — is replaced. There
+ * is no evidential question about a CV, and the key of the file it replaced is
+ * returned so the caller can delete the orphan: otherwise the old object sits
+ * in the bucket forever, paid for and unreachable.
  */
 export function addDocument(
   id: string,
@@ -432,19 +443,47 @@ export function addDocument(
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: { ok: false } };
     const docs = c.documents ?? [];
+
+    if (isVerificationKind(doc.kind)) {
+      const now = new Date().toISOString();
+      c.documents = [
+        ...docs.map((d) =>
+          d.kind === doc.kind && !d.supersededAt ? { ...d, supersededAt: now } : d,
+        ),
+        doc,
+      ];
+      // Nothing to delete: the point is that it stays.
+      return { list, result: { ok: true } };
+    }
+
     const previous = docs.find((d) => d.kind === doc.kind);
     c.documents = [...docs.filter((d) => d.kind !== doc.kind), doc];
     return { list, result: { ok: true, replacedKey: previous?.key } };
   });
 }
 
-/** One stored document, or null. Used by the admin download route. */
+/**
+ * One stored document, or null. Used by the admin download route.
+ *
+ * The current one, not the first one in the list. Identity photographs keep
+ * their predecessors, so "the identity document" and "a document whose kind is
+ * identity" stopped meaning the same thing — and answering with the wrong one
+ * would put a replaced photograph in front of whoever is reviewing it.
+ *
+ * Pass `key` to reach a specific version. It is matched against this
+ * candidate's own documents, so it selects among their files and can never
+ * name anybody else's.
+ */
 export async function getDocument(
   id: string,
   kind: DocumentKind,
+  key?: string,
 ): Promise<CandidateDocument | null> {
   const c = await getCandidate(id);
-  return c?.documents?.find((d) => d.kind === kind) ?? null;
+  if (key) {
+    return (c?.documents ?? []).find((d) => d.kind === kind && d.key === key) ?? null;
+  }
+  return currentDocument(c?.documents, kind);
 }
 
 /**
@@ -605,6 +644,18 @@ export function setIdentityDocumentType(
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: false };
     c.identityDocumentType = type;
+
+    // Someone who sent an ID card and is now sending a passport has a "back of
+    // card" on file that belongs to the submission they are replacing. Nothing
+    // supersedes it, because no new back is coming — so it would sit in the
+    // current set as though it were part of what they just sent. Retire it
+    // here, where the change of type is known.
+    if (!needsBack(type)) {
+      const now = new Date().toISOString();
+      c.documents = (c.documents ?? []).map((d) =>
+        d.kind === "identityBack" && !d.supersededAt ? { ...d, supersededAt: now } : d,
+      );
+    }
     return { list, result: true };
   });
 }
