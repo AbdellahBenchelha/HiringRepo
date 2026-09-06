@@ -174,7 +174,7 @@ const html = `<!doctype html>
     <table class="terms">
       <tr><th>Services</th><td><span class="fill">[ROLE, e.g. customer support by email, live chat and telephone]</span></td></tr>
       <tr><th>Fee</th><td><span class="fill">[RATE]</span> per hour worked, in <span class="fill">[CURRENCY]</span></td></tr>
-      <tr><th>Expected hours</th><td><span class="fill">[HOURS]</span> per week, within <span class="fill">[AGREED WORKING WINDOW AND TIME ZONE]</span></td></tr>
+      <tr><th>Guaranteed hours</th><td><span class="fill">[HOURS]</span> per week, guaranteed under clause 6, within <span class="fill">[AGREED WORKING WINDOW AND TIME ZONE]</span></td></tr>
       <tr><th>Invoicing</th><td>Monthly in arrears</td></tr>
       <tr><th>Payment</th><td>Within <span class="fill">[N]</span> working days of a correct invoice, by bank transfer</td></tr>
       <tr><th>Notice</th><td><span class="fill">[N]</span> days, by either party, in writing</td></tr>
@@ -220,8 +220,9 @@ ${clause(3, 'Your status: independent contractor', `
       <li>You are free to work for other clients, including in the same industry, provided you keep
           to your confidentiality obligations in clause 9 and there is no conflict of interest you
           have not told us about.</li>
-      <li>We do not guarantee you any minimum amount of work. The hours in the schedule are what we
-          expect and plan around, not a commitment to provide them.</li>
+      <li>We guarantee the weekly hours in the schedule, and clause 6 says what that means in
+          practice. What we do not direct is how you work: the guarantee is about how much we
+          commit to, not about who controls your day.</li>
       <li>You decide how you carry out the services, subject to the quality standards and the agreed
           working window.</li>
     </ol>`)}
@@ -252,10 +253,26 @@ ${clause(5, 'Where and how you work', `
     </p>`)}
 
 ${clause(6, 'Fees, invoicing and payment', `
+    <p>
+      <strong>We guarantee the hours in the schedule.</strong> If the schedule says 10 hours a week,
+      you are paid for 10 hours a week. This is a commitment on our side, not a forecast: if we do
+      not have that much work for you in a given week, we pay you for the guaranteed hours anyway.
+    </p>
     <ol class="sub-list">
-      <li>We pay you the fee in the schedule for each hour actually worked.</li>
-      <li>You invoice us monthly in arrears, for the previous month, showing the hours worked and
-          your own tax or registration number where your country requires one.</li>
+      <li>We pay you the fee in the schedule for each hour worked, and for any guaranteed hour we
+          did not give you work for.</li>
+      <li>The guarantee applies to the hours you were available for inside the agreed working
+          window. Hours you were not available for — time off you asked for, or time you did not
+          work when work was offered — are not guaranteed hours, and nothing in this clause requires
+          you to be available outside that window.</li>
+      <li>If you work more than the guaranteed hours in a week, at our request, we pay you for every
+          hour you worked. The guarantee is a floor, not a ceiling.</li>
+      <li>The guaranteed number can only change if we both agree the change in writing. We cannot
+          reduce it on our own; if we need fewer hours than we committed to, the answer is either an
+          agreed change or notice under clause 13, not a smaller payment.</li>
+      <li>You invoice us monthly in arrears, for the previous month, showing the hours worked, any
+          guaranteed hours you were not given work for, and your own tax or registration number
+          where your country requires one.</li>
       <li>We pay a correct invoice within the number of working days shown in the schedule, by bank
           transfer to the account you tell us, in the currency shown.</li>
       <li>Bank charges applied by your own bank, and any currency conversion carried out by it, are
@@ -337,7 +354,11 @@ ${clause(13, 'Term and ending this agreement', `
           period shown in the schedule. No reason is needed.</li>
       <li>Either of us may end it immediately if the other commits a serious breach that cannot be
           put right, or does not put right a breach within 14 days of being asked to.</li>
-      <li>On ending, we pay you for all hours worked up to that date, on your final invoice.</li>
+      <li>The guarantee in clause 6 runs to the end of the notice period. If we ask you to stop
+          working before the notice runs out, we still pay the guaranteed hours for the rest of
+          it.</li>
+      <li>On ending, we pay you for all hours worked up to that date, and for any guaranteed hours
+          still owed under this clause, on your final invoice.</li>
       <li>Clauses 9, 10 and 11 continue to apply after the agreement ends.</li>
     </ol>`)}
 
