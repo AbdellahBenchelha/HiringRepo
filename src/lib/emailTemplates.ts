@@ -825,6 +825,228 @@ export function voiceReminderHtml(invite: VoiceAssessmentInvite): string {
 </html>`;
 }
 
+export interface IdentityReminderEmail {
+  fullName: string;
+  /** Their offer link, which resumes the identity step. */
+  uploadUrl: string;
+  position?: string;
+}
+
+/**
+ * Chasing identity documents from somebody who has already accepted.
+ *
+ * The most delicate message this system sends. Being asked to photograph a
+ * passport, by email, after accepting a remote job offer is precisely the
+ * shape of a recruitment scam — a cautious person is right to hesitate, and
+ * the ones who hesitate hardest are usually the ones worth hiring. So this
+ * spends most of its length earning the request rather than making it: it
+ * confirms their acceptance is already recorded, says plainly what the check
+ * is for and who sees the photographs, and states the things we will never ask
+ * for. Anything less and the careful candidates are the ones who drop out.
+ *
+ * It does not threaten a deadline. A withdrawal warning would push exactly the
+ * people who are being careful, and we would rather answer their question.
+ */
+export function identityReminderSubject(): string {
+  return `One step left before your ${siteConfig.company.name} agreement`;
+}
+
+export function identityReminderText(invite: IdentityReminderEmail): string {
+  const name = firstNameOf(invite.fullName);
+  return [
+    `Dear ${name},`,
+    ``,
+    `Thank you for accepting our offer${invite.position ? ` for the ${invite.position} role` : ""}.`,
+    `Your acceptance is recorded and your place is held.`,
+    ``,
+    `One step remains before we can issue your written agreement: a short identity`,
+    `check. We ask this of everyone we engage, and we cannot prepare a contract`,
+    `without it.`,
+    ``,
+    `Open your personal link and follow the steps on the page:`,
+    ``,
+    invite.uploadUrl,
+    ``,
+    `You will be asked for a photo of your passport, national identity card or`,
+    `driver's licence, and a photo of you holding it. It takes about a minute from`,
+    `a phone.`,
+    ``,
+    `WHY WE ASK`,
+    ``,
+    `An agreement has to be made with a real, identified person. The check confirms`,
+    `that the person we are contracting with is you, and it protects you as much as`,
+    `us: it is what stops somebody else using your name and your details.`,
+    ``,
+    `YOUR PHOTOGRAPHS`,
+    ``,
+    `- Stored privately. Nobody can open them without signing in.`,
+    `- Seen only by our recruitment team.`,
+    `- Used only to confirm who you are, and never shared with anyone else.`,
+    ``,
+    `WE WILL NEVER ASK YOU FOR`,
+    ``,
+    `- A payment of any kind, for anything, at any stage.`,
+    `- Your bank card details or a password.`,
+    `- Money to release your first payment.`,
+    ``,
+    `If a message ever asks you for any of those in our name,`,
+    `it did not come from us. Please do not pay it, and tell us so we can warn others.`,
+    ``,
+    `If anything here is unclear, simply reply to this email and a person will`,
+    `answer you.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function identityReminderHtml(invite: IdentityReminderEmail): string {
+  const name = esc(firstNameOf(invite.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(invite.uploadUrl);
+  const role = invite.position ? ` for the <strong style="color:${NAVY};">${esc(invite.position)}</strong> role` : "";
+
+  const bullet = (text: string) => `
+    <tr>
+      <td style="padding:0 0 8px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+        <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; ${text}
+      </td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(identityReminderSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your acceptance is recorded. One identity check and your agreement follows.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          One step left before your agreement
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Dear ${name}, thank you for accepting our offer${role}.
+          <strong style="color:${NAVY};">Your acceptance is recorded and your place is held.</strong>
+        </p>
+
+        <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          One step remains before we can issue your written agreement: a short
+          <strong style="color:${NAVY};">identity check</strong>. We ask this of everyone we
+          engage, and we cannot prepare a contract without it. It takes about a minute from a
+          phone &mdash; a photo of your passport, national identity card or driver&rsquo;s
+          licence, and a photo of you holding it.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Complete my identity check
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <!-- Being asked for a passport by email after accepting a remote offer
+             is exactly what a scam looks like. Earning the request matters more
+             here than making it, so what happens to the photographs and what we
+             will never ask for are both stated plainly. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 18px 0;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                Why we ask
+              </p>
+              <p style="margin:0 0 16px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                An agreement has to be made with a real, identified person. This confirms that the
+                person we are contracting with is you &mdash; which protects you as much as us,
+                because it is what stops somebody else using your name and your details.
+              </p>
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                Your photographs
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${bullet("Stored privately &mdash; nobody can open them without signing in.")}
+                ${bullet("Seen only by our recruitment team.")}
+                ${bullet("Used only to confirm who you are, never shared onward.")}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                We will never ask you for
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${bullet("A payment of any kind, for anything, at any stage.")}
+                ${bullet("Your bank card details, or a password.")}
+                ${bullet("Money to release your first payment.")}
+              </table>
+              <p style="margin:8px 0 0 0;font:400 14px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                If a message ever asks you for any of those in our name, it did not come from us.
+                Please do not pay it, and tell us so we can warn others.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:22px 0 0 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          If anything here is unclear, simply reply to this email and a person will answer you.
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export interface OfferEmail {
   fullName: string;
   position: string;

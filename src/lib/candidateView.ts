@@ -11,6 +11,7 @@ import type { Candidate } from "@/lib/store";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
 import {
+  identityStillNeeded,
   identityReuploadPending,
   verificationStatus,
   type VerificationStatus,
@@ -94,6 +95,16 @@ export interface CandidateView {
    * disagree about whether anyone is still waiting.
    */
   voiceNeeded: boolean;
+  identityReminderSentAt?: string;
+  identityReminderCount?: number;
+  /**
+   * Derived: they have accepted an offer and still owe us identity documents.
+   *
+   * Both halves matter. Before accepting there is nothing to chase, and the
+   * step only appears on their offer link once they have — so a reminder to
+   * anyone else points at a page that will not ask them for anything.
+   */
+  identityNeeded: boolean;
   /** Interview follow-up state, for the Interviews tab's own filters. */
   interviewCompletedAt?: string;
   voiceRequestedAt?: string;
@@ -186,6 +197,9 @@ export function toCandidateView(
     voiceReminderSentAt: c.voiceReminderSentAt,
     voiceReminderCount: c.voiceReminderCount,
     voiceNeeded: voiceRecordingNeeded(c),
+    identityReminderSentAt: c.identityReminderSentAt,
+    identityReminderCount: c.identityReminderCount,
+    identityNeeded: !!c.offerAcceptedAt && identityStillNeeded(c),
     interviewCompletedAt: c.interview?.completedAt,
     voiceRequestedAt: c.voiceRequestedAt,
     offer: c.offer,

@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { VerificationBadge } from "@/components/admin/VerificationPanel";
+import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
@@ -143,6 +144,14 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   }
 
   const waiting = live.filter((c) => !c.confirmedDetails).length;
+  /**
+   * Accepted, and we still cannot draw up their agreement.
+   *
+   * The group that stalls silently: accepting feels like the finish, so
+   * nobody who closed the tab afterwards has anything telling them a step is
+   * outstanding — and from their side it looks as though we went quiet.
+   */
+  const needingId = live.filter((c) => c.identityNeeded).length;
 
   return (
     <>
@@ -218,6 +227,20 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           </div>
         ) : null}
       </div>
+
+      {needingId > 0 ? (
+        <p className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>
+              {needingId} {needingId === 1 ? "person has" : "people have"} accepted but not sent
+              identity documents.
+            </strong>{" "}
+            No agreement can be issued until they do. Use{" "}
+            <span className="font-semibold">Remind for ID</span> in the ID check column.
+          </span>
+        </p>
+      ) : null}
 
       {waiting > 0 ? (
         <p className="mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -313,6 +336,10 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                         status={c.verificationStatus}
                         requestedAt={c.verificationRequestedAt}
                         onOpenPhotos={() => openProfile(c)}
+                      />
+                      <IdentityReminderButton
+                        candidate={c}
+                        onSent={(p) => patch(c.id, p)}
                       />
                     </td>
                     <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">

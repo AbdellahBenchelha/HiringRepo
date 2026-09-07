@@ -195,6 +195,15 @@ export interface Candidate {
   voiceReminderSentAt?: string;
   voiceReminderCount?: number;
   /**
+   * Reminders chasing identity documents from someone who has accepted.
+   *
+   * Their own counters rather than the voice ones: these are weeks apart and
+   * about different things, and "chased 3 times" is useless to whoever is
+   * deciding whether to chase a fourth unless it says about what.
+   */
+  identityReminderSentAt?: string;
+  identityReminderCount?: number;
+  /**
    * The country the application was actually sent from, as the server saw it.
    *
    * Deliberately not the IP address: a raw address is personal data with real
@@ -417,6 +426,22 @@ export function recordVoiceOpened(id: string, source?: OpenSource): Promise<bool
     c.voiceLastOpenedAt = iso;
     c.voiceOpenCount = (c.voiceOpenCount ?? 0) + 1;
     return { list, result: true };
+  });
+}
+
+/**
+ * Log a reminder sent about identity documents an accepted candidate owes.
+ *
+ * Counted only once the message is away — a count that includes failures reads
+ * as "chased twice, no response" about somebody who was never reached.
+ */
+export function recordIdentityReminder(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.identityReminderSentAt = new Date().toISOString();
+    c.identityReminderCount = (c.identityReminderCount ?? 0) + 1;
+    return { list, result: c };
   });
 }
 
