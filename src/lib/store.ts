@@ -174,6 +174,27 @@ export interface Candidate {
   identityReuploadRequestedAt?: string;
   identityReuploadReason?: string;
   /**
+   * Whether the candidate has actually opened the voice-assessment page, and
+   * how often.
+   *
+   * Separate from interviewOpenedAt even though both live at /interview: the
+   * assessment open happened weeks earlier and says nothing about whether they
+   * have seen the recording step. Without this, "no recording yet" covers two
+   * different people — one who read the email and is putting it off, and one
+   * for whom the email never arrived — and only the second is worth chasing
+   * on another channel.
+   *
+   * Recorded from the browser, never from the server render: pasting the link
+   * into WhatsApp makes it fetch the URL for a preview, and a preview bot must
+   * not count as a candidate.
+   */
+  voiceOpenedAt?: string;
+  voiceLastOpenedAt?: string;
+  voiceOpenCount?: number;
+  /** Reminders chasing an outstanding recording. Email only, by design. */
+  voiceReminderSentAt?: string;
+  voiceReminderCount?: number;
+  /**
    * The country the application was actually sent from, as the server saw it.
    *
    * Deliberately not the IP address: a raw address is personal data with real
@@ -368,6 +389,52 @@ export function recordInterviewOpened(id: string, source?: OpenSource): Promise<
     c.openCount = (c.openCount ?? 0) + 1;
     if (source) c.lastOpenSource = source;
     return { list, result: true };
+  });
+}
+
+/**
+ * Record that the candidate opened their voice-assessment page.
+ *
+ * Same shape and the same throttle as the assessment open, for the same
+ * reasons: repeat opens answer "did they come back after we chased them", and
+ * every write rewrites the whole file so a refresh has to stay free.
+ */
+export function recordVoiceOpened(id: string, source?: OpenSource): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: false };
+    // A recruiter checking the link is not the candidate opening it.
+    if (!isCandidateOpen(source)) return { list, result: false };
+
+    const now = Date.now();
+    const last = c.voiceLastOpenedAt ?? c.voiceOpenedAt;
+    if (last && now - new Date(last).getTime() < REOPEN_THROTTLE_MS) {
+      return { list, result: false };
+    }
+
+    const iso = new Date(now).toISOString();
+    if (!c.voiceOpenedAt) c.voiceOpenedAt = iso;
+    c.voiceLastOpenedAt = iso;
+    c.voiceOpenCount = (c.voiceOpenCount ?? 0) + 1;
+    return { list, result: true };
+  });
+}
+
+/**
+ * Log a reminder sent about an outstanding voice recording.
+ *
+ * Kept apart from the assessment reminder counters rather than reusing them.
+ * They chase different things weeks apart, and a single count would tell a
+ * recruiter "chased 3 times" without saying about what — which is the one
+ * thing they need to know before sending a fourth.
+ */
+export function recordVoiceReminder(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.voiceReminderSentAt = new Date().toISOString();
+    c.voiceReminderCount = (c.voiceReminderCount ?? 0) + 1;
+    return { list, result: c };
   });
 }
 

@@ -36,12 +36,21 @@ export function VoicePanel({
   documents,
   voiceStatus,
   requestedAt,
+  openedAt,
+  openCount,
+  reminderSentAt,
+  reminderCount,
 }: {
   id: string;
   documents?: CandidateDocument[];
   voiceStatus?: VoiceStatus;
   /** When a recording was last asked for, so waiting can be dated. */
   requestedAt?: string;
+  /** Whether they have opened the recording page, and how often. */
+  openedAt?: string;
+  openCount?: number;
+  reminderSentAt?: string;
+  reminderCount?: number;
 }) {
   const current = currentVoiceRecording(documents);
   const earlier = supersededDocuments(documents, ["voice"]).filter((d) => !!d.key);
@@ -75,16 +84,45 @@ export function VoicePanel({
           </p>
         </>
       ) : (
-        <p className="mt-2 text-sm text-navy-500">
+        <div className="mt-2 space-y-1.5 text-sm text-navy-500">
+          <p>
+            {requestedAt ? (
+              <>
+                Asked on {fmt(requestedAt)}. Their assessment link shows the recording step until
+                something arrives.
+              </>
+            ) : (
+              <>No recording yet.</>
+            )}
+          </p>
+
+          {/* The question a recruiter is actually asking before they chase:
+              did this person ever see the request? Silence from someone who
+              opened the page means something different from silence from
+              someone who never did — the first is hesitation, the second is
+              usually an email that never landed. */}
           {requestedAt ? (
-            <>
-              Asked on {fmt(requestedAt)}. Their assessment link shows the recording step until
-              something arrives.
-            </>
-          ) : (
-            <>No recording yet.</>
-          )}
-        </p>
+            openedAt ? (
+              <p className="font-medium text-navy-600">
+                They opened the recording page on {fmt(openedAt)}
+                {openCount && openCount > 1 ? `, ${openCount} times in all` : ""} — so they have
+                seen it.
+              </p>
+            ) : (
+              <p className="font-medium text-red-600">
+                They have never opened the recording page. Worth checking the email reached them
+                before chasing again.
+              </p>
+            )
+          ) : null}
+
+          {reminderCount ? (
+            <p className="text-xs text-navy-400">
+              Reminded {reminderCount === 1 ? "once" : `${reminderCount} times`}, last on{" "}
+              {fmt(reminderSentAt)}.
+            </p>
+          ) : null}
+        </div>
       )}
 
       {/* Kept, not replaced. A recruiter who asked for a second attempt is

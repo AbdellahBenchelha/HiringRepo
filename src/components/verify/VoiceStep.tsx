@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Logo } from "@/components/layout/Logo";
 import { VoiceRecorder } from "@/components/verify/VoiceRecorder";
@@ -17,12 +17,30 @@ export function VoiceStep({
   candidateId,
   fullName,
   script,
+  source,
 }: {
   candidateId: string;
   fullName: string;
   script: string;
+  /** Which message brought them, so a reminder can be credited with working. */
+  source?: string;
 }) {
   const [done, setDone] = useState(false);
+
+  // Tell the Admin Panel they reached this page, so "no recording yet" can be
+  // told apart from "never saw the request". Fired from the browser on
+  // purpose: link-preview bots fetch the URL when the link is pasted into a
+  // messenger, and a server-side record would credit the bot with the open.
+  // Failures are ignored — this is bookkeeping and must never interrupt them.
+  useEffect(() => {
+    if (!candidateId) return;
+    void fetch("/api/interview/opened", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: candidateId, source, step: "voice" }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [candidateId, source]);
 
   if (done) {
     return (

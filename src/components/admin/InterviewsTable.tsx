@@ -371,13 +371,23 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                         onOpenPhotos={() => setQuickView(c)}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    {/* Bounded, because the Results column is sticky and floats
+                        over whatever runs under it. Without a width the voice
+                        controls slide beneath it and their labels are cut in
+                        half — they need to wrap before they reach it. */}
+                    <td className="px-4 py-3 align-top">
                       <InterviewActions
                         id={c.id}
                         fullName={c.fullName}
                         email={c.email}
                         voiceRequestedAt={c.voiceRequestedAt}
                         voiceStatus={c.voiceStatus}
+                        voiceOpenedAt={c.voiceOpenedAt}
+                        voiceOpenCount={c.voiceOpenCount}
+                        voiceReminderSentAt={c.voiceReminderSentAt}
+                        voiceReminderCount={c.voiceReminderCount}
+                        voiceNeeded={c.voiceNeeded}
+                        onVoiceReminder={(p) => patch(c.id, p)}
                         onVoiceStatusChange={(voiceStatus) => patch(c.id, { voiceStatus })}
                       />
                     </td>

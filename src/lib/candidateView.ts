@@ -16,6 +16,7 @@ import {
   type VerificationStatus,
 } from "@/lib/verification";
 import type { IdDocumentType } from "@/lib/identityDocuments";
+import { voiceRecordingNeeded } from "@/lib/voice";
 import type { Offer } from "@/lib/offer";
 import type { ConfirmedDetails } from "@/lib/hiring";
 import { countryRuleApplies } from "@/lib/phoneCountry";
@@ -82,6 +83,17 @@ export interface CandidateView {
    */
   identityReuploadPending: boolean;
   voiceStatus?: VoiceStatus;
+  /** Whether they have opened the voice-recording page, and how often. */
+  voiceOpenedAt?: string;
+  voiceOpenCount?: number;
+  voiceReminderSentAt?: string;
+  voiceReminderCount?: number;
+  /**
+   * Derived: a recording has been asked for and none newer has arrived.
+   * Computed here so the table, the panel and the reminder button cannot
+   * disagree about whether anyone is still waiting.
+   */
+  voiceNeeded: boolean;
   /** Interview follow-up state, for the Interviews tab's own filters. */
   interviewCompletedAt?: string;
   voiceRequestedAt?: string;
@@ -169,6 +181,11 @@ export function toCandidateView(
     identityReuploadReason: c.identityReuploadReason,
     identityReuploadPending: identityReuploadPending(c),
     voiceStatus: c.voiceStatus,
+    voiceOpenedAt: c.voiceOpenedAt,
+    voiceOpenCount: c.voiceOpenCount,
+    voiceReminderSentAt: c.voiceReminderSentAt,
+    voiceReminderCount: c.voiceReminderCount,
+    voiceNeeded: voiceRecordingNeeded(c),
     interviewCompletedAt: c.interview?.completedAt,
     voiceRequestedAt: c.voiceRequestedAt,
     offer: c.offer,

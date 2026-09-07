@@ -102,6 +102,7 @@ export default async function InterviewPage({
         candidateId={identity.id}
         fullName={identity.name}
         script={voiceScript(identity.name)}
+        source={isOpenSource(sourceParam) ? sourceParam : "direct"}
       />
     );
   }

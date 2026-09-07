@@ -290,6 +290,10 @@ export function CandidateProfileModal({
             documents={candidate.documents}
             voiceStatus={candidate.voiceStatus}
             requestedAt={candidate.voiceRequestedAt}
+            openedAt={candidate.voiceOpenedAt}
+            openCount={candidate.voiceOpenCount}
+            reminderSentAt={candidate.voiceReminderSentAt}
+            reminderCount={candidate.voiceReminderCount}
           />
         </div>
 

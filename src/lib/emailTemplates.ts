@@ -690,6 +690,141 @@ export function identityReuploadHtml({ fullName, url, reason }: IdentityReupload
 </html>`;
 }
 
+/**
+ * Chasing a voice assessment that has been asked for and not sent.
+ *
+ * Deliberately not the assessment reminder reworded. That one chases a
+ * 30-minute test somebody has to sit down for; this one chases a minute of
+ * talking, and saying so is the whole persuasion. It also has to carry the
+ * fact that they have already passed the interview — a bare "you have not
+ * completed this" weeks later reads like a rejection notice, and the people
+ * most likely to give up are the ones who most need reminding they are nearly
+ * through.
+ */
+export function voiceReminderSubject(): string {
+  return `A minute of your time — your ${siteConfig.company.name} voice assessment`;
+}
+
+export function voiceReminderText(invite: VoiceAssessmentInvite): string {
+  const name = firstNameOf(invite.fullName);
+  return [
+    `Dear ${name},`,
+    ``,
+    `You passed our online interview${invite.position ? ` for the ${invite.position} role` : ""}, and your`,
+    `application is still open. The one thing outstanding is your voice assessment.`,
+    ``,
+    `It takes about a minute. Open your personal link and follow the steps on the page:`,
+    ``,
+    invite.recordUrl,
+    ``,
+    `A short passage is shown for you to read aloud. Record it on the page, or attach a`,
+    `recording made with your phone — whichever is easier. You can listen back and record`,
+    `again before you send it.`,
+    ``,
+    `If you would rather not continue, simply reply and let us know.`,
+    `We will close your application. Either answer is helpful to us.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function voiceReminderHtml(invite: VoiceAssessmentInvite): string {
+  const name = esc(firstNameOf(invite.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(invite.recordUrl);
+  const role = invite.position ? ` for the <strong style="color:${NAVY};">${esc(invite.position)}</strong> role` : "";
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(voiceReminderSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  One minute of reading aloud, and your application is complete.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          You are one step from finishing
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hello ${name}, you passed our online interview${role} and your application is still
+          open. The one thing outstanding is your <strong style="color:${NAVY};">voice
+          assessment</strong>.
+        </p>
+
+        <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          It takes about a minute. A short passage is shown for you to read aloud &mdash; record
+          it on the page, or attach a recording made with your phone, whichever is easier.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Record it now
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+              Changed your mind? Reply to this email and we will close your application. Either
+              answer is helpful to us.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export interface OfferEmail {
   fullName: string;
   position: string;
