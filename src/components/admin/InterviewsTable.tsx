@@ -58,6 +58,17 @@ function pct(score: number, total: number) {
   return total > 0 ? Math.round((score / total) * 100) : 0;
 }
 
+/**
+ * Where the hidden countries are remembered.
+ *
+ * Unlike the other filters, this one is a standing decision rather than a
+ * question about the list in front of you: somebody who does not recruit from
+ * a country does not want to hide it again after every reload. Kept in the
+ * browser rather than on the record — it is one recruiter's view of the table,
+ * not a fact about the candidates, and nobody is rejected by it.
+ */
+const HIDDEN_COUNTRIES_KEY = "wr.interviews.hiddenCountries";
+
 const OFFER_FILTERS: { value: "all" | OfferStatus; label: string }[] = [
   { value: "all", label: "All" },
   { value: "none", label: "No offer" },
@@ -69,6 +80,8 @@ const OFFER_FILTERS: { value: "all" | OfferStatus; label: string }[] = [
 export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
+  /** Countries taken out of the table entirely. Restored from the browser below. */
+  const [hiddenCountries, setHiddenCountries] = useState<string[]>([]);
   const [voice, setVoice] = useState<"all" | VoiceStatus>("all");
   const [verification, setVerification] = useState<VerificationFilter>("all");
   const [status, setStatus] = useState<"all" | CandidateStatus>("all");
@@ -120,9 +133,47 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
     [rows],
   );
 
+  /**
+   * Restored once, on mount rather than in the initial state, because the
+   * server rendered this table without a browser to read — reading storage
+   * during the first render would make the markup disagree with itself.
+   */
+  const restored = useRef(false);
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(HIDDEN_COUNTRIES_KEY) ?? "[]");
+      if (Array.isArray(saved)) {
+        setHiddenCountries(saved.filter((v): v is string => typeof v === "string"));
+      }
+    } catch {
+      /* A damaged value is no reason to show a broken table. */
+    }
+    restored.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!restored.current) return;
+    try {
+      localStorage.setItem(HIDDEN_COUNTRIES_KEY, JSON.stringify(hiddenCountries));
+    } catch {
+      /* Private browsing, a full quota — the filter still works for this visit. */
+    }
+  }, [hiddenCountries]);
+
+  function hideCountry(name: string) {
+    if (!name) return;
+    setHiddenCountries((prev) => (prev.includes(name) ? prev : [...prev, name].sort()));
+    // Showing only India while hiding India is a contradiction with an empty
+    // table as its answer, so the narrower filter gives way.
+    setCountry((prev) => (prev === name ? "all" : prev));
+  }
+
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
     return live.filter(({ view: c }) => {
+      // First, because it is a decision about who belongs in this table at
+      // all — the other filters narrow whoever is left.
+      if (c.country && hiddenCountries.includes(c.country)) return false;
       if (q && ![c.fullName, c.email, c.phone, c.country, c.city].some((v) => (v || "").toLowerCase().includes(q))) {
         return false;
       }
@@ -133,7 +184,13 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
       if (offer !== "all" && offerStatus(c) !== offer) return false;
       return true;
     });
-  }, [live, search, country, voice, verification, status, offer]);
+  }, [live, search, country, hiddenCountries, voice, verification, status, offer]);
+
+  /** How many rows the hidden countries are keeping off the table. */
+  const hiddenCount = useMemo(
+    () => live.filter((r) => r.view.country && hiddenCountries.includes(r.view.country)).length,
+    [live, hiddenCountries],
+  );
 
   const filtering = shown.length !== rows.length;
 
@@ -191,7 +248,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, voice, verification, status, offer, pageSize]);
+  }, [search, country, hiddenCountries, voice, verification, status, offer, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -260,12 +317,73 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
             <span className="label">Country</span>
             <select id="country" className="select" value={country} onChange={(e) => setCountry(e.target.value)}>
               <option value="all">All countries</option>
-              {countries.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {countries
+                .filter((c) => !hiddenCountries.includes(c))
+                .map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+            </select>
+          </label>
+
+          {/* Choosing here takes a country out of the table rather than
+              narrowing to it. It stays a picker rather than becoming a list of
+              tick boxes because most of the time nothing is hidden, and an
+              empty list of ticks would take the same room as all the rest. */}
+          <label className="block">
+            <span className="label">Hide countries</span>
+            <select
+              id="hide-country"
+              className="select"
+              value=""
+              onChange={(e) => hideCountry(e.target.value)}
+            >
+              <option value="">
+                {hiddenCountries.length
+                  ? `Hiding ${hiddenCountries.length} — hide another…`
+                  : "Choose a country to hide…"}
+              </option>
+              {countries
+                .filter((c) => !hiddenCountries.includes(c))
+                .map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
             </select>
           </label>
         </div>
+
+        {/* Always on screen while anything is hidden. A filter that quietly
+            removes people is the one that has to say so, or the tab looks
+            empty for no reason a week later. */}
+        {hiddenCountries.length ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-navy-100 pt-3">
+            <span className="text-xs font-bold uppercase tracking-wide text-navy-500">
+              Hidden
+            </span>
+            {hiddenCountries.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setHiddenCountries((prev) => prev.filter((x) => x !== c))}
+                title={`Show ${c} again`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-navy-50 px-3 py-1 text-xs font-semibold text-navy-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+              >
+                {c}
+                <span aria-hidden className="text-navy-400">&times;</span>
+                <span className="sr-only">Show again</span>
+              </button>
+            ))}
+            <span className="text-xs text-navy-500">
+              {hiddenCount} interview{hiddenCount === 1 ? "" : "s"} kept off this table
+            </span>
+            <button
+              type="button"
+              onClick={() => setHiddenCountries([])}
+              className="rounded-full px-3 py-1 text-xs font-semibold text-navy-600 transition hover:bg-navy-100"
+            >
+              Show all countries
+            </button>
+          </div>
+        ) : null}
 
         {filtering ? (
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-navy-100 pt-3">
