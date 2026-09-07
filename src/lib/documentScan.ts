@@ -8,9 +8,11 @@
  *      .pdf passes an extension check and a MIME check, because both come from
  *      the client and both are one line to forge.
  *
- *   2. Structure — you accept PDF, DOC and DOCX, which narrows the realistic
- *      threat to two things: macros in Office files, and JavaScript or launch
- *      actions in PDFs. A CV has no legitimate reason to contain either.
+ *   2. Structure — the realistic threat in what we accept is two things:
+ *      macros in Office files, and JavaScript or launch actions in PDFs. A CV
+ *      has no legitimate reason to contain either. Photographs and voice
+ *      recordings carry neither, so for those the check is only that the file
+ *      is not simultaneously valid markup.
  *
  * This is not an antivirus engine and does not pretend to be one. It stops the
  * documents that actually arrive in recruitment inboxes — macro droppers and
@@ -29,10 +31,19 @@ export type ScanVerdict =
   | { ok: true }
   | { ok: false; reason: string };
 
-/** Longest signature we compare, so callers know how few bytes to fetch. */
-export const SIGNATURE_BYTES = 8;
+/** Furthest byte any signature reaches, so callers know how few to fetch. */
+export const SIGNATURE_BYTES = 12;
 
-const SIGNATURES: { ext: string; magic: number[]; label: string }[] = [
+/**
+ * One accepted opening for a file type.
+ *
+ * `offset` exists for the container formats: an .m4a or .mp4 begins with a
+ * four-byte length and only then says "ftyp", and a .wav says "WAVE" at byte
+ * eight. More than one entry may share an extension — an .mp3 legitimately
+ * starts either with an ID3 tag or with a raw frame header, and rejecting the
+ * second would refuse honest recordings from whole classes of phone.
+ */
+const SIGNATURES: { ext: string; magic: number[]; offset?: number; label: string }[] = [
   { ext: ".pdf", magic: [0x25, 0x50, 0x44, 0x46], label: "PDF" }, // %PDF
   // .docx is a zip. "PK\x03\x04" is a populated archive; the other PK variants
   // mean empty or spanned, neither of which is a real document.
@@ -43,6 +54,39 @@ const SIGNATURES: { ext: string; magic: number[]; label: string }[] = [
   { ext: ".jpg", magic: [0xff, 0xd8, 0xff], label: "JPEG" },
   { ext: ".jpeg", magic: [0xff, 0xd8, 0xff], label: "JPEG" },
   { ext: ".png", magic: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], label: "PNG" },
+
+  // Voice assessments. We do not choose these formats — the handset does — so
+  // the list covers what phones actually produce rather than what would be
+  // tidiest to support.
+  // Matroska/WebM: the EBML header. What Chrome on Android records.
+  { ext: ".webm", magic: [0x1a, 0x45, 0xdf, 0xa3], label: "WebM" },
+  { ext: ".ogg", magic: [0x4f, 0x67, 0x67, 0x53], label: "Ogg" }, // OggS
+  { ext: ".oga", magic: [0x4f, 0x67, 0x67, 0x53], label: "Ogg" },
+  // ISO base media: a length, then "ftyp". What Safari on iOS records, and
+  // what most Android recorder apps write.
+  { ext: ".m4a", magic: [0x66, 0x74, 0x79, 0x70], offset: 4, label: "MP4 audio" },
+  { ext: ".mp4", magic: [0x66, 0x74, 0x79, 0x70], offset: 4, label: "MP4 audio" },
+  { ext: ".3gp", magic: [0x66, 0x74, 0x79, 0x70], offset: 4, label: "3GP audio" },
+  // RIFF ... WAVE. Checked at byte eight, because RIFF alone is also AVI.
+  { ext: ".wav", magic: [0x57, 0x41, 0x56, 0x45], offset: 8, label: "WAV" },
+  // MP3: an ID3 tag, or a bare frame sync. The sync is eleven set bits, so the
+  // second byte varies with the MPEG version and layer — these are the ones
+  // real encoders emit.
+  { ext: ".mp3", magic: [0x49, 0x44, 0x33], label: "MP3" }, // ID3
+  { ext: ".mp3", magic: [0xff, 0xfb], label: "MP3" },
+  { ext: ".mp3", magic: [0xff, 0xf3], label: "MP3" },
+  { ext: ".mp3", magic: [0xff, 0xf2], label: "MP3" },
+  { ext: ".mp3", magic: [0xff, 0xfa], label: "MP3" },
+  // Raw AAC in an ADTS stream.
+  { ext: ".aac", magic: [0xff, 0xf1], label: "AAC" },
+  { ext: ".aac", magic: [0xff, 0xf9], label: "AAC" },
+  // AMR, still produced by cheaper handsets' recorder apps.
+  { ext: ".amr", magic: [0x23, 0x21, 0x41, 0x4d, 0x52], label: "AMR" }, // #!AMR
+];
+
+/** Extensions handled by the audio branch of the structure check. */
+const AUDIO_STRUCTURE_EXTS = [
+  ".webm", ".ogg", ".oga", ".m4a", ".mp4", ".3gp", ".wav", ".mp3", ".aac", ".amr",
 ];
 
 /** "VBA" as it appears inside a UTF-16LE name: V\x00B\x00A\x00. */
@@ -50,9 +94,9 @@ function utf16le(s: string): string {
   return [...s].map((c) => c + "\u0000").join("");
 }
 
-function startsWith(buf: Uint8Array, magic: number[]): boolean {
-  if (buf.length < magic.length) return false;
-  return magic.every((b, i) => buf[i] === b);
+function startsWith(buf: Uint8Array, magic: number[], offset = 0): boolean {
+  if (buf.length < offset + magic.length) return false;
+  return magic.every((b, i) => buf[offset + i] === b);
 }
 
 /**
@@ -63,17 +107,19 @@ function startsWith(buf: Uint8Array, magic: number[]): boolean {
  */
 export function checkSignature(bytes: Uint8Array, filename: string): ScanVerdict {
   const ext = extensionOf(filename);
-  const expected = SIGNATURES.find((s) => s.ext === ext);
-  if (!expected) return { ok: false, reason: "File type not accepted." };
+  // All of them, not the first: one extension can have several legitimate
+  // openings, and matching only the first would reject the rest.
+  const expected = SIGNATURES.filter((s) => s.ext === ext);
+  if (!expected.length) return { ok: false, reason: "File type not accepted." };
 
-  if (startsWith(bytes, expected.magic)) return { ok: true };
+  if (expected.some((e) => startsWith(bytes, e.magic, e.offset))) return { ok: true };
 
-  const actual = SIGNATURES.find((s) => startsWith(bytes, s.magic));
+  const actual = SIGNATURES.find((s) => startsWith(bytes, s.magic, s.offset));
   return {
     ok: false,
     reason: actual
       ? `Named ${ext} but the file is actually a ${actual.label}.`
-      : `Named ${ext} but the contents are not a ${expected.label}.`,
+      : `Named ${ext} but the contents are not a ${expected[0].label}.`,
   };
 }
 
@@ -132,6 +178,18 @@ export function checkStructure(bytes: Uint8Array, filename: string): ScanVerdict
     // anyway; a real photograph never contains a script tag.
     if (/<script|<html|<\/svg|javascript:/i.test(text.slice(0, 4096))) {
       return { ok: false, reason: "This image contains embedded markup." };
+    }
+    return { ok: true };
+  }
+
+  if (AUDIO_STRUCTURE_EXTS.includes(ext)) {
+    // Nothing to disassemble: none of these formats carries macros or an
+    // action that runs on open, and the signature check has already
+    // established the container is what it claims. The one cheap thing worth
+    // refusing is the same polyglot trick the images guard against — a file
+    // that is simultaneously valid audio and valid markup.
+    if (/<script|<html|javascript:/i.test(text.slice(0, 4096))) {
+      return { ok: false, reason: "This recording contains embedded markup." };
     }
     return { ok: true };
   }

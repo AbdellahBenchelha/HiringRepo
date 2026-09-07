@@ -45,6 +45,11 @@ const csp = [
   // Identity photographs are reviewed inline in the Admin Panel, served
   // from storage. Without the origin here the review panel is blank.
   `img-src 'self' data: blob: ${r2Origin}`,
+  // Voice assessments. The admin route redirects to a signed storage URL, so
+  // the audio element ends up loading from R2 rather than from here; without
+  // this it falls back to default-src and the recording silently will not
+  // play. blob: is the candidate's own recording, played back before sending.
+  `media-src 'self' blob: ${r2Origin}`,
   "font-src 'self' data:",
   `connect-src 'self' https://ipwho.is ${r2Origin}`,
   // The Admin Panel previews candidate PDFs in an iframe pointed at storage.
@@ -63,7 +68,18 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+  // The microphone is opened to this origin and nothing else, for the voice
+  // assessment. It was closed along with everything else until candidates
+  // started recording here — with it shut the recorder fails silently on every
+  // device, falls back to the file picker, and looks like a broken feature
+  // rather than a policy.
+  //
+  // The camera stays shut: the identity step uses a file input, which opens
+  // the phone's own camera app and needs no permission from this policy.
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(self), geolocation=(), payment=()",
+  },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   {
     key: "Strict-Transport-Security",

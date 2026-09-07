@@ -19,6 +19,7 @@ import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
 import { canOffer } from "@/lib/offer";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
+import { VoicePanel } from "@/components/admin/VoicePanel";
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
 
 /**
@@ -280,6 +281,15 @@ export function CandidateProfileModal({
             id={candidate.id}
             documents={candidate.documents}
             onOpen={onOpenDocument}
+          />
+        </div>
+
+        <div className="mt-5">
+          <VoicePanel
+            id={candidate.id}
+            documents={candidate.documents}
+            voiceStatus={candidate.voiceStatus}
+            requestedAt={candidate.voiceRequestedAt}
           />
         </div>
 

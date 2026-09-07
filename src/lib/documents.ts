@@ -24,6 +24,15 @@ export const DOCUMENT_KINDS = [
    */
   "identityBack",
   "selfie",
+  /**
+   * The spoken assessment, read aloud by the candidate.
+   *
+   * Recorded in the browser or attached from a phone's own recorder — the two
+   * arrive as different container formats and are stored exactly as they came,
+   * because both play in a browser and converting audio server-side would buy
+   * nothing but a dependency.
+   */
+  "voice",
 ] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
@@ -38,6 +47,7 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   identity: "ID document",
   identityBack: "ID document — back",
   selfie: "Photo holding ID",
+  voice: "Voice recording",
 };
 
 /** Short form for the table chips, where three of them share one cell. */
@@ -48,6 +58,7 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   identity: "ID",
   identityBack: "ID back",
   selfie: "Photo",
+  voice: "Voice",
 };
 
 /** The identity pair, which the application documents column does not show. */
@@ -66,6 +77,15 @@ export const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
  */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Audio, at roughly half a megabyte a minute for Opus and a megabyte for AAC.
+ *
+ * The script reads in well under a minute, so 5 MB is several times what an
+ * honest recording needs — the cap is there to stop someone attaching a
+ * twenty-minute file, not to police length.
+ */
+export const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
+
 export const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"] as const;
 
 export const ALLOWED_MIME = [
@@ -78,21 +98,76 @@ export const ALLOWED_MIME = [
 export const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"] as const;
 export const IMAGE_MIME = ["image/jpeg", "image/png"] as const;
 
+/**
+ * What a voice recording may arrive as.
+ *
+ * Deliberately wide, because we do not choose the format — the phone does.
+ * Android Chrome records WebM/Opus, iOS Safari records MP4/AAC, and a file
+ * attached from a handset's own recorder app can be any of m4a, mp3, ogg or
+ * amr depending on the make. Narrowing this to one format would reject honest
+ * recordings from whole classes of phone, and the candidate would have no idea
+ * why.
+ */
+export const AUDIO_EXTENSIONS = [
+  ".webm", ".mp4", ".m4a", ".mp3", ".ogg", ".oga", ".wav", ".aac", ".amr", ".3gp",
+] as const;
+export const AUDIO_MIME = [
+  "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/aac",
+  "audio/x-m4a", "audio/wav", "audio/x-wav", "audio/amr", "audio/3gpp",
+  // Safari labels its own recordings video/mp4 even with no video track, and
+  // some Android recorders label WebM the same way.
+  "video/mp4", "video/webm", "video/3gpp",
+] as const;
+
 /** Which kinds are photographs rather than documents. */
 export function isImageKind(kind: DocumentKind): boolean {
   return kind === "identity" || kind === "identityBack" || kind === "selfie";
 }
 
+/** Which kinds are audio. */
+export function isAudioKind(kind: DocumentKind): boolean {
+  return kind === "voice";
+}
+
 export function maxBytesFor(kind: DocumentKind): number {
+  if (isAudioKind(kind)) return MAX_AUDIO_BYTES;
   return isImageKind(kind) ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
 }
 
 export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
+  if (isAudioKind(kind)) return AUDIO_EXTENSIONS;
   return isImageKind(kind) ? IMAGE_EXTENSIONS : ALLOWED_EXTENSIONS;
 }
 
 export function allowedMimeFor(kind: DocumentKind): readonly string[] {
+  if (isAudioKind(kind)) return AUDIO_MIME;
   return isImageKind(kind) ? IMAGE_MIME : ALLOWED_MIME;
+}
+
+/**
+ * Kinds whose predecessors are kept when a new one arrives.
+ *
+ * Identity photographs and voice recordings are both evidence of what a
+ * candidate actually sent, and in both cases the interesting question about a
+ * second attempt is how it differs from the first. A CV has no such question
+ * and is replaced.
+ */
+export function keepsHistory(kind: DocumentKind): boolean {
+  return isImageKind(kind) || isAudioKind(kind);
+}
+
+/**
+ * Is this content type acceptable for this kind?
+ *
+ * Compared without its parameters. A browser recording announces itself as
+ * `audio/webm;codecs=opus` — the codec is part of the header, not part of the
+ * type — and a straight string comparison against `audio/webm` rejects every
+ * recording Chrome makes. Others append a charset. Only the type and subtype
+ * decide.
+ */
+export function isAllowedMimeForKind(kind: DocumentKind, contentType: string): boolean {
+  const bare = contentType.split(";")[0].trim().toLowerCase();
+  return allowedMimeFor(kind).includes(bare);
 }
 
 /** Accepts only what this kind allows, so a CV cannot arrive as a photo. */

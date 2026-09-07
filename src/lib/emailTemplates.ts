@@ -11,6 +11,7 @@
  * require and which raises deliverability.
  */
 import { siteConfig } from "@/config/site";
+import { voiceScript } from "@/lib/voice";
 import { OFFER_LINK_TTL_DAYS } from "@/lib/token";
 
 const NAVY = "#0f1035";
@@ -1051,48 +1052,16 @@ export interface VoiceAssessmentInvite {
   fullName: string;
   email: string;
   position?: string;
-}
-
-/**
- * The script read aloud for the voice assessment, exactly as it was when this
- * lived in the editable WhatsApp message — carried over rather than reworded,
- * since the wording itself was never the part anyone asked to change.
- */
-function voiceScript(fullName: string): string {
-  return (
-    `"Hello, my name is ${fullName}. I am interested in joining your customer-support team. ` +
-    `I enjoy communicating with customers, listening carefully to their concerns, and helping ` +
-    `them find the best possible solution. I understand that professional customer service ` +
-    `requires patience, respect, clear communication, and a positive attitude. I am comfortable ` +
-    `working as part of a team, following company procedures, and learning new skills. I am ` +
-    `motivated to provide customers with a helpful and professional experience."`
-  );
-}
-
-/** Digits-only WhatsApp number for a wa.me link — no "+", spaces or dashes. */
-function waNumber(): string {
-  return siteConfig.contact.phone.replace(/[^\d]/g, "");
-}
-
-/**
- * The message a candidate's WhatsApp opens to, pre-addressed to us.
- *
- * This is what solves identification without any new matching logic on our
- * side: the recruiter did not start this conversation the way they do for a
- * WhatsApp-sent request, so nothing about the incoming message says who it is
- * from except what it actually says. Naming the candidate, their role and
- * their email up front means a recruiter reading the message already knows —
- * even if it arrives from a number that is not the one on file.
- */
-function voiceWhatsAppPrefill({ fullName, email, position }: VoiceAssessmentInvite): string {
-  return (
-    `Hello, this is ${fullName}${position ? `, applying for ${position}` : ""}. ` +
-    `My email is ${email}. Here is my voice assessment recording:`
-  );
-}
-
-function voiceWhatsAppUrl(invite: VoiceAssessmentInvite): string {
-  return `https://wa.me/${waNumber()}?text=${encodeURIComponent(voiceWhatsAppPrefill(invite))}`;
+  /**
+   * Where the recording is made — their own assessment link.
+   *
+   * Recordings used to be asked for on WhatsApp. A number that dozens of
+   * strangers message, sending links out, is the pattern the platform bans,
+   * and it did, repeatedly. It also meant matching a voice note to a name by
+   * hand. Sending them to their own link solves both: nothing to match, and no
+   * personal number in front of a stranger.
+   */
+  recordUrl: string;
 }
 
 /**
@@ -1108,7 +1077,6 @@ export function voiceAssessmentSubject(): string {
 /** Plain-text part. */
 export function voiceAssessmentText(invite: VoiceAssessmentInvite): string {
   const name = firstNameOf(invite.fullName);
-  const waUrl = voiceWhatsAppUrl(invite);
   return [
     `Hi ${name},`,
     ``,
@@ -1123,15 +1091,14 @@ export function voiceAssessmentText(invite: VoiceAssessmentInvite): string {
     ``,
     voiceScript(invite.fullName),
     ``,
-    `Record it somewhere quiet, then send it to us on WhatsApp using the link below. It opens`,
-    `WhatsApp with a message already addressed to us, so we know straight away it is you:`,
+    `Somewhere quiet, open your link below and record it straight on the page. You can listen`,
+    `back and record again before you send it, and if you would rather use your phone's own`,
+    `voice recorder you can attach the file there instead:`,
     ``,
-    waUrl,
+    invite.recordUrl,
     ``,
-    `Or message us on WhatsApp at ${siteConfig.contact.phone}.`,
-    ``,
-    `If you message us a different way instead, please make sure to say your full name and`,
-    `include your email address (${invite.email}) so we know which application it belongs to.`,
+    `The link is yours alone, so we know the recording is from you — there is nothing for you`,
+    `to write and nothing for us to match up. It takes about a minute.`,
     ``,
     `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
     ``,
@@ -1144,10 +1111,8 @@ export function voiceAssessmentText(invite: VoiceAssessmentInvite): string {
 export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
   const name = esc(firstNameOf(invite.fullName));
   const company = esc(siteConfig.company.name);
-  const waUrl = voiceWhatsAppUrl(invite);
+  const url = esc(invite.recordUrl);
   const script = esc(voiceScript(invite.fullName));
-  const email = esc(invite.email);
-  const WHATSAPP_GREEN = "#25d366";
 
   return `<!doctype html>
 <html lang="en">
@@ -1207,37 +1172,32 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
         </table>
 
         <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Record it somewhere quiet, then send it to us on WhatsApp using the button below. It
-          opens WhatsApp with a message already addressed to us, so we know straight away it is
-          you:
+          Somewhere quiet, open your link and record it straight on the page. You can listen back
+          and record again before you send it &mdash; and if you would rather use your phone&rsquo;s
+          own voice recorder, you can attach the file there instead.
         </p>
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px 0;">
           <tr>
-            <td align="center" bgcolor="${WHATSAPP_GREEN}" style="border-radius:999px;">
-              <a href="${waUrl}" style="display:inline-block;padding:15px 34px;font:700 16px/1 Arial,Helvetica,sans-serif;color:#ffffff;text-decoration:none;border-radius:999px;">
-                Send my recording on WhatsApp
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 34px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Record my voice assessment
               </a>
             </td>
           </tr>
         </table>
 
-        <!-- The wa.me link is mostly percent-encoded message text, so printing
-             it raw here is three lines of %20 that help nobody. Someone whose
-             button does not work needs the number, which they can save and
-             message directly. -->
         <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
-          Button not working? Message us on WhatsApp at
-          <strong style="color:${NAVY};">${esc(siteConfig.contact.phone)}</strong>.
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
           <tr>
             <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
-              Messaging us a different way instead? Please say your full name and include your
-              email address (<strong style="color:${NAVY};">${email}</strong>) so we know which
-              application it belongs to.
+              The link is yours alone, so we know the recording is from you &mdash; there is
+              nothing for you to write and nothing for us to match up. It takes about a minute.
             </td>
           </tr>
         </table>

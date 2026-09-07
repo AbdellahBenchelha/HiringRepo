@@ -39,13 +39,16 @@ export interface DeletableCandidate {
  * stop and check they are on the right row.
  */
 function losses(c: DeletableCandidate): string[] {
-  const photos = (c.documents ?? []).filter((d) => isVerificationKind(d.kind) && d.key).length;
-  const files = (c.documents ?? []).filter((d) => !isVerificationKind(d.kind) && d.key).length;
+  const have = (c.documents ?? []).filter((d) => !!d.key);
+  const photos = have.filter((d) => isVerificationKind(d.kind)).length;
+  const voice = have.filter((d) => d.kind === "voice").length;
+  const files = have.filter((d) => !isVerificationKind(d.kind) && d.kind !== "voice").length;
   return [
     "their application and your notes",
     c.interviewCompleted ? "their assessment answers and score" : null,
     c.offerAcceptedAt ? "their accepted offer and the details they confirmed" : null,
     photos ? `${photos} identity photograph${photos === 1 ? "" : "s"}` : null,
+    voice ? `${voice} voice recording${voice === 1 ? "" : "s"}` : null,
     files ? `${files} uploaded file${files === 1 ? "" : "s"}` : null,
   ].filter((s): s is string => typeof s === "string");
 }

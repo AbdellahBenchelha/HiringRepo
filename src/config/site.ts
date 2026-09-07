@@ -130,7 +130,15 @@ export const siteConfig = {
     recruitmentEmail: "careers@workroute.work",
     supportEmail: "support@workroute.work",
     privacyEmail: "privacy@workroute.work",
-    /** Also the WhatsApp Business number candidates send voice recordings to. */
+    /**
+     * The published contact number.
+     *
+     * Voice assessments no longer come here. They used to arrive as WhatsApp
+     * voice notes, which got the number banned repeatedly — a number that
+     * dozens of strangers message, with links going out, is the pattern the
+     * platform acts on — and meant matching a voice note to a name by hand.
+     * Candidates now record on their own assessment link.
+     */
     phone: "+44 7451 272838",
     address: {
       line1: "65 Stroude Road",

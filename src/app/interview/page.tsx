@@ -9,6 +9,8 @@ import {
   verificationStatus,
 } from "@/lib/verification";
 import { IdentityVerification } from "@/components/interview/IdentityVerification";
+import { VoiceStep } from "@/components/verify/VoiceStep";
+import { voiceRecordingNeeded, voiceScript } from "@/lib/voice";
 import { getCandidate } from "@/lib/store";
 import { publicQuestions, sections } from "@/config/interviewQuestions";
 import { siteConfig } from "@/config/site";
@@ -43,6 +45,8 @@ export default async function InterviewPage({
   let verificationSent = false;
   /** Set only while a recruiter's request for new photographs is outstanding. */
   let reuploadNotice: string | undefined;
+  /** True while a voice recording has been asked for and none has arrived. */
+  let needsVoice = false;
   if (candidateId) {
     const cand = await getCandidate(candidateId);
     if (cand) {
@@ -52,6 +56,7 @@ export default async function InterviewPage({
       needsVerification = verificationRequired(cand, required);
       verificationSent = verificationStatus(cand, required) === "provided";
       if (identityReuploadPending(cand)) reuploadNotice = cand.identityReuploadReason;
+      needsVoice = voiceRecordingNeeded(cand);
     }
   }
   if (!identity && tokenParam) {
@@ -67,6 +72,7 @@ export default async function InterviewPage({
           needsVerification = verificationRequired(cand, required);
           verificationSent = verificationStatus(cand, required) === "provided";
           if (identityReuploadPending(cand)) reuploadNotice = cand.identityReuploadReason;
+          needsVoice = voiceRecordingNeeded(cand);
         }
       }
     }
@@ -82,6 +88,20 @@ export default async function InterviewPage({
         candidateId={identity.id}
         fullName={identity.name}
         notice={reuploadNotice}
+      />
+    );
+  }
+
+  // The voice assessment comes after identity, which is a filter on whether
+  // the application proceeds at all, and before the completion notice, which
+  // would otherwise tell someone with an outstanding recording that there is
+  // nothing left for them to do.
+  if (identity?.id && alreadyCompleted && needsVoice) {
+    return (
+      <VoiceStep
+        candidateId={identity.id}
+        fullName={identity.name}
+        script={voiceScript(identity.name)}
       />
     );
   }

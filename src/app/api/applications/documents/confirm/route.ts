@@ -6,6 +6,7 @@ import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { createHash } from "node:crypto";
 import {
+  allowedExtensionsFor,
   isAllowedForKind,
   isDocumentKind,
   isImageKind,
@@ -13,7 +14,7 @@ import {
   safeFilename,
   type CandidateDocument,
 } from "@/lib/documents";
-import { findDocumentTwin, flagDuplicate } from "@/lib/store";
+import { findDocumentTwin, flagDuplicate, setVoiceStatus } from "@/lib/store";
 
 /**
  * Accept or destroy an uploaded document.
@@ -66,7 +67,16 @@ export async function POST(req: NextRequest) {
   // The key must be exactly the shape presign issues for this candidate and
   // this kind. Without this, anyone could confirm another candidate's object
   // onto their own record and then read it back through the download route.
-  const KEY_RE = new RegExp(`^candidates/${id}/${kind}-[A-Za-z0-9]{1,24}\\.(pdf|docx?|jpe?g|png)$`);
+  //
+  // The extensions come from the same table presign signs against rather than
+  // being spelled out again here. A second copy went stale the moment audio
+  // was added — every recording uploaded successfully and was then refused at
+  // this line — and it was also looser than it needed to be, since it let a
+  // .pdf key be confirmed as an identity photograph.
+  const exts = allowedExtensionsFor(kind)
+    .map((e) => e.slice(1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const KEY_RE = new RegExp(`^candidates/${id}/${kind}-[A-Za-z0-9]{1,24}\\.(${exts})$`);
   if (!KEY_RE.test(key)) {
     return NextResponse.json({ ok: false, error: "bad_key" }, { status: 400 });
   }
@@ -146,6 +156,20 @@ export async function POST(req: NextRequest) {
       // eslint-disable-next-line no-console
       console.warn(`[documents] ${id} ${kind} is byte-identical to ${twin.id} (${twin.name})`);
     }
+  }
+
+  // A recording that has arrived moves the candidate along on its own. This
+  // used to be a dropdown a recruiter set by hand after listening to a
+  // WhatsApp voice note, which meant the status said "Requested" for as long
+  // as nobody got round to it — and the offer button stays locked until it
+  // does not, so the delay was the candidate's.
+  //
+  // "Received", never "Passed": whether the recording is any good is a
+  // judgement, and nothing here has listened to it.
+  if (kind === "voice") {
+    await setVoiceStatus(id, "Voice Recording Received");
+    // eslint-disable-next-line no-console
+    console.log(`[voice] ${id} recording received`);
   }
 
   // eslint-disable-next-line no-console

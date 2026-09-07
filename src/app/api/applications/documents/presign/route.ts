@@ -4,7 +4,7 @@ import { presignUpload, r2Configured } from "@/lib/r2";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import {
-  allowedMimeFor,
+  isAllowedMimeForKind,
   extensionOf,
   isAllowedForKind,
   isDocumentKind,
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   if (typeof size !== "number" || size <= 0 || size > maxBytesFor(kind)) {
     return NextResponse.json({ ok: false, error: "too_large" }, { status: 400 });
   }
-  if (typeof contentType !== "string" || !allowedMimeFor(kind).includes(contentType)) {
+  if (typeof contentType !== "string" || !isAllowedMimeForKind(kind, contentType)) {
     return NextResponse.json({ ok: false, error: "bad_type" }, { status: 400 });
   }
 

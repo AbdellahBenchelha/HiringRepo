@@ -65,6 +65,18 @@ export async function GET(
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
     ".png": "image/png",
+    // Voice assessments, played inline in the profile. Served as attachments
+    // they would download instead of playing, which is not a review.
+    ".webm": "audio/webm",
+    ".ogg": "audio/ogg",
+    ".oga": "audio/ogg",
+    ".mp3": "audio/mpeg",
+    ".m4a": "audio/mp4",
+    ".mp4": "audio/mp4",
+    ".aac": "audio/aac",
+    ".wav": "audio/wav",
+    ".amr": "audio/amr",
+    ".3gp": "audio/3gpp",
   };
   const viewType = VIEWABLE[extensionOf(name)];
 

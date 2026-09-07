@@ -20,7 +20,12 @@ import {
 } from "@/lib/candidateStatus";
 import { normaliseEmail, normalisePhone } from "@/lib/identity";
 import { isCandidateOpen, type OpenSource } from "@/lib/followUp";
-import { currentDocument, type CandidateDocument, type DocumentKind } from "@/lib/documents";
+import {
+  currentDocument,
+  keepsHistory,
+  type CandidateDocument,
+  type DocumentKind,
+} from "@/lib/documents";
 import { needsBack, type IdDocumentType } from "@/lib/identityDocuments";
 import { isVerificationKind } from "@/lib/verification";
 
@@ -421,13 +426,14 @@ export function deleteCandidate(id: string): Promise<Candidate | null> {
  *
  * Two behaviours, deliberately different.
  *
- * An identity photograph never displaces its predecessor. When a recruiter
- * sends someone back for a clearer picture, what they sent the first time is
- * the only record of what was actually submitted — and the interesting
- * question is often whether the second attempt is the same document
- * photographed better or a different document entirely, which cannot be asked
- * at all once the first one is gone. The old record is marked superseded and
- * kept; it leaves when a recruiter deletes it by hand.
+ * An identity photograph or a voice recording never displaces its
+ * predecessor. When a recruiter sends someone back for a clearer picture, what
+ * they sent the first time is the only record of what was actually submitted —
+ * and the interesting question is often whether the second attempt is the same
+ * document photographed better or a different document entirely, which cannot
+ * be asked at all once the first one is gone. The same holds for a re-recorded
+ * assessment. The old record is marked superseded and kept; it leaves when a
+ * recruiter deletes it by hand.
  *
  * Everything else — a CV, a cover letter, a certificate — is replaced. There
  * is no evidential question about a CV, and the key of the file it replaced is
@@ -444,7 +450,7 @@ export function addDocument(
     if (!c) return { list, result: { ok: false } };
     const docs = c.documents ?? [];
 
-    if (isVerificationKind(doc.kind)) {
+    if (keepsHistory(doc.kind)) {
       const now = new Date().toISOString();
       c.documents = [
         ...docs.map((d) =>

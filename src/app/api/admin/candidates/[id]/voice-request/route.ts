@@ -17,6 +17,13 @@ import { siteConfig } from "@/config/site";
 
 export const runtime = "nodejs";
 
+function baseUrl(req: NextRequest): string {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, "");
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
+  return `${proto}://${host}`;
+}
+
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await verifyAdminRequest(req.headers.get("x-csrf-token")))) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -34,6 +41,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       fullName: updated.fullName || "Candidate",
       email,
       position: updated.position || undefined,
+      // Their own assessment link. The recording step appears on it, so there
+      // is no second address for them to trust and nothing to match up here.
+      recordUrl: `${baseUrl(req)}/interview?c=${id}`,
     };
     const result = await sendEmail({
       to: email,

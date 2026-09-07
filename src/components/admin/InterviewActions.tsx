@@ -144,8 +144,9 @@ export function InterviewActions(props: InterviewActionsProps) {
           <>
             <strong className="text-navy-900">{props.fullName || "This candidate"}</strong> will be
             emailed at <strong className="text-navy-900">{props.email}</strong> with the
-            congratulations, the voice-assessment script, and instructions to record and send it
-            back on WhatsApp.
+            congratulations, the voice-assessment script, and a link to their own assessment page
+            to record it on. Sending this again reopens that step for them, and keeps any
+            recording they have already sent.
           </>
         }
       />
