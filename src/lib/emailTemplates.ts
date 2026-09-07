@@ -11,7 +11,6 @@
  * require and which raises deliverability.
  */
 import { siteConfig } from "@/config/site";
-import { voiceScript } from "@/lib/voice";
 import { OFFER_LINK_TTL_DAYS } from "@/lib/token";
 
 const NAVY = "#0f1035";
@@ -1069,6 +1068,12 @@ export interface VoiceAssessmentInvite {
  *
  * This single email now carries what used to be two separate WhatsApp
  * messages: the congratulations, and the request itself.
+ *
+ * It does not carry the script. The script belongs on the page where the
+ * recording is made, in front of them while they read it — in the email it
+ * only invited people to read from a phone they were also recording on, and
+ * it made a short, clear message into a wall of text that buries the one
+ * thing they have to do.
  */
 export function voiceAssessmentSubject(): string {
   return `Congratulations — next step: your voice assessment`;
@@ -1078,30 +1083,32 @@ export function voiceAssessmentSubject(): string {
 export function voiceAssessmentText(invite: VoiceAssessmentInvite): string {
   const name = firstNameOf(invite.fullName);
   return [
-    `Hi ${name},`,
+    `Dear ${name},`,
     ``,
-    `Congratulations! You have successfully completed the online interview, and you performed`,
-    `very well. Thank you for taking the time to answer all the questions carefully — we are`,
-    `pleased to move your application to the next stage.`,
+    // Two sentences, one line each. The role is interpolated and can be long,
+    // so it ends a sentence rather than sitting mid-clause across a hand-made
+    // line break, which read as three fragments.
+    `Congratulations. You have passed the online interview${invite.position ? ` for the ${invite.position} role` : ""}.`,
+    `We are pleased to invite you to the next stage.`,
     ``,
-    `The next step is a short voice assessment. We use it to evaluate your pronunciation,`,
-    `communication skills, fluency, and voice clarity.`,
+    `The next step is a short voice assessment. It helps us hear your pronunciation,`,
+    `fluency and clarity — the things a written interview cannot show us.`,
     ``,
-    `Please record a voice message reading the text below — slowly, clearly and naturally:`,
-    ``,
-    voiceScript(invite.fullName),
-    ``,
-    `Somewhere quiet, open your link below and record it straight on the page. You can listen`,
-    `back and record again before you send it, and if you would rather use your phone's own`,
-    `voice recorder you can attach the file there instead:`,
+    `Open your personal link and follow the steps on the page:`,
     ``,
     invite.recordUrl,
     ``,
-    `The link is yours alone, so we know the recording is from you — there is nothing for you`,
-    `to write and nothing for us to match up. It takes about a minute.`,
+    `You will find a short passage to read aloud, and you can record it directly on the`,
+    `page or attach a recording made with your phone. Please do it somewhere quiet. It`,
+    `takes about a minute, and you can listen back and record again before you send it.`,
     ``,
-    `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
+    `The link is personal to you, so there is nothing you need to write and nothing for`,
+    `us to match up.`,
     ``,
+    `If you have any questions, simply reply to this email.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
     `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
     siteConfig.url,
   ].join("\n");
@@ -1112,7 +1119,18 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
   const name = esc(firstNameOf(invite.fullName));
   const company = esc(siteConfig.company.name);
   const url = esc(invite.recordUrl);
-  const script = esc(voiceScript(invite.fullName));
+  const role = invite.position ? ` for the <strong style="color:${NAVY};">${esc(invite.position)}</strong> role` : "";
+
+  /** One numbered line of "what happens on the page". */
+  const step = (n: number, text: string) => `
+    <tr>
+      <td width="26" valign="top" style="padding:0 0 12px 0;font:700 15px/1.55 Arial,Helvetica,sans-serif;color:#b06e0c;">
+        ${n}.
+      </td>
+      <td style="padding:0 0 12px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+        ${text}
+      </td>
+    </tr>`;
 
   return `<!doctype html>
 <html lang="en">
@@ -1123,7 +1141,7 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
 </head>
 <body style="margin:0;padding:0;background:${CREAM};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-  You passed the interview — here is your voice assessment.
+  You have passed the interview. Your voice assessment takes about a minute.
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
@@ -1143,46 +1161,50 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
       <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
 
         <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
-          Congratulations, ${name}!
+          Congratulations, ${name}
         </h1>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          You have successfully completed the online interview, and you performed very well.
-          Thank you for taking the time to answer all the questions carefully — we are pleased to
-          move your application to the next stage.
+          You have passed the online interview${role}, and we are pleased to invite you to the
+          next stage.
         </p>
 
-        <p style="margin:0 0 20px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          The next step is a short <strong style="color:${NAVY};">voice assessment</strong>. We use
-          it to evaluate your pronunciation, communication skills, fluency, and voice clarity.
+        <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          The next step is a short <strong style="color:${NAVY};">voice assessment</strong>. It
+          helps us hear your pronunciation, fluency and clarity &mdash; the things a written
+          interview cannot show us. It takes about a minute.
         </p>
 
-        <p style="margin:0 0 12px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Please record a voice message reading the text below &mdash; slowly, clearly and
-          naturally:
-        </p>
-
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 26px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
           <tr>
-            <td style="padding:18px 22px;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};font-style:italic;">
-              ${script}
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Start your voice assessment
+              </a>
             </td>
           </tr>
         </table>
 
-        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Somewhere quiet, open your link and record it straight on the page. You can listen back
-          and record again before you send it &mdash; and if you would rather use your phone&rsquo;s
-          own voice recorder, you can attach the file there instead.
-        </p>
-
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px 0;">
+        <!-- What is behind the button, so pressing it is not a leap of faith.
+             The passage itself stays on the page: in an email it invited
+             people to read from the phone they were recording on, and it
+             buried the one thing they actually have to do. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 26px 0;">
           <tr>
-            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
-              <a href="${url}" style="display:inline-block;padding:15px 34px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
-                Record my voice assessment
-              </a>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 14px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                What happens on the page
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${step(1, "A short passage is shown for you to read aloud.")}
+                ${step(2, "Record it there and then, or attach a recording made with your phone.")}
+                ${step(3, "Listen back, and record again if you would like to.")}
+                ${step(4, "Send it. Nothing to write, nothing to attach to an email.")}
+              </table>
+              <p style="margin:6px 0 0 0;font:400 14px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                Please record somewhere quiet, at your normal speaking pace.
+              </p>
             </td>
           </tr>
         </table>
@@ -1196,8 +1218,8 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
                style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
           <tr>
             <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
-              The link is yours alone, so we know the recording is from you &mdash; there is
-              nothing for you to write and nothing for us to match up. It takes about a minute.
+              This link is personal to you. Please do not share it &mdash; it is how we know the
+              recording is yours.
             </td>
           </tr>
         </table>
