@@ -848,7 +848,7 @@ export interface IdentityReminderEmail {
  * people who are being careful, and we would rather answer their question.
  */
 export function identityReminderSubject(): string {
-  return `One step left before your ${siteConfig.company.name} agreement`;
+  return `Identity verification required to issue your ${siteConfig.company.name} agreement`;
 }
 
 export function identityReminderText(invite: IdentityReminderEmail): string {
@@ -862,10 +862,6 @@ export function identityReminderText(invite: IdentityReminderEmail): string {
     `One step remains before we can issue your written agreement: a short identity`,
     `check. We ask this of everyone we engage, and we cannot prepare a contract`,
     `without it.`,
-    ``,
-    `Open your personal link and follow the steps on the page:`,
-    ``,
-    invite.uploadUrl,
     ``,
     `You will be asked for a photo of your passport, national identity card or`,
     `driver's licence, and a photo of you holding it. It takes about a minute from`,
@@ -882,6 +878,10 @@ export function identityReminderText(invite: IdentityReminderEmail): string {
     `- Stored privately. Nobody can open them without signing in.`,
     `- Seen only by our recruitment team.`,
     `- Used only to confirm who you are, and never shared with anyone else.`,
+    ``,
+    `Open your personal link and follow the steps on the page:`,
+    ``,
+    invite.uploadUrl,
     ``,
     `WE WILL NEVER ASK YOU FOR`,
     ``,
@@ -960,27 +960,14 @@ export function identityReminderHtml(invite: IdentityReminderEmail): string {
           licence, and a photo of you holding it.
         </p>
 
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
-          <tr>
-            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
-              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
-                Complete my identity check
-              </a>
-            </td>
-          </tr>
-        </table>
-
-        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
-          Button not working? Copy this link into your browser:<br>
-          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
-        </p>
-
         <!-- Being asked for a passport by email after accepting a remote offer
              is exactly what a scam looks like. Earning the request matters more
              here than making it, so what happens to the photographs and what we
-             will never ask for are both stated plainly. -->
+             will never ask for are both stated plainly — and the button comes
+             after that reassurance, not before it, so nobody is asked to click
+             before they have been given a reason to. -->
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 18px 0;">
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 26px 0;">
           <tr>
             <td style="padding:20px 22px;">
               <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
@@ -1002,6 +989,21 @@ export function identityReminderHtml(invite: IdentityReminderEmail): string {
             </td>
           </tr>
         </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Complete my identity check
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
