@@ -81,12 +81,15 @@ export function OfferAcceptForm({
   const [address, setAddress] = useState(initial.address);
   const [postcode, setPostcode] = useState("");
 
-  // 09:00 is the commonest answer, so it is the one already selected; the
-  // timezone fills itself in from the browser once this is on screen.
+  // No days chosen to begin with. A pre-ticked Monday-to-Friday is a schedule
+  // we picked and they agreed to by not noticing — and the whole point of
+  // asking is that the days are theirs. The start time and timezone are safe
+  // to prefill: one is a common default they can see, the other is read from
+  // their own device.
   const [availability, setAvailability] = useState<AvailabilityValue>({
     startTime: "09:00",
     timeZone: "",
-    days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    days: [],
   });
 
   const [agreed, setAgreed] = useState(false);

@@ -104,12 +104,19 @@ export function AvailabilityPicker({
           You will be available {value.startTime} – {endTime}
           {overnight ? " (ending the next day)" : ""}
           {chosen === REQUIRED_DAYS ? (
-            <>
-              {" "}
-              on {value.days.map((d) => DAY_LABELS[d]).join(", ")}
-            </>
+            <> on {value.days.map((d) => DAY_LABELS[d]).join(", ")}</>
           ) : null}
           .
+          {/* Nothing is ticked for them, so the sentence is unfinished until
+              they finish it — which is a clearer prompt than an error after
+              they press the button. */}
+          {chosen < REQUIRED_DAYS ? (
+            <span className="text-brand-800">
+              {" "}
+              Now choose the {REQUIRED_DAYS} days you will work
+              {chosen ? ` — ${REQUIRED_DAYS - chosen} to go` : ""}.
+            </span>
+          ) : null}
         </p>
         <p className="mt-1.5 text-xs leading-relaxed text-navy-600">
           The window is {WINDOW_HOURS} hours. You will work at most{" "}
