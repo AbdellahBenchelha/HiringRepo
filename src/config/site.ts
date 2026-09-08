@@ -183,8 +183,8 @@ export const siteConfig = {
   legal: {
     registeredName: "WorkRoute Ltd.", // PLACEHOLDER
     businessType: "Private Limited Company", // PLACEHOLDER
-    registrationNumber: "REG-000000000", // PLACEHOLDER
-    taxNumber: "TAX-000000000", // PLACEHOLDER
+    /** Companies House, Scotland. Verified — not a placeholder. */
+    registrationNumber: "SC238030",
     registeredAddress:
       "65 Stroude Road, Skeabrae, KW17 0AX, United Kingdom",
     websiteOwner: "WorkRoute Ltd.", // PLACEHOLDER

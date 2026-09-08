@@ -15,7 +15,6 @@ export default function LegalNoticePage() {
     { label: "Registered company name", value: legal.registeredName },
     { label: "Legal business type", value: legal.businessType },
     { label: "Registration number", value: legal.registrationNumber },
-    { label: "Tax number", value: legal.taxNumber },
     { label: "Registered address", value: legal.registeredAddress },
     { label: "Email", value: contact.recruitmentEmail },
     { label: "Phone number", value: contact.phone },
