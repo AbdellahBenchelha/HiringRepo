@@ -3,7 +3,6 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getVerificationSettings } from "@/lib/verificationStore";
 import { getNotificationSettings } from "@/lib/notificationSettings";
 import { countries } from "@/config/countries";
-import { AdminShell } from "@/components/admin/AdminShell";
 import { CountryListEditor } from "@/components/admin/CountryListEditor";
 import { QuietNotificationsToggle } from "@/components/admin/QuietNotificationsToggle";
 
@@ -20,9 +19,9 @@ export default async function AdminVerificationSettingsPage() {
   ]);
 
   return (
-    <AdminShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">ID verification</h1>
+    <>
+      <header className="mb-5">
+        <h2 className="text-lg font-bold text-navy-900">ID verification</h2>
         <p className="mt-1 max-w-3xl text-sm text-navy-500">
           Choose which countries have to prove their identity before their application goes
           further. Everyone else is unaffected.
@@ -70,6 +69,6 @@ export default async function AdminVerificationSettingsPage() {
           </li>
         </ul>
       </div>
-    </AdminShell>
+    </>
   );
 }

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getCvSettings } from "@/lib/cvStore";
 import { countries } from "@/config/countries";
-import { AdminShell } from "@/components/admin/AdminShell";
 import { CountryListEditor } from "@/components/admin/CountryListEditor";
 
 export const metadata: Metadata = {
@@ -15,9 +14,9 @@ export default async function AdminCvSettingsPage() {
   const settings = await getCvSettings();
 
   return (
-    <AdminShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">CV requirement</h1>
+    <>
+      <header className="mb-5">
+        <h2 className="text-lg font-bold text-navy-900">CV requirement</h2>
         <p className="mt-1 max-w-3xl text-sm text-navy-500">
           Choose which countries must attach a CV to apply. Everywhere else a CV stays optional.
         </p>
@@ -60,6 +59,6 @@ export default async function AdminCvSettingsPage() {
           </li>
         </ul>
       </div>
-    </AdminShell>
+    </>
   );
 }

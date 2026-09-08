@@ -11,9 +11,10 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/candidates", label: "Candidates", icon: "users" },
   { href: "/admin/interviews", label: "Interviews", icon: "chat" },
   { href: "/admin/accepted", label: "Accepted", icon: "checkCircle" },
-  { href: "/admin/settings/verification", label: "ID checks", icon: "shield" },
-  { href: "/admin/settings/manual-invite", label: "Manual invites", icon: "clock" },
-  { href: "/admin/settings/cv", label: "CV requirement", icon: "upload" },
+  // One entry, three sections behind it. As three items they sat among the
+  // tabs where candidates are actually worked, making rules you change once a
+  // month look like part of the daily round.
+  { href: "/admin/settings", label: "Settings", icon: "settings" },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {

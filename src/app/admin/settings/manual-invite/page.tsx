@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getManualInviteSettings } from "@/lib/manualInviteStore";
 import { countries } from "@/config/countries";
-import { AdminShell } from "@/components/admin/AdminShell";
 import { CountryListEditor } from "@/components/admin/CountryListEditor";
 
 export const metadata: Metadata = {
@@ -16,9 +15,9 @@ export default async function AdminManualInvitePage() {
   const settings = await getManualInviteSettings();
 
   return (
-    <AdminShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">Manual invitations</h1>
+    <>
+      <header className="mb-5">
+        <h2 className="text-lg font-bold text-navy-900">Manual invitations</h2>
         <p className="mt-1 max-w-3xl text-sm text-navy-500">
           Choose which countries do not get their assessment link automatically. Applications still
           arrive as normal — you decide when to send the link.
@@ -68,6 +67,6 @@ export default async function AdminManualInvitePage() {
           </li>
         </ul>
       </div>
-    </AdminShell>
+    </>
   );
 }
