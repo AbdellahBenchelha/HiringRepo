@@ -1,49 +1,81 @@
 /**
- * The live identity check, run by Persona.
+ * The live identity check, run by whichever provider the recruiter is using.
  *
  * When the photographs a candidate sent cannot settle the question — a blurred
  * document, a face that could be anyone, a card that looks retouched — the
- * recruiter creates an inquiry in Persona for that one person and pastes its
- * link here. Persona then does what photographs by email cannot: it watches
- * the document and the face at the same moment, on a device it can measure.
+ * recruiter creates a session for that one person with their provider and
+ * pastes its link here. The provider then does what photographs by email
+ * cannot: it watches the document and the face at the same moment, on a device
+ * it can measure.
  *
  * Pure module — no filesystem, no node built-ins — so the admin form and the
  * route that sends the email agree on what a usable link is.
  */
 
 /**
- * Where a verification link is allowed to point.
+ * Providers whose domains are recognised on sight.
  *
- * The whole feature is "type a URL, and we email it to a candidate over the
- * company's name". That is a phishing tool with a nice interface unless the
- * destination is pinned: an admin session in the wrong hands could otherwise
- * send a bank login page to fifty people who are expecting a message from us
- * and inclined to trust it. Pinning it to the provider costs the recruiter
- * nothing, because that is the only place their links come from.
+ * Not an allowlist. The list decides whether the dialog says "Onfido link" or
+ * "we do not recognise this domain" — a sanity check on a URL pasted between
+ * two browser tabs, not a rule about who may be used. New providers appear,
+ * accounts get custom domains, and a hiring team blocked from sending a
+ * perfectly good link because this file has not heard of Veriff is a worse
+ * outcome than an unrecognised domain going out with a warning attached.
  */
-const ALLOWED_HOSTS = ["withpersona.com"] as const;
+const KNOWN_PROVIDERS: { host: string; name: string }[] = [
+  { host: "withpersona.com", name: "Persona" },
+  { host: "onfido.com", name: "Onfido" },
+  { host: "onfido.app", name: "Onfido" },
+  { host: "veriff.com", name: "Veriff" },
+  { host: "veriff.me", name: "Veriff" },
+  { host: "sumsub.com", name: "Sumsub" },
+  { host: "jumio.com", name: "Jumio" },
+  { host: "netverify.com", name: "Jumio" },
+  { host: "idenfy.com", name: "iDenfy" },
+  { host: "shuftipro.com", name: "Shufti Pro" },
+  { host: "yoti.com", name: "Yoti" },
+  { host: "trulioo.com", name: "Trulioo" },
+  { host: "didit.me", name: "Didit" },
+  { host: "ondato.com", name: "Ondato" },
+  { host: "hyperverge.co", name: "HyperVerge" },
+  { host: "verify.stripe.com", name: "Stripe Identity" },
+  { host: "complycube.com", name: "ComplyCube" },
+];
 
-export const PROVIDER_NAME = "Persona";
 export const MAX_LINK_LENGTH = 600;
 
-function hostAllowed(host: string): boolean {
-  const lower = host.toLowerCase();
-  return ALLOWED_HOSTS.some((h) => lower === h || lower.endsWith(`.${h}`));
+/** The provider behind a link, when the domain is one we know. */
+export function providerFor(url: string): string | null {
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  const hit = KNOWN_PROVIDERS.find((p) => host === p.host || host.endsWith(`.${p.host}`));
+  return hit?.name ?? null;
 }
 
 export type LinkCheck =
-  | { ok: true; url: string }
+  | { ok: true; url: string; provider: string | null }
   | { ok: false; problem: string };
 
 /**
- * Is this a link we are willing to send to a candidate?
+ * Is this a link we can send to a candidate?
  *
- * Returns the URL normalised by the parser rather than the raw string, so what
- * is stored and what was checked are the same text.
+ * Deliberately permissive about *where* it points and strict about *how*. The
+ * recruiter chooses the provider; the one thing not left to a typo is the
+ * scheme, because this link asks somebody to photograph their passport and
+ * carries a session identifier, and over plain http both are readable by
+ * anyone between them and the provider. No real provider serves that flow over
+ * http either, so refusing it never blocks a genuine link.
+ *
+ * Returns the URL as the parser normalised it, so what is stored and what was
+ * checked are the same text.
  */
 export function checkVerificationLink(input: string): LinkCheck {
   const raw = (input ?? "").trim();
-  if (!raw) return { ok: false, problem: `Paste the ${PROVIDER_NAME} link for this candidate.` };
+  if (!raw) return { ok: false, problem: "Paste the verification link for this candidate." };
   if (raw.length > MAX_LINK_LENGTH) {
     return { ok: false, problem: "That link is too long to be a verification link." };
   }
@@ -52,20 +84,23 @@ export function checkVerificationLink(input: string): LinkCheck {
   try {
     url = new URL(raw);
   } catch {
-    return { ok: false, problem: "That is not a valid link. Paste the whole URL, starting https://" };
-  }
-
-  if (url.protocol !== "https:") {
-    return { ok: false, problem: "The link must start with https://" };
-  }
-  if (!hostAllowed(url.hostname)) {
     return {
       ok: false,
-      problem: `We only send ${PROVIDER_NAME} links (withpersona.com). Check you copied the right one.`,
+      problem: "That is not a valid link. Paste the whole URL, starting https://",
     };
   }
 
-  return { ok: true, url: url.toString() };
+  if (url.protocol !== "https:") {
+    return {
+      ok: false,
+      problem: "The link must start with https:// — an identity check must not run over http.",
+    };
+  }
+  if (!url.hostname.includes(".")) {
+    return { ok: false, problem: "That link has no domain in it. Check you copied the whole URL." };
+  }
+
+  return { ok: true, url: url.toString(), provider: providerFor(url.toString()) };
 }
 
 export interface LiveVerificationState {
@@ -103,5 +138,5 @@ export const LIVE_STAGE_LABEL: Record<
   none: "Not sent",
   sent: "Sent — not opened yet",
   opened: "Opened — not started",
-  started: `Started at ${PROVIDER_NAME}`,
+  started: "Started with the provider",
 };

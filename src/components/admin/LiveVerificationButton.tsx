@@ -6,18 +6,18 @@ import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
   LIVE_STAGE_LABEL,
-  PROVIDER_NAME,
   checkVerificationLink,
   liveVerificationStage,
+  providerFor,
   type LiveVerificationState,
 } from "@/lib/liveVerification";
 
 /**
  * Send a candidate a live identity check.
  *
- * Used when photographs could not settle the question: the recruiter creates
- * an inquiry for that one person in Persona and pastes its link here, and we
- * email it to them wrapped in our own page.
+ * Used when photographs could not settle the question: the recruiter creates a
+ * session for that one person with whichever provider they are using and
+ * pastes its link here, and we email it to them wrapped in our own page.
  *
  * Every send is deliberate. There is a link to paste, so the dialog always
  * opens, and where one has already gone out it says how many and when —
@@ -57,6 +57,11 @@ export function LiveVerificationButton({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [sent, setSent] = useState(false);
+
+  // Recognised on sight, or not. Either way the link can be sent — this only
+  // decides whether the dialog nods at it or raises an eyebrow.
+  const provider = providerFor(url.trim());
+  const unknownDomain = !provider && /^https:\/\/\S+\.\S+/i.test(url.trim());
 
   const hasEmail = !!email?.includes("@");
   const count = state.liveVerificationCount ?? 0;
@@ -114,7 +119,7 @@ export function LiveVerificationButton({
         disabled={!hasEmail || busy}
         title={
           hasEmail
-            ? `Email them a ${PROVIDER_NAME} link to verify on their phone`
+            ? "Email them a verification link to complete on their phone"
             : "No email on file"
         }
         className="inline-flex items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3.5 py-1.5 text-xs font-bold text-brand-800 transition hover:bg-brand-100 disabled:opacity-40"
@@ -182,21 +187,38 @@ export function LiveVerificationButton({
             </p>
 
             <label className="mt-3 block text-xs font-bold text-navy-700">
-              Their {PROVIDER_NAME} link
+              Their verification link
               <input
                 value={url}
                 onChange={(e) => {
                   setUrl(e.target.value);
                   setProblem("");
                 }}
-                placeholder="https://withpersona.com/verify?inquiry-id=…"
+                placeholder="https://…"
                 className="input mt-1.5 !py-2 text-sm font-normal"
               />
             </label>
-            <p className="mt-1.5 text-xs text-navy-500">
-              Create the inquiry for this candidate in {PROVIDER_NAME} and paste its link. We only
-              send links to withpersona.com.
-            </p>
+
+            {/* Any provider — Persona, Onfido, Veriff, whoever this candidate
+                was set up with. The domain is read back rather than ruled on,
+                because the mistake worth catching is a link pasted from the
+                wrong browser tab, and only the person who created it knows
+                which tab was right. */}
+            {provider ? (
+              <p className="mt-1.5 text-xs font-medium text-green-700">
+                Recognised as a {provider} link.
+              </p>
+            ) : unknownDomain ? (
+              <p className="mt-1.5 text-xs font-medium text-amber-700">
+                We do not recognise this domain. It will still be sent — check it is the link your
+                verification provider gave you for this candidate.
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-navy-500">
+                Create the session for this candidate with your verification provider and paste its
+                link here. Any provider is fine.
+              </p>
+            )}
 
             {problem ? (
               <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">

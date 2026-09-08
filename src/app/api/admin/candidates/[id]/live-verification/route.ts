@@ -15,13 +15,15 @@ import { siteConfig } from "@/config/site";
  * Email a candidate their live identity check.
  *
  * Sent by hand, one candidate at a time, with a link the recruiter created for
- * that person in Persona. Nothing here runs on a schedule and nothing sends
- * itself: the decision that photographs were not enough is a human one.
+ * that person with whichever verification provider they use. Nothing here runs
+ * on a schedule and nothing sends itself: the decision that photographs were
+ * not enough is a human one.
  *
- * The link is checked again on this side. The form checks it so the recruiter
- * is told immediately, but this is the check that matters — the endpoint takes
- * a URL and emails it to a real person over the company's name, which without
- * a pinned destination is a phishing tool with a login screen.
+ * Which provider is the recruiter's business, so the destination is not
+ * restricted. The scheme is: this link asks somebody to photograph their
+ * passport and carries a session identifier, and over plain http both are
+ * readable by anyone in between. The provider host is logged with every send,
+ * so where the links went is answerable afterwards.
  */
 
 export const runtime = "nodejs";
@@ -89,7 +91,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   // eslint-disable-next-line no-console
-  console.log(`[live-verify] sent to ${email} (${saved.liveVerificationCount ?? 1})`);
+  console.log(
+    `[live-verify] sent to ${email} via ${link.provider ?? new URL(link.url).hostname}` +
+      ` (${saved.liveVerificationCount ?? 1})`,
+  );
   return NextResponse.json({
     ok: true,
     liveVerificationUrl: saved.liveVerificationUrl,
