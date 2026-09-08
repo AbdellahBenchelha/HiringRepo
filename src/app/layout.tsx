@@ -45,12 +45,11 @@ export const metadata: Metadata = {
     url: siteConfig.url,
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: siteConfig.company.name }],
   },
-  // site/creator attribute shared links to the account on X, so the card
-  // carries the WorkRoute handle instead of appearing unattributed.
+  // No handle: there is no company account on X any more, and attributing the
+  // card to one that does not exist is worse than leaving it unattributed. The
+  // card itself stays, because it is what gives a shared link its image.
   twitter: {
     card: "summary_large_image",
-    site: "@WorkRouteCo",
-    creator: "@WorkRouteCo",
     title: `${siteConfig.company.name} — Customer Support Careers`,
     description: siteConfig.company.tagline,
     images: ["/og-image.png"],

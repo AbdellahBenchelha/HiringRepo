@@ -174,7 +174,6 @@ export const siteConfig = {
   social: [
     { label: "LinkedIn", href: "https://www.linkedin.com/company/workroute-services-private-limited/", icon: "linkedin" },
     { label: "Facebook", href: "https://www.facebook.com/WorkRouteService/", icon: "facebook" },
-    { label: "X (Twitter)", href: "https://x.com/WorkRouteCo", icon: "x" },
   ],
 
   /** ----------------------------------------------------------------------- */
