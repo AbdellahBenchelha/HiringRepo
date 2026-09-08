@@ -347,7 +347,8 @@ export function IdentityUpload({
           Which document are you sending?
         </legend>
         <p className="mt-1 text-xs leading-relaxed text-navy-500">
-          We can only accept these three. Choose the one you have with you.
+          We can only accept these three. Choose the one you have with you — a
+          photograph of the document itself, not a scan, photocopy or screenshot.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {ID_DOCUMENT_TYPES.map((type) => {

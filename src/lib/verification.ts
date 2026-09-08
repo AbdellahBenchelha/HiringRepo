@@ -123,6 +123,12 @@ export const REUPLOAD_REASONS = [
       "The document you sent is not one we can accept. We can only accept a passport, a national identity card or a driver's licence. Please send one of those three.",
   },
   {
+    value: "scanned",
+    label: "Scan, photocopy or screenshot",
+    message:
+      "What you sent is a scan or a copy of your document rather than a photograph of the document itself. We cannot accept scans, photocopies, screenshots or printouts. Please take a new photograph of the physical document with your phone camera, holding it in your hand or laying it flat, so that the whole document and its edges are in the picture.",
+  },
+  {
     value: "missing-back",
     label: "Back of the card missing",
     message:
