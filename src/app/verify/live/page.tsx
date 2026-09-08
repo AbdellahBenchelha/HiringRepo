@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import QRCode from "qrcode";
 import { readLiveVerifyToken } from "@/lib/token";
 import { getCandidate } from "@/lib/store";
@@ -21,9 +22,25 @@ import { LiveVerifyStart } from "@/components/verify/LiveVerifyStart";
  * what a fraudulent link does, it takes the choice away from the person we are
  * asking to trust us, and it breaks the back button on the way.
  *
- * On a computer it offers a QR code instead, because the whole check needs a
- * phone camera and retyping a signed link by hand is not a plan.
+ * What it shows depends on the device, and shows only that: a button on a
+ * phone, a QR code on a computer. Offering both with advice about which to use
+ * puts the decision on the candidate — and the wrong choice ends at a camera
+ * step that cannot be finished, which means starting again.
  */
+
+/**
+ * Is this a phone or a tablet?
+ *
+ * Read from the user agent so the first paint is already right, then checked
+ * again in the browser against what the device can actually do. Neither test
+ * is perfect; together they are wrong rarely, and the browser gets the last
+ * word because it is the one that knows about the pointer.
+ */
+function looksMobile(userAgent: string): boolean {
+  return /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|BlackBerry|Opera Mini|IEMobile/i.test(
+    userAgent,
+  );
+}
 
 export const metadata: Metadata = {
   title: "Confirm your identity",
@@ -86,6 +103,7 @@ export default async function LiveVerifyPage({
   });
 
   const name = candidate.firstName || "";
+  const mobile = looksMobile((await headers()).get("user-agent") ?? "");
 
   return (
     <Shell>
@@ -94,44 +112,32 @@ export default async function LiveVerifyPage({
           Identity check
         </p>
         <h1 className="mt-2 text-2xl font-bold text-navy-900">
-          {name ? `${name}, let's finish this in two minutes` : "Let's finish this in two minutes"}
+          {mobile
+            ? name
+              ? `${name}, this takes about two minutes`
+              : "This takes about two minutes"
+            : "Continue on your phone"}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-navy-600">
-          The photographs you sent were not clear enough to complete your identity check. This way
-          is quicker: your phone guides you through it, and there is nothing to install and nothing
-          to fill in.
+          {mobile
+            ? "The photographs you sent were not clear enough to complete your identity check. This way is quicker — you will be guided step by step, and there is nothing to install and nothing to fill in."
+            : "The photographs you sent were not clear enough to complete your identity check. The quickest way to finish it uses your phone camera, so scan this code and it will carry on there."}
         </p>
 
-        {/* First and loudest. Somebody who starts this on a laptop reaches a
-            camera step they cannot finish and has to begin again. */}
-        <p className="mt-5 flex items-start gap-2.5 rounded-xl border-2 border-brand-300 bg-brand-50 p-4 text-sm font-bold text-navy-900">
-          <Icon name="phone" className="mt-0.5 h-4 w-4 shrink-0 text-brand-700" />
-          <span>
-            Please do this on your phone.
-            <span className="mt-0.5 block text-xs font-medium text-navy-600">
-              Your phone camera is what the check uses. On a computer, scan the code below to move
-              across.
-            </span>
-          </span>
-        </p>
-
-        <div className="mt-6">
-          <LiveVerifyStart token={token ?? ""} url={url} />
-        </div>
-
-        <div className="mt-7 border-t border-navy-100 pt-6">
-          <p className="text-sm font-bold text-navy-900">On a computer? Scan this with your phone</p>
-          <p className="mt-1 text-xs leading-relaxed text-navy-500">
-            Open the camera app on your phone and hold it up to the code — no app needed.
-          </p>
-          <div
-            className="mt-4 inline-block rounded-2xl border border-navy-100 bg-white p-3"
-            aria-label="QR code linking to your verification check"
-            dangerouslySetInnerHTML={{ __html: qr }}
+        {/* The one control that works on this device, and only that one. On a
+            computer there is no button at all: pressing one would lead to a
+            camera step that cannot be finished, and starting again is worse
+            than never having started. */}
+        <div className="mt-7">
+          <LiveVerifyStart
+            token={token ?? ""}
+            url={url}
+            qrSvg={qr}
+            serverIsMobile={mobile}
           />
         </div>
 
-        <div className="mt-7 rounded-xl bg-cream-100 p-4">
+        <div className="mt-8 rounded-xl bg-cream-100 p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-navy-700">What happens</p>
           <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-navy-600">
             {[
