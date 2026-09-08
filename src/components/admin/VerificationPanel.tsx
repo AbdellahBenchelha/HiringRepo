@@ -18,6 +18,8 @@ import {
   type VerificationStatus,
 } from "@/lib/verification";
 import { ID_DOCUMENT_LABEL, type IdDocumentType } from "@/lib/identityDocuments";
+import { LiveVerificationButton } from "@/components/admin/LiveVerificationButton";
+import type { LiveVerificationState } from "@/lib/liveVerification";
 
 /**
  * Review a candidate's identity photographs.
@@ -224,14 +226,22 @@ function fmt(iso?: string) {
 export function VerificationPanel({
   id,
   fullName,
+  email,
   documents,
   initial,
+  live,
+  onLiveChange,
   onChange,
 }: {
   id: string;
   fullName?: string;
+  /** Needed by the live check, which emails them rather than reopening a page. */
+  email?: string;
   documents?: CandidateDocument[];
   initial: VerificationState;
+  /** What has happened with the live identity check, if one was ever sent. */
+  live?: LiveVerificationState;
+  onLiveChange?: (state: LiveVerificationState) => void;
   /**
    * Report the new state upward. Without this the row behind the profile keeps
    * the value it was rendered with, so verifying someone leaves the table
@@ -600,6 +610,19 @@ export function VerificationPanel({
               Ask for new photos
             </button>
           ) : null}
+
+          {/* The other way of asking, for when better photographs will not
+              help: a blurred document can be retaken, but a face that could be
+              anybody's is not a photography problem. Kept beside "Ask for new
+              photos" because they answer the same question differently, and
+              which one to use is a judgement about why the check failed. */}
+          <LiveVerificationButton
+            id={id}
+            fullName={fullName}
+            email={email}
+            initial={live ?? {}}
+            onChange={(next) => onLiveChange?.(next)}
+          />
 
           {hasImages ? (
             <button

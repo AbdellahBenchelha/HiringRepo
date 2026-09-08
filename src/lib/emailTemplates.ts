@@ -1049,6 +1049,219 @@ export function identityReminderHtml(invite: IdentityReminderEmail): string {
 </html>`;
 }
 
+export interface LiveVerificationEmail {
+  fullName: string;
+  /** Our own page, which records the open and then hands over to the provider. */
+  startUrl: string;
+}
+
+/**
+ * Asking somebody to finish their identity check on their phone.
+ *
+ * Written for the moment it is actually sent: their photographs did not settle
+ * the question, and we are asking a person who has done as they were told to
+ * do it again, differently. So it does not say we could not verify them —
+ * that is an accusation, and the people it stings hardest are the honest ones
+ * who took the picture in bad light. It says the photographs were not clear
+ * enough for the check, and that this way is quicker.
+ *
+ * The button leads to our own page rather than straight to the provider. A
+ * message asking somebody to photograph their passport, whose only link goes
+ * to a domain they have never heard of, is indistinguishable from the scam it
+ * is not.
+ */
+export function liveVerificationSubject(): string {
+  return `We were unable to verify your identity — one quick step to finish it`;
+}
+
+export function liveVerificationText(invite: LiveVerificationEmail): string {
+  const name = firstNameOf(invite.fullName);
+  return [
+    `Dear ${name},`,
+    ``,
+    `Thank you for sending your identity documents. Unfortunately we were not able`,
+    `to complete the check from the photographs, so we cannot verify your identity`,
+    `that way.`,
+    ``,
+    `There is a quicker way to finish it, and it takes about two minutes.`,
+    ``,
+    `OPEN THIS ON YOUR PHONE`,
+    ``,
+    invite.startUrl,
+    ``,
+    `Your phone camera is what makes this work, so please open the link on a`,
+    `phone. If you are reading this on a computer, the page will show you a code`,
+    `you can scan with your phone camera to continue there.`,
+    ``,
+    `WHAT HAPPENS`,
+    ``,
+    `- You photograph your identity document, guided step by step.`,
+    `- You take a short live selfie so we can see it is really you.`,
+    `- That is all. There is nothing to install and nothing to fill in.`,
+    ``,
+    `The check is carried out by our verification provider. Your photographs are`,
+    `used only to confirm who you are.`,
+    ``,
+    `WE WILL NEVER ASK YOU FOR`,
+    ``,
+    `- A payment of any kind, for anything, at any stage.`,
+    `- Your bank card details or a password.`,
+    `- Money to release your first payment.`,
+    ``,
+    `This link is personal to you. Please do not forward it to anyone.`,
+    ``,
+    `If anything here is unclear, simply reply to this email and a person will`,
+    `answer you.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function liveVerificationHtml(invite: LiveVerificationEmail): string {
+  const name = esc(firstNameOf(invite.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(invite.startUrl);
+
+  const bullet = (text: string) => `
+    <tr>
+      <td style="padding:0 0 8px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+        <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; ${text}
+      </td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(liveVerificationSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Two minutes on your phone finishes your identity check.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          One quick step to finish your identity check
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Dear ${name}, thank you for sending your identity documents. Unfortunately we were not
+          able to complete the check from the photographs, so
+          <strong style="color:${NAVY};">we were unable to verify your identity</strong> that way.
+        </p>
+
+        <p style="margin:0 0 8px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          There is a quicker way to finish it, and it takes about
+          <strong style="color:${NAVY};">two minutes</strong>.
+        </p>
+
+        <!-- Said immediately above the button, not in the small print. The
+             whole thing needs a phone camera, and somebody who starts it on a
+             laptop has to begin again. -->
+        <p style="margin:0 0 18px 0;font:700 15px/1.5 Arial,Helvetica,sans-serif;color:#b06e0c;">
+          Please open this on your phone.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Start verification
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Reading this on a computer? Open the page anyway and it will show you a code to scan with
+          your phone camera. Or copy this link:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 18px 0;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                What happens
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${bullet("You photograph your identity document, guided step by step.")}
+                ${bullet("You take a short live selfie, so we can see it is really you.")}
+                ${bullet("That is all &mdash; nothing to install, nothing to fill in.")}
+              </table>
+              <p style="margin:10px 0 0 0;font:400 14px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                The check is carried out by our verification provider, and your photographs are used
+                only to confirm who you are.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                We will never ask you for
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${bullet("A payment of any kind, for anything, at any stage.")}
+                ${bullet("Your bank card details, or a password.")}
+                ${bullet("Money to release your first payment.")}
+              </table>
+              <p style="margin:8px 0 0 0;font:400 14px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                This link is personal to you &mdash; please do not forward it. If a message ever
+                asks you for any of those in our name, it did not come from us.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:22px 0 0 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          If anything here is unclear, simply reply to this email and a person will answer you.
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export interface OfferEmail {
   fullName: string;
   position: string;

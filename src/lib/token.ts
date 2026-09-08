@@ -109,6 +109,65 @@ export function readOfferToken(token: string | undefined | null): OfferTokenResu
   }
 }
 
+/**
+ * Link a candidate to one live identity check.
+ *
+ * Its own payload shape, with a marker of its own, so a token minted for one
+ * purpose cannot be spent on another: the signature covers the marker, so an
+ * offer link pasted into /verify/live fails the check rather than quietly
+ * resolving to the same candidate. They are different pages asking for
+ * different things, and one secret signs both.
+ */
+export interface LiveVerifyLink {
+  id: string;
+  /** ISO timestamp of the request this link belongs to. */
+  sentAt: string;
+}
+
+/** How long a live-check link stays usable. */
+export const LIVE_VERIFY_TTL_DAYS = 14;
+
+export function createLiveVerifyToken(link: LiveVerifyLink): string {
+  const body = b64url(Buffer.from(JSON.stringify({ v: "live", i: link.id, s: link.sentAt })));
+  return `${body}.${sign(body)}`;
+}
+
+export type LiveVerifyTokenResult =
+  | { ok: true; link: LiveVerifyLink }
+  | { ok: false; reason: "invalid" }
+  | { ok: false; reason: "expired" };
+
+export function readLiveVerifyToken(token: string | undefined | null): LiveVerifyTokenResult {
+  if (!token || !token.includes(".")) return { ok: false, reason: "invalid" };
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return { ok: false, reason: "invalid" };
+
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
+
+  try {
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as {
+      v?: unknown;
+      i?: unknown;
+      s?: unknown;
+    };
+    if (obj.v !== "live") return { ok: false, reason: "invalid" };
+    if (typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
+    if (typeof obj.s !== "string" || !obj.s) return { ok: false, reason: "invalid" };
+
+    const sentAt = Date.parse(obj.s);
+    if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
+    if (Date.now() - sentAt > LIVE_VERIFY_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      return { ok: false, reason: "expired" };
+    }
+    return { ok: true, link: { id: obj.i, sentAt: obj.s } };
+  } catch {
+    return { ok: false, reason: "invalid" };
+  }
+}
+
 /** Verify and decode a token. Returns null if missing, malformed, or tampered. */
 export function readInterviewToken(token: string | undefined | null): InterviewIdentity | null {
   if (!token || !token.includes(".")) return null;

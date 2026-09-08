@@ -301,8 +301,19 @@ export function CandidateProfileModal({
           <VerificationPanel
             id={candidate.id}
             fullName={candidate.fullName}
+            email={candidate.email}
             documents={candidate.documents}
             initial={verification}
+            live={{
+              liveVerificationUrl: candidate.liveVerificationUrl,
+              liveVerificationSentAt: candidate.liveVerificationSentAt,
+              liveVerificationCount: candidate.liveVerificationCount,
+              liveVerificationOpenedAt: candidate.liveVerificationOpenedAt,
+              liveVerificationLastOpenedAt: candidate.liveVerificationLastOpenedAt,
+              liveVerificationOpenCount: candidate.liveVerificationOpenCount,
+              liveVerificationStartedAt: candidate.liveVerificationStartedAt,
+            }}
+            onLiveChange={(live) => onChange(live)}
             onChange={(v) =>
               onChange(verificationPatch(v))
             }

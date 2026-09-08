@@ -78,6 +78,14 @@ export interface CandidateView {
   identityDocumentType?: IdDocumentType;
   identityReuploadRequestedAt?: string;
   identityReuploadReason?: string;
+  /** The live identity check: what was sent, and how far they got with it. */
+  liveVerificationUrl?: string;
+  liveVerificationSentAt?: string;
+  liveVerificationCount?: number;
+  liveVerificationOpenedAt?: string;
+  liveVerificationLastOpenedAt?: string;
+  liveVerificationOpenCount?: number;
+  liveVerificationStartedAt?: string;
   /**
    * Derived, not stored: a request for new photographs that has not been
    * answered yet. Computed here so the tables and the panel cannot disagree
@@ -193,6 +201,13 @@ export function toCandidateView(
     identityDocumentType: c.identityDocumentType,
     identityReuploadRequestedAt: c.identityReuploadRequestedAt,
     identityReuploadReason: c.identityReuploadReason,
+    liveVerificationUrl: c.liveVerificationUrl,
+    liveVerificationSentAt: c.liveVerificationSentAt,
+    liveVerificationCount: c.liveVerificationCount,
+    liveVerificationOpenedAt: c.liveVerificationOpenedAt,
+    liveVerificationLastOpenedAt: c.liveVerificationLastOpenedAt,
+    liveVerificationOpenCount: c.liveVerificationOpenCount,
+    liveVerificationStartedAt: c.liveVerificationStartedAt,
     identityReuploadPending: identityReuploadPending(c),
     voiceStatus: c.voiceStatus,
     voiceOpenedAt: c.voiceOpenedAt,

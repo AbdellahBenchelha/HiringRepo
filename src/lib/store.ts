@@ -183,6 +183,21 @@ export interface Candidate {
   identityReuploadRequestedAt?: string;
   identityReuploadReason?: string;
   /**
+   * The live identity check: a link created for this one candidate in Persona,
+   * emailed to them by hand when photographs could not settle the question.
+   *
+   * Sent, opened and started are kept apart because they are three different
+   * problems: an email that never arrived, a person hesitating over it, and a
+   * check already half-finished in the provider's dashboard.
+   */
+  liveVerificationUrl?: string;
+  liveVerificationSentAt?: string;
+  liveVerificationCount?: number;
+  liveVerificationOpenedAt?: string;
+  liveVerificationLastOpenedAt?: string;
+  liveVerificationOpenCount?: number;
+  liveVerificationStartedAt?: string;
+  /**
    * Whether the candidate has actually opened the voice-assessment page, and
    * how often.
    *
@@ -451,6 +466,67 @@ export function recordIdentityReminder(id: string): Promise<Candidate | null> {
     c.identityReminderSentAt = new Date().toISOString();
     c.identityReminderCount = (c.identityReminderCount ?? 0) + 1;
     return { list, result: c };
+  });
+}
+
+/**
+ * Record that a live identity check was emailed to a candidate.
+ *
+ * The link is stored with it. It is the only copy: the recruiter created it in
+ * Persona for this one person, and without it here a second attempt means
+ * going back to the provider's dashboard to find which inquiry belonged to
+ * whom. Sending again replaces the link, because the newest one is the one
+ * their email now points at.
+ */
+export function recordLiveVerificationSent(id: string, url: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.liveVerificationUrl = url;
+    c.liveVerificationSentAt = new Date().toISOString();
+    c.liveVerificationCount = (c.liveVerificationCount ?? 0) + 1;
+    // A fresh request, so what happened to the last one is history. Leaving
+    // the old marks would show "opened" against a link nobody has opened yet.
+    c.liveVerificationOpenedAt = undefined;
+    c.liveVerificationLastOpenedAt = undefined;
+    c.liveVerificationOpenCount = undefined;
+    c.liveVerificationStartedAt = undefined;
+    return { list, result: c };
+  });
+}
+
+/** They opened the page we sent them. Throttled like the other opens. */
+export function recordLiveVerificationOpened(id: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: false };
+
+    const now = Date.now();
+    const last = c.liveVerificationLastOpenedAt ?? c.liveVerificationOpenedAt;
+    if (last && now - new Date(last).getTime() < REOPEN_THROTTLE_MS) {
+      return { list, result: false };
+    }
+
+    const iso = new Date(now).toISOString();
+    if (!c.liveVerificationOpenedAt) c.liveVerificationOpenedAt = iso;
+    c.liveVerificationLastOpenedAt = iso;
+    c.liveVerificationOpenCount = (c.liveVerificationOpenCount ?? 0) + 1;
+    return { list, result: true };
+  });
+}
+
+/**
+ * They pressed through to the provider.
+ *
+ * Only the first time. This answers "did they ever get as far as starting",
+ * and a later attempt does not make that less true.
+ */
+export function recordLiveVerificationStarted(id: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || c.liveVerificationStartedAt) return { list, result: false };
+    c.liveVerificationStartedAt = new Date().toISOString();
+    return { list, result: true };
   });
 }
 
