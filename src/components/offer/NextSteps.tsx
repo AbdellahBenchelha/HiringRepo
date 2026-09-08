@@ -23,8 +23,12 @@ const STEPS: { title: string; body: string }[] = [
     body: "A photograph of your passport, national identity card or driver's licence, and one of you holding it. About a minute from a phone.",
   },
   {
-    title: "Our team reviews your file",
-    body: "We check everything is in order, then email you a date and time with a Google Meet link for a short video interview.",
+    // Named for the thing that happens to them, not for the work we do. "Our
+    // team reviews your file" describes our afternoon; this describes their
+    // next appointment, which is what somebody reading a list of steps is
+    // looking for.
+    title: "A short video interview",
+    body: "Our team checks everything is in order, then emails you a date and time with a Google Meet link. It is a short conversation, not another test.",
   },
   {
     title: "Your written agreement",
