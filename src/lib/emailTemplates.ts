@@ -540,7 +540,7 @@ export interface IdentityReuploadEmail {
  * whether the job is still there.
  */
 export function identityReuploadSubject(): string {
-  return `We need your ID photos again — ${siteConfig.company.name}`;
+  return `Identity Verification Unsuccessful – ${siteConfig.company.name}`;
 }
 
 export function identityReuploadText({ fullName, url, reason }: IdentityReuploadEmail): string {
@@ -611,7 +611,7 @@ export function identityReuploadHtml({ fullName, url, reason }: IdentityReupload
       <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
 
         <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
-          We need your ID photos again
+          Identity verification unsuccessful
         </h1>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
