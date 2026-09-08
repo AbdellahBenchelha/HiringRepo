@@ -451,6 +451,10 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
             ) : (
               visible.map(({ view: c }) => {
                 const p = pct(c.score ?? 0, c.total ?? 0);
+                // No answers on file: the interview happened somewhere else and
+                // somebody set the status by hand. Showing 0% in red for that
+                // would be a score this person never got.
+                const scored = c.total != null && c.total > 0;
                 return (
                   <tr key={c.id} className="align-top hover:bg-navy-50/40">
                     <td className="px-4 py-3 font-medium text-navy-900">
@@ -468,16 +472,26 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                         detectedCountryName={c.detectedCountryName}
                       />
                     </td>
-                    <td className="px-4 py-3 text-navy-500">{fmt(c.interviewCompletedAt)}</td>
+                    <td className="px-4 py-3 text-navy-500">
+                      {scored ? (
+                        fmt(c.interviewCompletedAt)
+                      ) : (
+                        <span className="text-navy-400">Marked by hand</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-navy-800">
-                      {c.score}/{c.total}
+                      {scored ? `${c.score}/${c.total}` : <span className="text-navy-400">—</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`font-semibold ${p >= 60 ? "text-green-600" : p >= 40 ? "text-amber-600" : "text-red-600"}`}
-                      >
-                        {p}%
-                      </span>
+                      {scored ? (
+                        <span
+                          className={`font-semibold ${p >= 60 ? "text-green-600" : p >= 40 ? "text-amber-600" : "text-red-600"}`}
+                        >
+                          {p}%
+                        </span>
+                      ) : (
+                        <span className="text-navy-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={c.status} />
@@ -511,12 +525,19 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                     </td>
                     <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
                       <div className="flex flex-col items-start gap-2 whitespace-nowrap">
-                        <Link
-                          href={`/admin/interviews/${c.id}`}
-                          className="text-sm font-medium text-brand-700 hover:text-brand-800"
-                        >
-                          View answers →
-                        </Link>
+                        {/* There is no answer sheet for an interview this
+                            system did not run, and a link to an empty one is a
+                            dead end dressed as a page. */}
+                        {scored ? (
+                          <Link
+                            href={`/admin/interviews/${c.id}`}
+                            className="text-sm font-medium text-brand-700 hover:text-brand-800"
+                          >
+                            View answers →
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-navy-400">No answers on file</span>
+                        )}
                         <div className="flex items-center gap-2">
                           <CandidateInfoButton onOpen={() => openProfile(c)} />
                           <DeleteCandidateButton candidate={c} onDeleted={dropRow} />

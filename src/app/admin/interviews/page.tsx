@@ -6,6 +6,7 @@ import { listCandidates } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
 import { toCandidateView } from "@/lib/candidateView";
 import { verificationStatus } from "@/lib/verification";
+import { reachedInterviewStage } from "@/lib/candidateStatus";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { InterviewsTable, type InterviewRow } from "@/components/admin/InterviewsTable";
 
@@ -31,7 +32,16 @@ export default async function AdminInterviewsPage({
     requiredCountries(),
     baseUrl(),
   ]);
-  const finished = all.filter((c) => c.interview);
+  /**
+   * Everybody past the interview, whether or not this system ran it.
+   *
+   * A recorded set of answers is one way to get here; the other is somebody
+   * setting the status by hand, which is what happens when the interview was a
+   * phone call, or happened before this site did. Both belong on the tab that
+   * requests ID checks, voice assessments and offers — those steps come after
+   * the interview regardless of where the interview took place.
+   */
+  const finished = all.filter((c) => c.interview || reachedInterviewStage(c.status));
 
   /**
    * Nobody has told this candidate they need to verify: verification is due
