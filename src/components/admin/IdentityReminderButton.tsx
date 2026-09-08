@@ -92,7 +92,7 @@ export function IdentityReminderButton({
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         <button
           type="button"
-          onClick={() => (recent ? setAsking(true) : void send())}
+          onClick={() => setAsking(true)}
           disabled={!hasEmail || busy}
           title={
             hasEmail
@@ -119,21 +119,41 @@ export function IdentityReminderButton({
         <p className="mt-1 text-[11px] font-medium text-amber-700">Not sent ({result}).</p>
       ) : null}
 
+      {/* Asked every time, not only on a repeat. The button sits in a table
+          row, and the row above is somebody else — a reminder that cannot be
+          unsent should say whose inbox it is about to land in before it goes,
+          not after. */}
       <ConfirmDialog
         open={asking}
         icon="mail"
-        title="Send another reminder?"
-        confirmLabel="Send reminder"
+        title={count ? "Send another reminder?" : "Send identity reminder?"}
+        confirmLabel={busy ? "Sending…" : "Send reminder"}
         busy={busy}
-        warning={`The last one went out on ${fmt(sentAt)}.`}
+        warning={
+          recent
+            ? `The last one went out on ${fmt(sentAt)}. Asking repeatedly in a short space of time is what makes a genuine request start to look like a scam.`
+            : undefined
+        }
         onCancel={() => setAsking(false)}
         onConfirm={() => void send()}
         body={
           <>
-            <strong className="text-navy-900">{candidate.fullName || "This candidate"}</strong> has
-            already been reminded {count === 1 ? "once" : `${count} times`} about their identity
-            documents. Asking repeatedly in a short space of time is the thing that makes a genuine
-            request start to look like a scam.
+            An email goes to{" "}
+            <strong className="text-navy-900">{candidate.fullName || "this candidate"}</strong>
+            {candidate.email ? (
+              <>
+                {" "}
+                at <span className="font-medium text-navy-800">{candidate.email}</span>
+              </>
+            ) : null}
+            , confirming that their acceptance is recorded and asking them to complete the identity
+            check so their agreement can be prepared. It links their own offer page.
+            {count ? (
+              <>
+                {" "}
+                They have already been reminded {count === 1 ? "once" : `${count} times`}.
+              </>
+            ) : null}
           </>
         }
       />
