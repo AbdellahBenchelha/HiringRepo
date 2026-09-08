@@ -8,6 +8,13 @@ import { PhoneInput } from "@/components/forms/PhoneInput";
 import { DateSelect } from "@/components/forms/DateSelect";
 import { ENGAGED_AS, validateConfirmed, type EngagedAs } from "@/lib/hiring";
 import { IdentityAsk } from "@/components/verify/IdentityStep";
+import {
+  AvailabilityPicker,
+  toAvailability,
+  type AvailabilityValue,
+} from "@/components/offer/AvailabilityPicker";
+import { validateAvailability } from "@/lib/availability";
+import { NextSteps } from "@/components/offer/NextSteps";
 
 /**
  * Accepting an offer, and correcting the record while doing it.
@@ -74,6 +81,14 @@ export function OfferAcceptForm({
   const [address, setAddress] = useState(initial.address);
   const [postcode, setPostcode] = useState("");
 
+  // 09:00 is the commonest answer, so it is the one already selected; the
+  // timezone fills itself in from the browser once this is on screen.
+  const [availability, setAvailability] = useState<AvailabilityValue>({
+    startTime: "09:00",
+    timeZone: "",
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+  });
+
   const [agreed, setAgreed] = useState(false);
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -99,7 +114,8 @@ export function OfferAcceptForm({
     // Checked here so the candidate is told before a round trip; checked again
     // on the server, because a browser check is a courtesy, not a control.
     const check = validateConfirmed(details());
-    const found = check.ok ? [] : check.problems;
+    const when = validateAvailability(toAvailability(availability));
+    const found = [...(check.ok ? [] : check.problems), ...(when.ok ? [] : when.problems)];
     if (!agreed) found.push("Please tick the box to confirm you accept the offer.");
     setProblems(found);
     if (found.length) {
@@ -112,7 +128,12 @@ export function OfferAcceptForm({
       const res = await fetch("/api/offer/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, action: "accept", details: details() }),
+        body: JSON.stringify({
+          token,
+          action: "accept",
+          details: details(),
+          availability: toAvailability(availability),
+        }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; problems?: string[] };
       if (data.ok) {
@@ -169,9 +190,14 @@ export function OfferAcceptForm({
         title="Thank you — your acceptance is confirmed"
         body={
           identity?.needed
-            ? "We have everything we need, including your identity documents. Our recruitment team will review them and send your written agreement for signature, along with everything you need for your first day."
-            : "We have everything we need. Our recruitment team will prepare your written agreement and send it to you for signature, along with everything you need for your first day."
+            ? "We have everything we need, including your identity documents."
+            : "We have everything we need."
         }
+        /* The step that follows is spelled out here above all, because this is
+           the screen somebody sees straight after photographing a passport.
+           Silence at that moment is what makes a genuine process feel like a
+           trap; a named next step does not. */
+        next
       />
     );
   }
@@ -399,6 +425,8 @@ export function OfferAcceptForm({
             </div>
           </div>
 
+          <AvailabilityPicker value={availability} onChange={setAvailability} />
+
           <div className="card p-6">
             <label className="flex cursor-pointer items-start gap-3">
               <input
@@ -465,23 +493,29 @@ function Done({
   tone,
   title,
   body,
+  next,
 }: {
   icon: "checkCircle" | "close";
   tone: "green" | "navy";
   title: string;
   body: string;
+  /** Show what happens between here and the written agreement. */
+  next?: boolean;
 }) {
   return (
-    <div className="card p-8 text-center">
-      <span
-        className={`inline-flex h-14 w-14 items-center justify-center rounded-full ${
-          tone === "green" ? "bg-green-100 text-green-700" : "bg-navy-100 text-navy-600"
-        }`}
-      >
-        <Icon name={icon} className="h-7 w-7" />
-      </span>
-      <h2 className="mt-4 text-xl font-bold text-navy-900">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-navy-600">{body}</p>
+    <div className="space-y-6">
+      <div className="card p-8 text-center">
+        <span
+          className={`inline-flex h-14 w-14 items-center justify-center rounded-full ${
+            tone === "green" ? "bg-green-100 text-green-700" : "bg-navy-100 text-navy-600"
+          }`}
+        >
+          <Icon name={icon} className="h-7 w-7" />
+        </span>
+        <h2 className="mt-4 text-xl font-bold text-navy-900">{title}</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-navy-600">{body}</p>
+      </div>
+      {next ? <NextSteps /> : null}
     </div>
   );
 }

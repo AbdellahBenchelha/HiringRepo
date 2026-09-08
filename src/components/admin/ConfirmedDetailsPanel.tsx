@@ -2,6 +2,15 @@
 
 import { Icon } from "@/components/Icon";
 import { CONFIRMED_LABELS, detailChanges, type ConfirmedDetails } from "@/lib/hiring";
+import {
+  COMPANY_TIME_LABEL,
+  MAX_HOURS_PER_DAY,
+  WINDOW_HOURS,
+  formatDays,
+  formatWindow,
+  offsetLabel,
+  windowInCompanyTime,
+} from "@/lib/availability";
 import type { CandidateView } from "@/lib/candidateView";
 
 /**
@@ -86,6 +95,32 @@ export function ConfirmedDetailsPanel({ candidate }: { candidate: CandidateView 
           </div>
         ))}
       </dl>
+
+      {/* The schedule they chose, in their time and in ours. A recruiter
+          arranging anything with this person needs the second line, and
+          working it out by hand is how calls get booked for the middle of
+          somebody's night. */}
+      {candidate.availability ? (
+        <div className="mt-4 rounded-lg border border-brand-200 bg-brand-50 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-900">
+            Availability they chose
+          </p>
+          <p className="mt-1.5 text-sm font-bold text-navy-900">
+            {formatWindow(candidate.availability)}{" "}
+            <span className="font-medium text-navy-600">
+              {candidate.availability.timeZone.replace(/_/g, " ")} (
+              {offsetLabel(candidate.availability.timeZone)})
+            </span>
+          </p>
+          <p className="mt-0.5 text-xs text-navy-600">
+            {windowInCompanyTime(candidate.availability)} {COMPANY_TIME_LABEL} ·{" "}
+            {formatDays(candidate.availability.days)}
+          </p>
+          <p className="mt-1.5 text-xs text-navy-500">
+            An {WINDOW_HOURS}-hour window; up to {MAX_HOURS_PER_DAY} hours worked a day.
+          </p>
+        </div>
+      ) : null}
 
       {changes.length > 0 ? (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">

@@ -61,8 +61,8 @@ export const siteConfig = {
    * after acceptance, with their own details in it.
    */
   sampleAgreement: {
-    /** e.g. "sample-contractor-agreement-2026-09.pdf". Empty = not published. */
-    file: "sample-contractor-agreement-2026-09.pdf",
+    /** e.g. "sample-contractor-agreement-2026-09-08.pdf". Empty = not published. */
+    file: "sample-contractor-agreement-2026-09-08.pdf",
     version: "",
   },
 

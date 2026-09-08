@@ -23,7 +23,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-09.pdf');
+const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-09-08.pdf');
 
 /**
  * The one party that is not a placeholder.
@@ -174,7 +174,10 @@ const html = `<!doctype html>
     <table class="terms">
       <tr><th>Services</th><td><span class="fill">[ROLE, e.g. customer support by email, live chat and telephone]</span></td></tr>
       <tr><th>Fee</th><td><span class="fill">[RATE]</span> per hour worked, in <span class="fill">[CURRENCY]</span></td></tr>
-      <tr><th>Guaranteed hours</th><td><span class="fill">[HOURS]</span> per week, guaranteed under clause 6, within <span class="fill">[AGREED WORKING WINDOW AND TIME ZONE]</span></td></tr>
+      <tr><th>Guaranteed hours</th><td><span class="fill">[HOURS]</span> per week, guaranteed under clause 6</td></tr>
+      <tr><th>Availability window</th><td><span class="fill">[START]</span> to <span class="fill">[END]</span> <span class="fill">[TIME ZONE]</span> — an 8-hour window, chosen by you</td></tr>
+      <tr><th>Working days</th><td><span class="fill">[FIVE DAYS OF THE WEEK]</span></td></tr>
+      <tr><th>Maximum work</th><td>5 hours per day, 25 hours per week</td></tr>
       <tr><th>Invoicing</th><td>Monthly in arrears</td></tr>
       <tr><th>Payment</th><td>Within <span class="fill">[N]</span> working days of a correct invoice, by bank transfer</td></tr>
       <tr><th>Notice</th><td><span class="fill">[N]</span> days, by either party, in writing</td></tr>
@@ -223,8 +226,8 @@ ${clause(3, 'Your status: independent contractor', `
       <li>We guarantee the weekly hours in the schedule, and clause 6 says what that means in
           practice. What we do not direct is how you work: the guarantee is about how much we
           commit to, not about who controls your day.</li>
-      <li>You decide how you carry out the services, subject to the quality standards and the agreed
-          working window.</li>
+      <li>You decide how you carry out the services, subject to the quality standards and the
+          availability window you chose under clause 5.</li>
     </ol>`)}
 
 ${clause(4, 'Your legal right to work in this way', `
@@ -241,12 +244,29 @@ ${clause(4, 'Your legal right to work in this way', `
       changes.
     </p>`)}
 
-${clause(5, 'Where and how you work', `
+${clause(5, 'Where and when you work', `
     <p>
       You provide the services from your own premises, using your own computer, headset and internet
       connection. You are responsible for their cost, maintenance and security. We will tell you the
       minimum technical requirements before you start.
     </p>
+    <p>
+      <strong>You choose your availability window, and it is eight hours long.</strong> You told us
+      when it starts and which five days of the week you work, and both are recorded in the schedule
+      above. Inside that window you will be asked to work no more than five hours in a day, and no
+      more than twenty-five hours in a week.
+    </p>
+    <ol class="sub-list">
+      <li>The window is longer than the work on purpose. Customer demand does not arrive evenly, and
+          the gap is what lets the work fall where it falls without either of us rescheduling.</li>
+      <li>You are not required to be available outside your window, and we will not treat time
+          outside it as time you were unavailable.</li>
+      <li>Your window and your days can change if we both agree the change in writing.</li>
+      <li>We give you access to our mobile application, for the notification that a customer request
+          is waiting, and to your account on our website, where requests are picked up. You may work
+          from either. Both are provided by us at no cost to you, and access ends when this
+          agreement does.</li>
+    </ol>
     <p>
       Any software, systems or accounts we give you access to remain ours or our client&rsquo;s. You
       may use them only for the services, and your access ends when this agreement does.
@@ -261,8 +281,8 @@ ${clause(6, 'Fees, invoicing and payment', `
     <ol class="sub-list">
       <li>We pay you the fee in the schedule for each hour worked, and for any guaranteed hour we
           did not give you work for.</li>
-      <li>The guarantee applies to the hours you were available for inside the agreed working
-          window. Hours you were not available for — time off you asked for, or time you did not
+      <li>The guarantee applies to the hours you were available for inside the availability window
+          in the schedule. Hours you were not available for — time off you asked for, or time you did not
           work when work was offered — are not guaranteed hours, and nothing in this clause requires
           you to be available outside that window.</li>
       <li>If you work more than the guaranteed hours in a week, at our request, we pay you for every

@@ -31,7 +31,8 @@ import { isVerificationKind } from "@/lib/verification";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
-import type { Offer } from "@/lib/offer";
+import { effectiveOffer, type Offer } from "@/lib/offer";
+import type { Availability } from "@/lib/availability";
 import type { ConfirmedDetails } from "@/lib/hiring";
 import type { CompanyCheck } from "@/lib/companyCheck";
 
@@ -94,6 +95,14 @@ export interface Candidate {
    */
   confirmedDetails?: ConfirmedDetails;
   confirmedDetailsAt?: string;
+  /**
+   * The eight-hour window and five days the candidate chose when accepting.
+   *
+   * Their choice, not ours, and stored with the timezone they picked it in —
+   * "08:00" from Casablanca and "08:00" from Lagos are an hour apart, and the
+   * schedule is the thing an agreement is built on.
+   */
+  availability?: Availability;
   /**
    * Result of looking this candidate up in the UK register of company
    * officers. Cached because it is a paid-for-with-requests lookup and a
@@ -837,6 +846,7 @@ export function acceptOfferWithDetails(
   id: string,
   offerSentAt: string,
   details: ConfirmedDetails,
+  availability?: Availability,
 ): Promise<OfferAnswerResult> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
@@ -852,6 +862,11 @@ export function acceptOfferWithDetails(
     const now = new Date().toISOString();
     c.confirmedDetails = details;
     c.confirmedDetailsAt = now;
+    if (availability) c.availability = availability;
+    // They accepted what the page showed them, which is the capped figure —
+    // so that is what the record says they accepted. The original survives on
+    // the offer as hoursCappedFrom, because their email still quotes it.
+    if (c.offer) c.offer = effectiveOffer(c.offer);
     c.offerAcceptedAt = now;
     c.status = "Hired";
     return { list, result: { ok: true, candidate: c } as OfferAnswerResult };

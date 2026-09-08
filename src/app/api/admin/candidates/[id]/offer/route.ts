@@ -4,7 +4,13 @@ import { getCandidate, recordOffer, setOfferOutcome } from "@/lib/store";
 import { sendEmail } from "@/lib/email";
 import { offerHtml, offerSubject, offerText } from "@/lib/emailTemplates";
 import { siteConfig } from "@/config/site";
-import { formatRate, offerProblems, ENGAGEMENT_TYPES, type Offer } from "@/lib/offer";
+import {
+  effectiveOffer,
+  formatRate,
+  offerProblems,
+  ENGAGEMENT_TYPES,
+  type Offer,
+} from "@/lib/offer";
 import { sampleAgreement } from "@/lib/sampleAgreement";
 import { createOfferToken } from "@/lib/token";
 
@@ -115,7 +121,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     position: offer.position,
     rate: formatRate(offer),
     engagement: offer.engagement,
-    hoursPerWeek: offer.hoursPerWeek,
+    // The figure the offer page will show, so the email and the page cannot
+    // quote different weekly hours to the same person.
+    hoursPerWeek: effectiveOffer(offer).hoursPerWeek,
     startDate: offer.startDate,
     probation: offer.probation,
     note: offer.note,

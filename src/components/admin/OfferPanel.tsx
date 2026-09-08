@@ -10,11 +10,13 @@ import {
   formatRate,
   offerProblems,
   offerStatus,
+  offerWarnings,
   ENGAGEMENT_TYPES,
   type EngagementType,
   type Offer,
   type OfferState,
 } from "@/lib/offer";
+import { MAX_HOURS_PER_WEEK } from "@/lib/availability";
 
 /**
  * Make and track a written job offer.
@@ -64,7 +66,9 @@ export function OfferPanel({
     rate: state.offer?.rate ?? advertised?.min,
     currency: state.offer?.currency ?? advertised?.currency ?? "USD",
     unit: state.offer?.unit ?? advertised?.unit ?? "HOUR",
-    hoursPerWeek: state.offer?.hoursPerWeek,
+    // The schedule everybody is offered — 5 days of up to 5 hours — so it is
+    // the number already in the box rather than one to remember to type.
+    hoursPerWeek: state.offer?.hoursPerWeek ?? MAX_HOURS_PER_WEEK,
     startDate: state.offer?.startDate,
     engagement: state.offer?.engagement ?? "Independent contractor",
     probation: state.offer?.probation ?? "",
@@ -80,6 +84,7 @@ export function OfferPanel({
 
   const status = offerStatus(state);
   const problems = offerProblems(form);
+  const warnings = offerWarnings(form);
   const low = problems.length === 0 ? belowAdvertised(form as Offer) : null;
   const showForm = status === "none" || editing;
 
@@ -252,6 +257,16 @@ export function OfferPanel({
             />
           </Field>
         </div>
+      ) : null}
+
+      {/* Said, not enforced. There may be a reason for more hours, and the
+          person sending this knows more than the rule does — but the offer
+          page will still show the capped figure, so it must not be a
+          surprise. */}
+      {showForm && warnings.length > 0 ? (
+        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+          {warnings[0]}
+        </p>
       ) : null}
 
       {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}

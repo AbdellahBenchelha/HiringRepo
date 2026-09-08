@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readOfferToken } from "@/lib/token";
 import { acceptOfferWithDetails, declineOfferByCandidate, type OfferAnswerResult } from "@/lib/store";
 import { validateConfirmed } from "@/lib/hiring";
+import { formatAvailability, validateAvailability } from "@/lib/availability";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { sendTelegramMessage, escapeHtml } from "@/lib/telegram";
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
     action?: string;
     reason?: string;
     details?: Record<string, unknown>;
+    availability?: unknown;
   }>(req, 16 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const body = parsed.data;
@@ -80,11 +82,18 @@ export async function POST(req: NextRequest) {
   }
 
   const check = validateConfirmed(body.details ?? {});
-  if (!check.ok) {
-    return NextResponse.json({ ok: false, error: "invalid", problems: check.problems }, { status: 400 });
+  // Both sets of problems at once. Told about the name and then, on the next
+  // attempt, about the days is how a form loses somebody halfway through.
+  const when = validateAvailability(body.availability);
+  if (!check.ok || !when.ok) {
+    const problems = [
+      ...(check.ok ? [] : check.problems),
+      ...(when.ok ? [] : when.problems),
+    ];
+    return NextResponse.json({ ok: false, error: "invalid", problems }, { status: 400 });
   }
 
-  const result = await acceptOfferWithDetails(id, offerSentAt, check.details);
+  const result = await acceptOfferWithDetails(id, offerSentAt, check.details, when.availability);
   if (!result.ok) {
     const { status, error } = REFUSAL[result.reason];
     return NextResponse.json({ ok: false, error }, { status });
@@ -99,7 +108,8 @@ export async function POST(req: NextRequest) {
       `${escapeHtml(result.candidate.position || "")}\n\n` +
       `Engaged as: ${escapeHtml(d.engagedAs)}` +
       (d.companyName ? ` — ${escapeHtml(d.companyName)}` : "") +
-      `\nDetails confirmed and ready to review in the Accepted tab.`,
+      `\nAvailable: ${escapeHtml(formatAvailability(when.availability))}` +
+      `\n\nDetails confirmed and ready to review in the Accepted tab.`,
   );
 
   return NextResponse.json({ ok: true, outcome: "accepted" });

@@ -10,6 +10,7 @@
  * actually offered someone on a particular day must not change with it.
  */
 import { jobs, type Salary } from "@/config/jobs";
+import { MAX_HOURS_PER_DAY, MAX_HOURS_PER_WEEK, REQUIRED_DAYS } from "@/lib/availability";
 
 export const ENGAGEMENT_TYPES = ["Independent contractor", "Employee"] as const;
 export type EngagementType = (typeof ENGAGEMENT_TYPES)[number];
@@ -21,12 +22,40 @@ export interface Offer {
   currency: string;
   unit: Salary["unit"];
   hoursPerWeek?: number;
+  /**
+   * What the weekly hours were before the schedule cap brought them down.
+   *
+   * Set only on offers sent before the cap existed. The original figure is
+   * kept because it is what the candidate's email says, and a record that
+   * quietly matches the new number would make that email look like a forgery.
+   */
+  hoursCappedFrom?: number;
   /** ISO date. */
   startDate?: string;
   engagement: EngagementType;
   probation?: string;
   /** Anything specific agreed on the call. */
   note?: string;
+}
+
+/**
+ * The offer as it stands today.
+ *
+ * A schedule of five days at five hours cannot deliver more than twenty-five
+ * hours a week, so an older offer promising thirty is a promise nothing can
+ * keep. Rather than editing history, every reader passes the offer through
+ * here: the page, the Admin Panel and any email sent from now on all show the
+ * same number, and the stored record keeps what was originally sent.
+ */
+export function effectiveOffer(offer: Offer): Offer {
+  if (!offer.hoursPerWeek || offer.hoursPerWeek <= MAX_HOURS_PER_WEEK) return offer;
+  return { ...offer, hoursPerWeek: MAX_HOURS_PER_WEEK, hoursCappedFrom: offer.hoursPerWeek };
+}
+
+/** What the candidate's own offer email said, when that is no longer the figure. */
+export function cappedFrom(offer: Offer): number | null {
+  const effective = effectiveOffer(offer);
+  return effective.hoursCappedFrom ?? null;
 }
 
 export interface OfferState {
@@ -111,6 +140,26 @@ export function offerProblems(offer: Partial<Offer>): string[] {
     (!Number.isFinite(offer.hoursPerWeek) || offer.hoursPerWeek <= 0 || offer.hoursPerWeek > 168)
   ) {
     problems.push("Hours per week does not look right.");
+  }
+  return problems;
+}
+
+/**
+ * Warnings worth reading before the email goes, which are not refusals.
+ *
+ * Above twenty-five hours the schedule cannot deliver what the offer says:
+ * five days at five hours is the shape everyone has agreed to, and the offer
+ * page will show twenty-five whatever is typed here. Said out loud rather than
+ * blocked — there may be a reason, and the person sending it knows more than
+ * this function does.
+ */
+export function offerWarnings(offer: Partial<Offer>): string[] {
+  const problems: string[] = [];
+  if (offer.hoursPerWeek !== undefined && offer.hoursPerWeek > MAX_HOURS_PER_WEEK) {
+    problems.push(
+      `${offer.hoursPerWeek} hours a week is more than ${REQUIRED_DAYS} days × ` +
+        `${MAX_HOURS_PER_DAY} hours. The offer page will show ${MAX_HOURS_PER_WEEK}.`,
+    );
   }
   if (offer.startDate && Number.isNaN(Date.parse(offer.startDate))) {
     problems.push("Start date is not a valid date.");

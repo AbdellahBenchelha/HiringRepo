@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { readOfferToken, OFFER_LINK_TTL_DAYS } from "@/lib/token";
 import { getCandidate } from "@/lib/store";
-import { formatRate } from "@/lib/offer";
+import { effectiveOffer, formatRate } from "@/lib/offer";
+import {
+  MAX_HOURS_PER_DAY,
+  MAX_HOURS_PER_WEEK,
+  REQUIRED_DAYS,
+  WINDOW_HOURS,
+} from "@/lib/availability";
+import { NextSteps } from "@/components/offer/NextSteps";
 import { siteConfig } from "@/config/site";
 import { IdentityStep } from "@/components/verify/IdentityStep";
 import { identityStillNeeded, identityReuploadPending } from "@/lib/verification";
@@ -115,13 +122,18 @@ export default async function OfferPage({
         </Shell>
       );
     }
+    // The steps are repeated here too. Somebody who comes back to this link a
+    // week later is usually here because they are wondering what became of it.
     return (
       <Shell>
-        <Notice
-          tone="green"
-          title="You have already accepted this offer"
-          body="Thank you — we have everything we need. Our recruitment team will be in touch with your written agreement. If you need to change any detail you gave us, just reply to your offer email."
-        />
+        <div className="space-y-6">
+          <Notice
+            tone="green"
+            title="You have already accepted this offer"
+            body="Thank you — we have everything we need. If you need to change any detail you gave us, just reply to your offer email."
+          />
+          <NextSteps />
+        </div>
       </Shell>
     );
   }
@@ -137,7 +149,12 @@ export default async function OfferPage({
     );
   }
 
-  const offer = candidate.offer;
+  // What the offer says today. An older one promising thirty hours a week is
+  // promising something a five-day, five-hour schedule cannot deliver, so the
+  // page shows the figure that can be kept — and says so, below, rather than
+  // quietly disagreeing with the email in their inbox.
+  const offer = effectiveOffer(candidate.offer);
+  const wasHours = offer.hoursCappedFrom;
   const terms: [string, string][] = [
     ["Position", offer.position],
     ["Pay", formatRate(offer)],
@@ -184,11 +201,67 @@ export default async function OfferPage({
             {offer.note}
           </p>
         ) : null}
+        {wasHours ? (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs leading-relaxed text-amber-800">
+            <strong className="font-bold">A change since your offer email.</strong> That email said{" "}
+            {wasHours} hours a week. Our schedule is {REQUIRED_DAYS} days of up to{" "}
+            {MAX_HOURS_PER_DAY} hours, so the maximum is now {MAX_HOURS_PER_WEEK} hours a week —
+            the figure shown above, and the one your agreement will be drawn up on. If that changes
+            your answer, please reply to your offer email and talk to us before accepting.
+          </p>
+        ) : null}
         <p className="mt-4 text-xs text-navy-400">
           This is an offer of engagement, not a contract — your written agreement follows once you
           accept.
         </p>
       </div>
+
+      {/* How the job runs, kept out of the terms above on purpose: those are
+          what was agreed with this one person, these are true of everybody and
+          would look negotiable in the same list. */}
+      <div className="card mb-6 p-6">
+        <h2 className="text-lg font-bold text-navy-900">How the work runs</h2>
+        <ul className="mt-4 space-y-3.5">
+          <WorkPoint icon="clock" title={`An ${WINDOW_HOURS}-hour window that you choose`}>
+            You pick the hours you can be reached in, on {REQUIRED_DAYS} days of the week — any{" "}
+            {REQUIRED_DAYS}, weekends included. You choose them on the form below.
+          </WorkPoint>
+          <WorkPoint icon="check" title={`At most ${MAX_HOURS_PER_DAY} hours of work a day`}>
+            Up to {MAX_HOURS_PER_WEEK} hours a week. The window is longer than the work so the work
+            has room to fall where it falls.
+          </WorkPoint>
+          <WorkPoint icon="phone" title="Mobile access, and the website">
+            Customer requests reach you as a notification on your phone, and you can pick them up
+            either from the app or from your account on this website. Both are provided by us once
+            your agreement is signed, and there is nothing to buy.
+          </WorkPoint>
+        </ul>
+      </div>
+
+      {/* The guarantee in the words the agreement uses. It is the single most
+          valuable term here and the one candidates most often assume they have
+          misunderstood, so it is spelled out rather than named. */}
+      <div className="card mb-6 border-brand-200 bg-brand-50/40 p-6">
+        <h2 className="text-lg font-bold text-navy-900">
+          We guarantee the hours in your schedule
+        </h2>
+        <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-navy-700">
+          {[
+            "The hours in your agreed schedule are guaranteed. They are not an estimate and not a maximum we hope to reach.",
+            "If we give you no work during a guaranteed hour, you are still paid for it. That is what the word means here.",
+            "In exchange, you are available and ready to work during those hours.",
+            "It is a floor, not a ceiling. More work may be offered, and you are free to take it or leave it.",
+            "We cannot cut your hours on our own. Any change is agreed with you, and the guarantee runs to the end of any notice period.",
+          ].map((line) => (
+            <li key={line} className="flex gap-2.5">
+              <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-700" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <NextSteps className="mb-6" />
 
       {/* Directly above the form, because this is the moment the question is
           actually asked: candidates have declined to hand over an identity
@@ -233,6 +306,28 @@ export default async function OfferPage({
         }}
       />
     </Shell>
+  );
+}
+
+function WorkPoint({
+  icon,
+  title,
+  children,
+}: {
+  icon: "clock" | "check" | "phone";
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex gap-3.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-800">
+        <Icon name={icon} className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-bold text-navy-900">{title}</span>
+        <span className="mt-0.5 block text-sm leading-relaxed text-navy-600">{children}</span>
+      </span>
+    </li>
   );
 }
 

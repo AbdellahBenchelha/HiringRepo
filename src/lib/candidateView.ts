@@ -20,6 +20,7 @@ import type { IdDocumentType } from "@/lib/identityDocuments";
 import { voiceRecordingNeeded } from "@/lib/voice";
 import type { Offer } from "@/lib/offer";
 import type { ConfirmedDetails } from "@/lib/hiring";
+import type { Availability } from "@/lib/availability";
 import { countryRuleApplies } from "@/lib/phoneCountry";
 import type { CompanyCheck } from "@/lib/companyCheck";
 import type { VoiceStatus } from "@/lib/candidateStatus";
@@ -116,6 +117,8 @@ export interface CandidateView {
   /** What they re-confirmed on accepting. Absent until they do. */
   confirmedDetails?: ConfirmedDetails;
   confirmedDetailsAt?: string;
+  /** The window and days they chose when accepting, with the zone they meant. */
+  availability?: Availability;
   /** Last Companies House lookup, if one has been run. */
   companyCheck?: CompanyCheck;
   /**
@@ -209,6 +212,7 @@ export function toCandidateView(
     offerDeclineReason: c.offerDeclineReason,
     confirmedDetails: c.confirmedDetails,
     confirmedDetailsAt: c.confirmedDetailsAt,
+    availability: c.availability,
     companyCheck: c.companyCheck,
     inviteHeld:
       !!c.submittedAt &&
