@@ -34,20 +34,31 @@ export default async function AdminInterviewsPage({
   const finished = all.filter((c) => c.interview);
 
   /**
-   * Nobody has told this candidate they need to verify — so there is nothing
-   * to follow up on yet, and this tab is for following up. Same condition the
-   * red "Not asked yet" badge uses: verification is due, and no request has
-   * gone out.
+   * Nobody has told this candidate they need to verify: verification is due
+   * and no request has gone out. Same condition the red "Not asked yet" badge
+   * uses.
    */
   const notAsked = (c: (typeof finished)[number]) =>
     verificationStatus(c, required) === "awaiting" && !c.verificationRequestedAt;
 
-  // Hidden by default, but never silently: the count below says how many and
-  // links to them, or a candidate simply vanishes with no explanation. The
-  // filters in the table narrow whatever survives this.
-  const showAll = params.show === "all";
-  const hidden = finished.filter(notAsked);
-  const listed = showAll ? finished : finished.filter((c) => !notAsked(c));
+  /**
+   * Everybody is listed, including them.
+   *
+   * They were hidden by default once, on the reasoning that this tab is for
+   * following up and there is nothing to follow up on until somebody has been
+   * asked. That was backwards: an interview finished ten minutes ago has no ID
+   * check requested *because it finished ten minutes ago*, so the rule hid the
+   * newest arrivals — the very rows somebody opens this tab to act on — and
+   * "the candidate who just finished is not on the tab" reads as a broken
+   * table, not as a filter doing its job.
+   *
+   * Hiding them stays available for anyone working through the asked pile, one
+   * link away, and their rows carry the red badge either way. The filters in
+   * the table narrow whatever survives this.
+   */
+  const onlyAsked = params.show === "asked";
+  const unasked = finished.filter(notAsked);
+  const listed = onlyAsked ? finished.filter((c) => !notAsked(c)) : finished;
 
   const rows: InterviewRow[] = listed.map((c) => ({
     view: toCandidateView(c, base, required),
@@ -60,22 +71,22 @@ export default async function AdminInterviewsPage({
           <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">Interviews</h1>
           <p className="mt-1 text-sm text-navy-500">
             {rows.length} completed interview{rows.length === 1 ? "" : "s"}
-            {hidden.length > 0 ? (
-              showAll ? (
+            {unasked.length > 0 ? (
+              onlyAsked ? (
                 <>
-                  , including {hidden.length} with no ID check requested.{" "}
+                  . {unasked.length} hidden — ID check not requested yet.{" "}
                   <Link href="/admin/interviews" className="font-semibold text-brand-700 underline">
-                    Hide them
+                    Show {unasked.length === 1 ? "it" : "them"}
                   </Link>
                 </>
               ) : (
                 <>
-                  . {hidden.length} hidden — ID check not requested yet.{" "}
+                  , {unasked.length} of them with no ID check requested yet.{" "}
                   <Link
-                    href="/admin/interviews?show=all"
+                    href="/admin/interviews?show=asked"
                     className="font-semibold text-brand-700 underline"
                   >
-                    Show {hidden.length === 1 ? "it" : "them"}
+                    Hide {unasked.length === 1 ? "it" : "them"}
                   </Link>
                 </>
               )
