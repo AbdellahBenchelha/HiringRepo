@@ -61,8 +61,8 @@ export const siteConfig = {
    * after acceptance, with their own details in it.
    */
   sampleAgreement: {
-    /** e.g. "sample-contractor-agreement-2026-09-08.pdf". Empty = not published. */
-    file: "sample-contractor-agreement-2026-09-08.pdf",
+    /** e.g. "sample-contractor-agreement-2026-09-09.pdf". Empty = not published. */
+    file: "sample-contractor-agreement-2026-09-09.pdf",
     version: "",
   },
 
@@ -141,11 +141,11 @@ export const siteConfig = {
      */
     phone: "+44 7451 272838",
     address: {
-      line1: "65 Stroude Road",
+      line1: "168/170 Main Street",
       line2: "",
-      city: "Skeabrae",
-      region: "",
-      postalCode: "KW17 0AX",
+      city: "Bellshill",
+      region: "Lanarkshire",
+      postalCode: "ML4 1AE",
       country: "United Kingdom",
     },
     businessHours: "Monday – Friday, 9:00 AM – 6:00 PM (local time)", // PLACEHOLDER
@@ -180,13 +180,22 @@ export const siteConfig = {
   /** LEGAL / COMPANY REGISTRATION — must be completed by the company.        */
   /** ----------------------------------------------------------------------- */
   legal: {
-    registeredName: "WorkRoute Ltd.", // PLACEHOLDER
-    businessType: "Private Limited Company", // PLACEHOLDER
+    /**
+     * The company that actually contracts, which is not the name on the door.
+     *
+     * WorkRoute is a trading name; agreements, invoices and anything a
+     * candidate could take to a court or a register are in the name of Routes
+     * to Work Limited. Keeping the two straight is the whole job of a legal
+     * notice — somebody checking us at Companies House searches the registered
+     * name and finds nothing under the brand.
+     */
+    registeredName: "Routes to Work Limited",
+    tradingName: "WorkRoute",
+    businessType: "Private Limited Company",
     /** Companies House, Scotland. Verified — not a placeholder. */
     registrationNumber: "SC238030",
-    registeredAddress:
-      "65 Stroude Road, Skeabrae, KW17 0AX, United Kingdom",
-    websiteOwner: "WorkRoute Ltd.", // PLACEHOLDER
+    registeredAddress: "168/170 Main Street, Bellshill, Lanarkshire, ML4 1AE, United Kingdom",
+    websiteOwner: "Routes to Work Limited",
     hostingProvider: "Your Hosting Provider Inc., 1 Datacenter Road, Country", // PLACEHOLDER
     /** How long applicant data is retained, in months. Used across legal pages. */
     applicantDataRetentionMonths: 12, // PLACEHOLDER — confirm with legal counsel

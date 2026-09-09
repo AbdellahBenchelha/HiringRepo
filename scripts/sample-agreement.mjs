@@ -23,7 +23,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-09-08.pdf');
+const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-09-09.pdf');
 
 /**
  * The one party that is not a placeholder.
@@ -36,10 +36,11 @@ const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-09-08.pd
  * Keep in step with `legal` in src/config/site.ts.
  */
 const COMPANY = {
-  name: 'WorkRoute LIMITED',
+  name: 'Routes to Work Limited',
+  tradingName: 'WorkRoute',
   country: 'United Kingdom',
   number: 'SC238030',
-  address: '65 Stroude Road, Skeabrae, KW17 0AX, United Kingdom',
+  address: '168/170 Main Street, Bellshill, Lanarkshire, ML4 1AE, United Kingdom',
 };
 
 const NAVY = '#0f1035';
@@ -156,7 +157,8 @@ const html = `<!doctype html>
       <p>
         <strong>(1) The Company.</strong> ${COMPANY.name}, a company registered in
         ${COMPANY.country} under company number ${COMPANY.number}, whose registered office is at
-        ${COMPANY.address} (&ldquo;the Company&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;).
+        ${COMPANY.address}, trading as ${COMPANY.tradingName} (&ldquo;the Company&rdquo;,
+        &ldquo;we&rdquo;, &ldquo;us&rdquo;).
       </p>
       <p>
         <strong>(2) The Contractor.</strong> <span class="fill">[FULL LEGAL NAME]</span> of

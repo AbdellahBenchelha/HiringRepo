@@ -13,6 +13,10 @@ export default function LegalNoticePage() {
   const { legal, contact } = siteConfig;
   const rows: { label: string; value: string }[] = [
     { label: "Registered company name", value: legal.registeredName },
+    // Both names, first thing. Somebody checking us searches Companies House
+    // for the name on the website and finds nothing — this row is what turns
+    // that dead end into a match.
+    { label: "Trading name", value: legal.tradingName },
     { label: "Legal business type", value: legal.businessType },
     { label: "Registration number", value: legal.registrationNumber },
     { label: "Registered address", value: legal.registeredAddress },
