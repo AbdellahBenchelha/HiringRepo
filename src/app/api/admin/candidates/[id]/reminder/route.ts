@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
 import { getCandidate, recordReminder } from "@/lib/store";
-import { sendEmail } from "@/lib/email";
-import { reminderHtml, reminderSubject, reminderText } from "@/lib/emailTemplates";
+import { sendReminderEmail } from "@/lib/candidateEmails";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
-import { siteConfig } from "@/config/site";
-import { withSource } from "@/lib/followUp";
 
 /**
  * Chase a candidate who has not finished their assessment.
@@ -57,37 +54,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     });
   }
 
-  const email = (candidate.email || "").trim();
-  if (!email.includes("@")) {
-    return NextResponse.json({ ok: false, error: "no_email" }, { status: 400 });
-  }
-
-  const position = candidate.position || undefined;
-  const invite = {
-    fullName: candidate.fullName || "Candidate",
-    interviewUrl: withSource(`${baseUrl(req)}/interview?c=${id}`, "reminder-email"),
-    position,
-  };
-
-  const result = await sendEmail({
-    to: email,
-    toName: candidate.fullName || undefined,
-    subject: reminderSubject(position),
-    html: reminderHtml(invite),
-    text: reminderText(invite),
-    replyTo: siteConfig.contact.recruitmentEmail,
-  });
-
+  const result = await sendReminderEmail(id, baseUrl(req));
   if (!result.ok) {
-    const reason = "skipped" in result ? result.skipped : result.error;
-    // eslint-disable-next-line no-console
-    console.warn(`[admin] reminder email not sent to ${email}: ${reason}`);
-    return NextResponse.json({ ok: false, error: reason }, { status: 502 });
+    const status = result.reason === "no_email" ? 400 : 502;
+    return NextResponse.json({ ok: false, error: result.reason }, { status });
   }
 
-  const updated = await recordReminder(id, "email");
-  // eslint-disable-next-line no-console
-  console.log(`[admin] reminder email sent to ${email} (${updated?.reminderEmailCount ?? 1})`);
+  const updated = await getCandidate(id);
   return NextResponse.json({
     ok: true,
     reminderEmailSentAt: updated?.reminderEmailSentAt,

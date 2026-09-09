@@ -14,6 +14,7 @@ import { DocumentChips } from "@/components/admin/DocumentChips";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
+import { useBulkEmail } from "@/components/admin/BulkEmailBar";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import {
   VerificationBadge,
@@ -219,6 +220,29 @@ export function CandidatesTable({
     applyPatch(id, { companyCheck: check }),
   );
 
+  /**
+   * Who is ticked, by id.
+   *
+   * Ids rather than rows, and kept when the page changes: somebody selecting
+   * across two pages and losing the first page's ticks would have no way to
+   * act on a filter larger than a page. Anything that falls out of the filters
+   * is dropped from the selection below, because acting on a row nobody can
+   * see is how the wrong person gets emailed.
+   */
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectable = useMemo(() => new Set(sorted.map((c) => c.id)), [sorted]);
+  const chosen = useMemo(() => selected.filter((id) => selectable.has(id)), [selected, selectable]);
+  const toggleOne = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const pageIds = visible.map((c) => c.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => chosen.includes(id));
+  const togglePage = () =>
+    setSelected((prev) =>
+      allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])],
+    );
+
+  const bulkEmail = useBulkEmail(sorted, chosen, () => setSelected([]));
+
   // A document reader belongs to the candidate it was opened from, so stepping
   // to the next one closes it rather than leaving someone else's CV on screen.
   useEffect(() => {
@@ -414,12 +438,24 @@ export function CandidatesTable({
       </div>
 
       {companyCheck.panel}
+      {bulkEmail.bar}
+      {bulkEmail.panel}
 
       {/* Table */}
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={allOnPage}
+                  onChange={togglePage}
+                  aria-label={allOnPage ? "Unselect this page" : "Select this page"}
+                  title={allOnPage ? "Unselect this page" : "Select this page"}
+                  className="h-4 w-4 rounded border-navy-300 text-brand-600"
+                />
+              </th>
               <SortHeader label="Candidate" k="name" sort={sort} onSort={toggleSort} />
               <SortHeader label="Country" k="country" sort={sort} onSort={toggleSort} />
               <SortHeader label="Applied" k="applied" sort={sort} onSort={toggleSort} />
@@ -436,10 +472,22 @@ export function CandidatesTable({
           </thead>
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
             ) : (
               visible.map((c) => (
-                <tr key={c.id} className="group hover:bg-cream-100">
+                <tr
+                  key={c.id}
+                  className={`group hover:bg-cream-100 ${chosen.includes(c.id) ? "bg-brand-50/60" : ""}`}
+                >
+                  <td className="px-3 py-3 align-top">
+                    <input
+                      type="checkbox"
+                      checked={chosen.includes(c.id)}
+                      onChange={() => toggleOne(c.id)}
+                      aria-label={`Select ${c.fullName || c.email || c.id}`}
+                      className="mt-0.5 h-4 w-4 rounded border-navy-300 text-brand-600"
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                     <p className="text-xs text-navy-500">{c.email || "—"}</p>
@@ -597,6 +645,8 @@ export function CandidatesTable({
           }
         />
       ) : null}
+
+      {bulkEmail.dialog}
     </div>
   );
 }
