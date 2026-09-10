@@ -5,7 +5,6 @@ import { Icon } from "@/components/Icon";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { VerificationBadge } from "@/components/admin/VerificationPanel";
-import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
@@ -236,8 +235,9 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
               {needingId} {needingId === 1 ? "person has" : "people have"} accepted but not sent
               identity documents.
             </strong>{" "}
-            No agreement can be issued until they do. Use{" "}
-            <span className="font-semibold">Remind for ID</span> in the ID check column.
+            No agreement can be issued until they do. Open{" "}
+            <span className="font-semibold">View info</span> on their row to see what has been
+            sent and to chase them.
           </span>
         </p>
       ) : null}
@@ -336,10 +336,6 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                         status={c.verificationStatus}
                         requestedAt={c.verificationRequestedAt}
                         onOpenPhotos={() => openProfile(c)}
-                      />
-                      <IdentityReminderButton
-                        candidate={c}
-                        onSent={(p) => patch(c.id, p)}
                       />
                     </td>
                     <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">

@@ -228,6 +228,17 @@ export interface Candidate {
   identityReminderSentAt?: string;
   identityReminderCount?: number;
   /**
+   * When each identity reminder went out, oldest first.
+   *
+   * The count and the last date are kept beside it because the tables read
+   * them, but this is the record: a candidate asking why they were chased
+   * three times, or a recruiter deciding whether a fourth is fair, both need
+   * the dates rather than a total. Absent on reminders sent before this was
+   * kept — an empty history is not the same as never reminded, which is why
+   * the count is not derived from it alone.
+   */
+  identityReminders?: string[];
+  /**
    * The country the application was actually sent from, as the server saw it.
    *
    * Deliberately not the IP address: a raw address is personal data with real
@@ -463,8 +474,14 @@ export function recordIdentityReminder(id: string): Promise<Candidate | null> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
-    c.identityReminderSentAt = new Date().toISOString();
-    c.identityReminderCount = (c.identityReminderCount ?? 0) + 1;
+    const now = new Date().toISOString();
+    // Every one of them, kept. "Chased twice" is a number; "9 Sept, then 14
+    // Sept" is what tells you whether the second one was reasonable and when
+    // a third would be — and it is what you read back to somebody who says
+    // nobody ever told them.
+    c.identityReminders = [...(c.identityReminders ?? []), now];
+    c.identityReminderSentAt = now;
+    c.identityReminderCount = c.identityReminders.length;
     return { list, result: c };
   });
 }

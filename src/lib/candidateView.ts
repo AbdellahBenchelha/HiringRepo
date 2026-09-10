@@ -106,6 +106,8 @@ export interface CandidateView {
   voiceNeeded: boolean;
   identityReminderSentAt?: string;
   identityReminderCount?: number;
+  /** Every identity reminder, oldest first. */
+  identityReminders?: string[];
   /**
    * Derived: they have accepted an offer and still owe us identity documents.
    *
@@ -217,6 +219,7 @@ export function toCandidateView(
     voiceNeeded: voiceRecordingNeeded(c),
     identityReminderSentAt: c.identityReminderSentAt,
     identityReminderCount: c.identityReminderCount,
+    identityReminders: c.identityReminders,
     identityNeeded: !!c.offerAcceptedAt && identityStillNeeded(c),
     interviewCompletedAt: c.interview?.completedAt,
     voiceRequestedAt: c.voiceRequestedAt,

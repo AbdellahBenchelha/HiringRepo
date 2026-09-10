@@ -89,5 +89,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     ok: true,
     identityReminderSentAt: updated?.identityReminderSentAt,
     identityReminderCount: updated?.identityReminderCount,
+    identityReminders: updated?.identityReminders,
   });
 }

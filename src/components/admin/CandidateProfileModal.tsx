@@ -20,6 +20,7 @@ import { OfferPanel } from "@/components/admin/OfferPanel";
 import { canOffer } from "@/lib/offer";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
+import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
 
 /**
@@ -317,6 +318,14 @@ export function CandidateProfileModal({
             onChange={(v) =>
               onChange(verificationPatch(v))
             }
+          />
+
+          {/* Beside the photographs, because it is the same question: have we
+              got what we need from this person, and what have we already done
+              about it. */}
+          <IdentityReminderButton
+            candidate={candidate}
+            onSent={(patch) => onChange(patch)}
           />
         </div>
 
