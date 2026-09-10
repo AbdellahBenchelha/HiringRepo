@@ -33,6 +33,19 @@ export const DOCUMENT_KINDS = [
    * nothing but a dependency.
    */
   "voice",
+  /**
+   * A company's paperwork, from a candidate contracting through one.
+   *
+   * Three separate kinds rather than one "company document", because which
+   * paper arrived is the whole question: a W-9 carries the name, the EIN and
+   * an address certified under penalty of perjury, and a certificate of
+   * formation proves the company exists at all. Filed under one kind they
+   * would replace each other, and "we have a document" would have replaced
+   * "we have the right documents".
+   */
+  "w9",
+  "formation",
+  "einLetter",
 ] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
@@ -48,6 +61,9 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   identityBack: "ID document — back",
   selfie: "Photo holding ID",
   voice: "Voice recording",
+  w9: "Form W-9",
+  formation: "Certificate of Formation",
+  einLetter: "EIN confirmation letter",
 };
 
 /** Short form for the table chips, where three of them share one cell. */
@@ -59,6 +75,9 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   identityBack: "ID back",
   selfie: "Photo",
   voice: "Voice",
+  w9: "W-9",
+  formation: "Formation",
+  einLetter: "EIN",
 };
 
 /** The identity pair, which the application documents column does not show. */
@@ -129,18 +148,39 @@ export function isAudioKind(kind: DocumentKind): boolean {
   return kind === "voice";
 }
 
+/** The paperwork of a company a candidate contracts through. */
+export const COMPANY_KINDS = ["w9", "formation", "einLetter"] as const;
+export type CompanyDocumentKind = (typeof COMPANY_KINDS)[number];
+
+export function isCompanyKind(kind: DocumentKind): boolean {
+  return (COMPANY_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * Company paperwork arrives as a PDF from a filing agent or as a photograph of
+ * a printed page. Both are ordinary; a Word file is not, and allowing one
+ * would mean accepting a document that can rewrite itself when opened.
+ */
+export const COMPANY_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"] as const;
+export const COMPANY_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
+
 export function maxBytesFor(kind: DocumentKind): number {
   if (isAudioKind(kind)) return MAX_AUDIO_BYTES;
+  // A scanned certificate runs to several pages, and a phone photograph of one
+  // is no smaller than a photograph of a passport.
+  if (isCompanyKind(kind)) return MAX_IMAGE_BYTES;
   return isImageKind(kind) ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
 }
 
 export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_EXTENSIONS;
+  if (isCompanyKind(kind)) return COMPANY_EXTENSIONS;
   return isImageKind(kind) ? IMAGE_EXTENSIONS : ALLOWED_EXTENSIONS;
 }
 
 export function allowedMimeFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_MIME;
+  if (isCompanyKind(kind)) return COMPANY_MIME;
   return isImageKind(kind) ? IMAGE_MIME : ALLOWED_MIME;
 }
 
@@ -153,7 +193,10 @@ export function allowedMimeFor(kind: DocumentKind): readonly string[] {
  * and is replaced.
  */
 export function keepsHistory(kind: DocumentKind): boolean {
-  return isImageKind(kind) || isAudioKind(kind);
+  // Company paperwork too: a corrected W-9 is a second version of a signed
+  // declaration, and the first one is exactly what you would want to compare
+  // it against.
+  return isImageKind(kind) || isAudioKind(kind) || isCompanyKind(kind);
 }
 
 /**

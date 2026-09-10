@@ -20,6 +20,7 @@ import type { IdDocumentType } from "@/lib/identityDocuments";
 import { voiceRecordingNeeded } from "@/lib/voice";
 import type { Offer } from "@/lib/offer";
 import type { ConfirmedDetails } from "@/lib/hiring";
+import { companyDetailsNeeded, type CompanyDetails } from "@/lib/companyDetails";
 import type { Availability } from "@/lib/availability";
 import { countryRuleApplies } from "@/lib/phoneCountry";
 import type { CompanyCheck } from "@/lib/companyCheck";
@@ -129,6 +130,21 @@ export interface CandidateView {
   confirmedDetailsAt?: string;
   /** The window and days they chose when accepting, with the zone they meant. */
   availability?: Availability;
+  /** The company they contract through, once confirmed with its paperwork. */
+  companyDetails?: CompanyDetails;
+  companyDetailsAt?: string;
+  companyRequestedAt?: string;
+  companyRequestCount?: number;
+  companyRequests?: string[];
+  companyOpenedAt?: string;
+  /**
+   * Derived: they accepted through a company and it is not confirmed yet.
+   *
+   * A gate, not a note. The agreement is made with the company, so drawing one
+   * up from two boxes typed on an acceptance form would name a legal person we
+   * have no evidence exists.
+   */
+  companyNeeded: boolean;
   /** Last Companies House lookup, if one has been run. */
   companyCheck?: CompanyCheck;
   /**
@@ -231,6 +247,13 @@ export function toCandidateView(
     confirmedDetails: c.confirmedDetails,
     confirmedDetailsAt: c.confirmedDetailsAt,
     availability: c.availability,
+    companyDetails: c.companyDetails,
+    companyDetailsAt: c.companyDetailsAt,
+    companyRequestedAt: c.companyRequestedAt,
+    companyRequestCount: c.companyRequestCount,
+    companyRequests: c.companyRequests,
+    companyOpenedAt: c.companyOpenedAt,
+    companyNeeded: companyDetailsNeeded(c),
     companyCheck: c.companyCheck,
     inviteHeld:
       !!c.submittedAt &&

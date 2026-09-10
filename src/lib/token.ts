@@ -168,6 +168,59 @@ export function readLiveVerifyToken(token: string | undefined | null): LiveVerif
   }
 }
 
+/**
+ * Link a candidate to their company-details form.
+ *
+ * Its own marker again, so a link that asks for an EIN and a signed W-9 cannot
+ * be reached with a token minted for an offer or an identity check.
+ */
+export interface CompanyLink {
+  id: string;
+  sentAt: string;
+}
+
+export const COMPANY_LINK_TTL_DAYS = 21;
+
+export function createCompanyToken(link: CompanyLink): string {
+  const body = b64url(Buffer.from(JSON.stringify({ v: "company", i: link.id, s: link.sentAt })));
+  return `${body}.${sign(body)}`;
+}
+
+export type CompanyTokenResult =
+  | { ok: true; link: CompanyLink }
+  | { ok: false; reason: "invalid" }
+  | { ok: false; reason: "expired" };
+
+export function readCompanyToken(token: string | undefined | null): CompanyTokenResult {
+  if (!token || !token.includes(".")) return { ok: false, reason: "invalid" };
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return { ok: false, reason: "invalid" };
+
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
+
+  try {
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as {
+      v?: unknown;
+      i?: unknown;
+      s?: unknown;
+    };
+    if (obj.v !== "company") return { ok: false, reason: "invalid" };
+    if (typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
+    if (typeof obj.s !== "string" || !obj.s) return { ok: false, reason: "invalid" };
+    const sentAt = Date.parse(obj.s);
+    if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
+    if (Date.now() - sentAt > COMPANY_LINK_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      return { ok: false, reason: "expired" };
+    }
+    return { ok: true, link: { id: obj.i, sentAt: obj.s } };
+  } catch {
+    return { ok: false, reason: "invalid" };
+  }
+}
+
 /** Verify and decode a token. Returns null if missing, malformed, or tampered. */
 export function readInterviewToken(token: string | undefined | null): InterviewIdentity | null {
   if (!token || !token.includes(".")) return null;

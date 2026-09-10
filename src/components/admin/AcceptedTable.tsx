@@ -151,6 +151,9 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
    * outstanding — and from their side it looks as though we went quiet.
    */
   const needingId = live.filter((c) => c.identityNeeded).length;
+  // The other thing that stops an agreement: somebody contracting through a
+  // company we have only been told about.
+  const needingCompany = live.filter((c) => c.companyNeeded).length;
 
   return (
     <>
@@ -238,6 +241,21 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
             No agreement can be issued until they do. Open{" "}
             <span className="font-semibold">View info</span> on their row to see what has been
             sent and to chase them.
+          </span>
+        </p>
+      ) : null}
+
+      {needingCompany > 0 ? (
+        <p className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <Icon name="briefcase" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>
+              {needingCompany} {needingCompany === 1 ? "person is" : "people are"} contracting
+              through a company that is not confirmed.
+            </strong>{" "}
+            The agreement is made with the company, so none can be issued until its details and
+            paperwork are on file. Open <span className="font-semibold">View info</span> on their
+            row to request them.
           </span>
         </p>
       ) : null}

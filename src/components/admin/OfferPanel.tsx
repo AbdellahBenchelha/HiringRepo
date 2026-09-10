@@ -46,6 +46,7 @@ export function OfferPanel({
   fullName,
   position,
   hasEmail,
+  blocked,
   initial,
   onChange,
 }: {
@@ -53,6 +54,14 @@ export function OfferPanel({
   fullName?: string;
   position: string;
   hasEmail: boolean;
+  /**
+   * Why no agreement can go out yet, in words, or nothing.
+   *
+   * Passed in rather than worked out here: what blocks an agreement is a
+   * question about identity documents and company paperwork, and this panel is
+   * about the offer. It only has to stop telling somebody to do the impossible.
+   */
+  blocked?: string;
   initial: OfferState;
   onChange: (patch: OfferState & { status?: string }) => void;
 }) {
@@ -165,9 +174,15 @@ export function OfferPanel({
         <p className="mt-3 text-sm text-navy-500">Sent {fmt(state.offerSentAt)}. Waiting for their answer.</p>
       ) : null}
       {status === "accepted" ? (
-        <p className="mt-3 text-sm font-medium text-green-700">
-          Accepted {fmt(state.offerAcceptedAt)}. Send them the agreement to sign.
-        </p>
+        blocked ? (
+          <p className="mt-3 text-sm font-medium text-red-700">
+            Accepted {fmt(state.offerAcceptedAt)}. {blocked}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm font-medium text-green-700">
+            Accepted {fmt(state.offerAcceptedAt)}. Send them the agreement to sign.
+          </p>
+        )
       ) : null}
       {status === "declined" ? (
         <p className="mt-3 text-sm font-medium text-red-600">

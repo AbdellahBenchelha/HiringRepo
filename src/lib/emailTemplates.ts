@@ -1262,6 +1262,205 @@ export function liveVerificationHtml(invite: LiveVerificationEmail): string {
 </html>`;
 }
 
+export interface CompanyDetailsEmail {
+  fullName: string;
+  companyName?: string;
+  /** Their own page, pre-filled with what they told us when accepting. */
+  url: string;
+}
+
+/**
+ * Asking a candidate who accepted through a company to confirm the company.
+ *
+ * The reason has to be given, because from their side this looks like a
+ * fourth hoop after an assessment, a recording, an offer and a passport. It is
+ * not: the agreement is with the company rather than with them, and everything
+ * we hold about that company is two boxes they typed while accepting. The
+ * paperwork is what turns those into something a contract can be built on.
+ */
+export function companyDetailsSubject(): string {
+  return `Confirm your company details before we issue your ${siteConfig.company.name} agreement`;
+}
+
+export function companyDetailsText(invite: CompanyDetailsEmail): string {
+  const name = firstNameOf(invite.fullName);
+  return [
+    `Dear ${name},`,
+    ``,
+    `Thank you for accepting our offer. You told us you are contracting through`,
+    invite.companyName ? `${invite.companyName}, so your agreement and your` : `a company, so your agreement and your`,
+    `invoices will be in the company's name rather than your own.`,
+    ``,
+    `Before we can draw the agreement up, we need the company's details`,
+    `confirmed. Open your personal link:`,
+    ``,
+    invite.url,
+    ``,
+    `WHAT WE NEED`,
+    ``,
+    `- The company name and number, which we have pre-filled for you to check.`,
+    `- The EIN.`,
+    `- The registered address.`,
+    `- A signed Form W-9.`,
+    `- The Certificate of Formation, or Articles of Organization.`,
+    `- The IRS EIN confirmation letter, if you have it. This one is optional.`,
+    ``,
+    `It takes a few minutes if the documents are to hand.`,
+    ``,
+    `WE WILL NEVER ASK YOU FOR`,
+    ``,
+    `- A payment of any kind, for anything, at any stage.`,
+    `- Your bank card details or a password.`,
+    `- Money to release your first payment.`,
+    ``,
+    `If your company is registered outside the United States, the form will ask`,
+    `for details it does not have. Reply to this email instead and we will take`,
+    `them another way.`,
+    ``,
+    `If anything here is unclear, simply reply to this email and a person will`,
+    `answer you.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function companyDetailsHtml(invite: CompanyDetailsEmail): string {
+  const name = esc(firstNameOf(invite.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(invite.url);
+  const theirs = invite.companyName ? esc(invite.companyName) : "";
+
+  const bullet = (text: string) => `
+    <tr>
+      <td style="padding:0 0 8px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+        <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; ${text}
+      </td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(companyDetailsSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your agreement is with your company, so we need its details confirmed.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Confirm your company details
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Dear ${name}, thank you for accepting our offer. You told us you are contracting through
+          ${theirs ? `<strong style="color:${NAVY};">${theirs}</strong>` : "a company"}, so your
+          agreement and your invoices will be in the company&rsquo;s name rather than your own.
+        </p>
+
+        <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Before we can draw the agreement up, we need the company&rsquo;s details confirmed. Your
+          link below is pre-filled with what you told us, for you to check.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 26px 0;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                What we need
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${bullet("The company name and number, pre-filled for you to check.")}
+                ${bullet("The EIN and the registered address.")}
+                ${bullet("A signed <strong style=\"color:" + NAVY + ";\">Form W-9</strong>.")}
+                ${bullet("The <strong style=\"color:" + NAVY + ";\">Certificate of Formation</strong>, or Articles of Organization.")}
+                ${bullet("The IRS EIN confirmation letter &mdash; optional, if you have it.")}
+              </table>
+              <p style="margin:10px 0 0 0;font:400 14px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                A few minutes, if the documents are to hand.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Confirm company details
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                We will never ask you for
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${bullet("A payment of any kind, for anything, at any stage.")}
+                ${bullet("Your bank card details, or a password.")}
+                ${bullet("Money to release your first payment.")}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:22px 0 0 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          If your company is registered outside the United States, the form will ask for details it
+          does not have &mdash; reply to this email instead and we will take them another way. And
+          if anything else is unclear, reply and a person will answer you.
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export interface OfferEmail {
   fullName: string;
   position: string;

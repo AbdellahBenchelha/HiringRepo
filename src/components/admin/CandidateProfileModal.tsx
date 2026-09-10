@@ -19,6 +19,7 @@ import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
 import { canOffer } from "@/lib/offer";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
+import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
 import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
@@ -46,6 +47,22 @@ function fmt(iso?: string) {
   return new Date(iso).toLocaleString("en-GB", {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
+}
+
+/**
+ * Why an accepted offer cannot become an agreement yet, in one sentence.
+ *
+ * Both gates read the same way to whoever is looking at the profile: something
+ * is outstanding, so nothing goes out. Said here once rather than in the offer
+ * panel, which has no business knowing what a W-9 is.
+ */
+function agreementBlocker(c: CandidateView): string | undefined {
+  const missing: string[] = [];
+  if (c.identityNeeded) missing.push("identity documents");
+  if (c.companyNeeded) missing.push("company details");
+  if (!missing.length) return undefined;
+  // Both are plural, so one verb reads correctly either way round.
+  return `No agreement yet — their ${missing.join(" and ")} are still outstanding.`;
 }
 
 /** Stepping to the next candidate without closing the dialog. */
@@ -338,6 +355,7 @@ export function CandidateProfileModal({
               fullName={candidate.fullName}
               position={candidate.position}
               hasEmail={!!candidate.email}
+              blocked={agreementBlocker(candidate)}
               initial={{
                 offer: candidate.offer,
                 offerSentAt: candidate.offerSentAt,
@@ -358,6 +376,15 @@ export function CandidateProfileModal({
         {/* What they stated when accepting, and what they corrected. Sits
             directly under the offer, which is what prompted it. */}
         <ConfirmedDetailsPanel candidate={candidate} />
+
+        {/* Right after what they confirmed about themselves, because it is the
+            same question about the other party: who is this agreement actually
+            with. */}
+        <CompanyDetailsPanel
+          candidate={candidate}
+          onOpenDocument={onOpenDocument}
+          onChange={onChange}
+        />
 
         {/* Whether they already trade through a UK limited company, which is
             the same question the offer step asks them. */}

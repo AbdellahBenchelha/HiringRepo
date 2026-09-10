@@ -34,6 +34,7 @@ export type { CandidateStatus, VoiceStatus };
 import { effectiveOffer, type Offer } from "@/lib/offer";
 import type { Availability } from "@/lib/availability";
 import type { ConfirmedDetails } from "@/lib/hiring";
+import type { CompanyDetails } from "@/lib/companyDetails";
 import type { CompanyCheck } from "@/lib/companyCheck";
 
 export interface LanguageRow {
@@ -95,6 +96,23 @@ export interface Candidate {
    */
   confirmedDetails?: ConfirmedDetails;
   confirmedDetailsAt?: string;
+  /**
+   * The company a candidate contracts through, confirmed on its own page.
+   *
+   * Kept apart from confirmedDetails because it is about a different legal
+   * person: the agreement is with the company, and what they typed into two
+   * boxes while accepting is a claim about it rather than evidence. The
+   * requests are listed so a recruiter can see what has already been asked,
+   * with dates, before asking again.
+   */
+  companyDetails?: CompanyDetails;
+  companyDetailsAt?: string;
+  companyRequestedAt?: string;
+  companyRequestCount?: number;
+  companyRequests?: string[];
+  companyOpenedAt?: string;
+  companyLastOpenedAt?: string;
+  companyOpenCount?: number;
   /**
    * The eight-hour window and five days the candidate chose when accepting.
    *
@@ -544,6 +562,63 @@ export function recordLiveVerificationStarted(id: string): Promise<boolean> {
     if (!c || c.liveVerificationStartedAt) return { list, result: false };
     c.liveVerificationStartedAt = new Date().toISOString();
     return { list, result: true };
+  });
+}
+
+/**
+ * Log a request for a candidate's company details, with its date.
+ *
+ * Every one is kept, for the same reason the identity reminders are: "asked
+ * twice" is a number, and the dates are what tell you whether a third is fair.
+ */
+export function recordCompanyRequest(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    c.companyRequests = [...(c.companyRequests ?? []), now];
+    c.companyRequestedAt = now;
+    c.companyRequestCount = c.companyRequests.length;
+    return { list, result: c };
+  });
+}
+
+/** They opened the page. Throttled like every other open. */
+export function recordCompanyOpened(id: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: false };
+
+    const now = Date.now();
+    const last = c.companyLastOpenedAt ?? c.companyOpenedAt;
+    if (last && now - new Date(last).getTime() < REOPEN_THROTTLE_MS) {
+      return { list, result: false };
+    }
+    const iso = new Date(now).toISOString();
+    if (!c.companyOpenedAt) c.companyOpenedAt = iso;
+    c.companyLastOpenedAt = iso;
+    c.companyOpenCount = (c.companyOpenCount ?? 0) + 1;
+    return { list, result: true };
+  });
+}
+
+/**
+ * Store what the candidate confirmed about their company.
+ *
+ * Overwrites the previous answer rather than keeping versions: unlike a
+ * document, this is a statement of what is true now, and the acceptance form's
+ * original claim is still on the record beside it to compare against.
+ */
+export function saveCompanyDetails(
+  id: string,
+  details: CompanyDetails,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.companyDetails = details;
+    c.companyDetailsAt = new Date().toISOString();
+    return { list, result: c };
   });
 }
 
