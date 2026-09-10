@@ -1301,6 +1301,7 @@ export function companyDetailsText(invite: CompanyDetailsEmail): string {
     `- The company name and number, which we have pre-filled for you to check.`,
     `- The EIN.`,
     `- The registered address.`,
+    `- The company website, or a sentence on what it does if it has none.`,
     `- A signed Form W-9.`,
     `- The Certificate of Formation, or Articles of Organization.`,
     `- The IRS EIN confirmation letter, if you have it. This one is optional.`,
@@ -1393,6 +1394,7 @@ export function companyDetailsHtml(invite: CompanyDetailsEmail): string {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 ${bullet("The company name and number, pre-filled for you to check.")}
                 ${bullet("The EIN and the registered address.")}
+                ${bullet("The company website &mdash; or, if it has none, a sentence on what it does.")}
                 ${bullet("A signed <strong style=\"color:" + NAVY + ";\">Form W-9</strong>.")}
                 ${bullet("The <strong style=\"color:" + NAVY + ";\">Certificate of Formation</strong>, or Articles of Organization.")}
                 ${bullet("The IRS EIN confirmation letter &mdash; optional, if you have it.")}

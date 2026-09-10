@@ -60,6 +60,22 @@ export interface CompanyDetails {
   city: string;
   state: string;
   zip: string;
+  /**
+   * Whether the company has a website — answered either way, never skipped.
+   *
+   * A company with no web presence at all is perfectly ordinary for a
+   * single-member LLC formed to invoice through, so "no" is a real answer
+   * rather than a failure. What is not acceptable is silence: with neither a
+   * site nor a description we would be contracting with a name on a
+   * certificate and nothing else.
+   *
+   * Absent on records confirmed before this was asked, so read it defensively.
+   */
+  hasWebsite?: "yes" | "no";
+  /** Present when hasWebsite is "yes". Normalised to include the scheme. */
+  website?: string;
+  /** Present when hasWebsite is "no". What the company actually does. */
+  activity?: string;
 }
 
 export const COMPANY_LABELS: Record<keyof CompanyDetails, string> = {
@@ -71,12 +87,52 @@ export const COMPANY_LABELS: Record<keyof CompanyDetails, string> = {
   city: "City",
   state: "State",
   zip: "ZIP code",
+  hasWebsite: "Has a website",
+  website: "Company website",
+  activity: "What the company does",
 };
 
 const MAX = 200;
 
+/** Long enough for a paragraph, bounded so the record cannot be used as storage. */
+const MAX_TEXT = 1500;
+
+/** A description shorter than this is not a description. */
+const MIN_ACTIVITY = 20;
+
 function clean(v: unknown): string {
   return typeof v === "string" ? v.trim().slice(0, MAX) : "";
+}
+
+function cleanText(v: unknown): string {
+  return typeof v === "string" ? v.trim().replace(/\r\n/g, "\n").slice(0, MAX_TEXT) : "";
+}
+
+/**
+ * What people type is "acme.com", not "https://acme.com".
+ *
+ * Rejecting the shorter form would be pedantry — the scheme is the one part of
+ * a web address nobody says out loud — so it is added rather than demanded.
+ */
+export function normaliseWebsite(input: string): string {
+  const raw = (input ?? "").trim();
+  if (!raw) return "";
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
+export function isValidWebsite(input: string): boolean {
+  const value = normaliseWebsite(input);
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    // A hostname with no dot is a machine name on somebody's own network, not
+    // a company's website. Trailing dots and spaces are typing slips.
+    const host = url.hostname.replace(/\.$/, "");
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(host);
+  } catch {
+    return false;
+  }
 }
 
 /** "123456789" or "12-3456789" both arrive; one shape is stored. */
@@ -138,6 +194,29 @@ export function validateCompanyDetails(input: Record<string, unknown>): CompanyC
   if (!zip) problems.push("ZIP code is required.");
   else if (!isValidZip(zip)) problems.push("ZIP code should be five digits, like 90210.");
   out.zip = zip;
+
+  // One of the two, decided by the answer above. Whichever branch is taken has
+  // to be filled in: the point is that something describes the company beyond
+  // its name, and an unanswered question would let both be skipped.
+  const hasWebsite = clean(input.hasWebsite).toLowerCase();
+  if (hasWebsite !== "yes" && hasWebsite !== "no") {
+    problems.push("Tell us whether the company has a website.");
+  } else {
+    out.hasWebsite = hasWebsite;
+    if (hasWebsite === "yes") {
+      const website = clean(input.website);
+      if (!website) problems.push("Company website is required.");
+      else if (!isValidWebsite(website)) {
+        problems.push("That does not look like a web address — for example acme.com.");
+      } else out.website = normaliseWebsite(website);
+    } else {
+      const activity = cleanText(input.activity);
+      if (!activity) problems.push("Tell us what the company does.");
+      else if (activity.length < MIN_ACTIVITY) {
+        problems.push("Please describe what the company does in a sentence or two.");
+      } else out.activity = activity;
+    }
+  }
 
   if (problems.length) return { ok: false, problems };
   return { ok: true, details: out as unknown as CompanyDetails };

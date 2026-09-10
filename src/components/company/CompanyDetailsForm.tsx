@@ -54,6 +54,10 @@ export function CompanyDetailsForm({ token, candidateId, initial, already }: Com
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
 
+  const [hasWebsite, setHasWebsite] = useState<"" | "yes" | "no">("");
+  const [website, setWebsite] = useState("");
+  const [activity, setActivity] = useState("");
+
   const [states, setStates] = useState<Record<string, UploadState>>(
     Object.fromEntries(already.map((k) => [k, "done" as UploadState])),
   );
@@ -76,7 +80,14 @@ export function CompanyDetailsForm({ token, candidateId, initial, already }: Com
   }, [token]);
 
   function details() {
-    return { companyName, companyNumber, ein, street, suite, city, state, zip };
+    return {
+      companyName, companyNumber, ein, street, suite, city, state, zip,
+      hasWebsite,
+      // Only the branch they answered. Sending both would put a half-typed
+      // description on the record of a company that has a website.
+      website: hasWebsite === "yes" ? website : "",
+      activity: hasWebsite === "no" ? activity : "",
+    };
   }
 
   async function upload(kind: Kind, file: File | null) {
@@ -260,6 +271,83 @@ export function CompanyDetailsForm({ token, candidateId, initial, already }: Com
               placeholder="12-3456789"
             />
           </Field>
+
+          {/* Asked either way round. A single-member LLC formed to invoice
+              through often has no website at all, so "no" is an ordinary
+              answer — but between a site and a description, one of them has to
+              tell us what the company actually does. */}
+          <fieldset className="sm:col-span-2">
+            <legend className="label">
+              Does the company have a website? <span className="text-red-600">*</span>
+            </legend>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              {[
+                { value: "yes" as const, title: "Yes", note: "We have a website" },
+                { value: "no" as const, title: "No", note: "Not yet" },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition ${
+                    hasWebsite === option.value
+                      ? "border-brand-500 bg-brand-50"
+                      : "border-navy-200 hover:border-navy-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="hasWebsite"
+                    value={option.value}
+                    checked={hasWebsite === option.value}
+                    onChange={() => setHasWebsite(option.value)}
+                    className="mt-0.5 h-4 w-4 accent-brand-600"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-navy-900">{option.title}</span>
+                    <span className="block text-xs text-navy-500">{option.note}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {hasWebsite === "yes" ? (
+            <Field
+              label="Company website"
+              htmlFor="website"
+              required
+              className="sm:col-span-2"
+              hint="The company's own site. acme.com is enough — we will add the rest."
+            >
+              <TextInput
+                id="website"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                inputMode="url"
+                placeholder="acme.com"
+                autoComplete="url"
+              />
+            </Field>
+          ) : null}
+
+          {hasWebsite === "no" ? (
+            <Field
+              label="What the company does"
+              htmlFor="activity"
+              required
+              className="sm:col-span-2"
+              hint="A sentence or two in your own words — the work it does and who for."
+            >
+              <textarea
+                id="activity"
+                className="textarea"
+                rows={4}
+                maxLength={1500}
+                value={activity}
+                onChange={(e) => setActivity(e.target.value)}
+                placeholder="For example: the company provides remote customer-support services to online retailers."
+              />
+            </Field>
+          ) : null}
         </div>
       </div>
 

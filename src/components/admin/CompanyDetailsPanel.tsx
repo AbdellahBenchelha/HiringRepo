@@ -150,6 +150,35 @@ export function CompanyDetailsPanel({
               <Row label={COMPANY_LABELS.companyNumber} value={details.companyNumber} />
               <Row label={COMPANY_LABELS.ein} value={details.ein} />
               <Row label="Registered address" value={formatCompanyAddress(details)} full />
+              {/* One or the other, never both. Older records have neither. */}
+              {details.website ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-navy-400">
+                    {COMPANY_LABELS.website}
+                  </dt>
+                  <dd className="break-words text-sm font-medium">
+                    <a
+                      href={details.website}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-brand-700 underline"
+                    >
+                      {details.website}
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+              {details.activity ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-navy-400">
+                    {COMPANY_LABELS.activity}
+                  </dt>
+                  <dd className="whitespace-pre-line break-words text-sm text-navy-900">
+                    {details.activity}
+                  </dd>
+                  <p className="mt-0.5 text-xs text-navy-400">They have no website.</p>
+                </div>
+              ) : null}
             </dl>
             <p className="mt-1.5 text-xs text-navy-400">
               Confirmed {fmt(candidate.companyDetailsAt)}
@@ -270,7 +299,7 @@ export function CompanyDetailsPanel({
             <strong className="text-navy-900">
               {candidate.confirmedDetails?.companyName || "their company"}
             </strong>{" "}
-            — its number, EIN and registered address — and to attach a signed W-9 and the
+            — its number, EIN, registered address and website — and to attach a signed W-9 and the
             certificate of formation. Their link is pre-filled with what they told us when they
             accepted.
           </>

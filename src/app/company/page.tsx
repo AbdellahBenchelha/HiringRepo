@@ -83,32 +83,29 @@ export default async function CompanyPage({
 
   return (
     <Shell>
-      <header className="mb-6">
+      <header className="mb-5">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
           Company details
         </p>
         <h1 className="mt-2 text-2xl font-bold text-navy-900 sm:text-3xl">
           {first ? `${first}, tell us about your company` : "Tell us about your company"}
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-navy-600">
-          You are contracting through a company, so the agreement and the invoices are in the
-          company&rsquo;s name rather than yours. We need its details confirmed, with the
-          paperwork, before the agreement can be drawn up.
-        </p>
       </header>
 
-      {/* The one dead end this form can create, answered before they hit it.
-          The fields below ask for an EIN and a US state; a company registered
-          anywhere else has neither, and a form that cannot be finished with no
-          way out is how somebody decides we are not serious. */}
-      <p className="mb-6 flex items-start gap-2.5 rounded-xl border border-navy-200 bg-cream-100 p-4 text-sm text-navy-700">
-        <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0 text-brand-700" />
-        <span>
-          This form is for a company registered in the United States. If yours is registered
-          elsewhere, do not guess at these fields — reply to the email we sent you and we will take
-          your details another way.
+      {/* Why any of this is being asked, in a card of its own.
+          Underneath the heading as ordinary grey prose it read as a subtitle
+          and was skipped — and somebody who skips it is filling in a form
+          about a company without knowing the agreement is with the company. */}
+      <div className="card mb-6 flex items-start gap-3.5 border-l-4 border-l-brand-500 p-5">
+        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-800">
+          <Icon name="briefcase" className="h-5 w-5" />
         </span>
-      </p>
+        <p className="text-sm leading-relaxed text-navy-700">
+          You are contracting through a company, so the agreement and the invoices are in the{" "}
+          <strong className="font-semibold text-navy-900">company&rsquo;s name rather than yours</strong>.
+          We need its details confirmed, with the paperwork, before the agreement can be drawn up.
+        </p>
+      </div>
 
       <CompanyDetailsForm
         token={token ?? ""}
