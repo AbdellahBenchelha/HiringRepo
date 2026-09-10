@@ -96,10 +96,7 @@ export default async function CompanyPage({
           Underneath the heading as ordinary grey prose it read as a subtitle
           and was skipped — and somebody who skips it is filling in a form
           about a company without knowing the agreement is with the company. */}
-      <div className="card mb-6 flex items-start gap-3.5 border-l-4 border-l-brand-500 p-5">
-        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-800">
-          <Icon name="briefcase" className="h-5 w-5" />
-        </span>
+      <div className="card mb-6 p-5">
         <p className="text-sm leading-relaxed text-navy-700">
           You are contracting through a company, so the agreement and the invoices are in the{" "}
           <strong className="font-semibold text-navy-900">company&rsquo;s name rather than yours</strong>.
