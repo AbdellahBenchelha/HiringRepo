@@ -1,4 +1,9 @@
-import { sendAssessmentEmail, sendReminderEmail } from "@/lib/candidateEmails";
+import {
+  sendAssessmentEmail,
+  sendReminderEmail,
+  sendVoiceAssessmentEmail,
+  sendVoiceReminderEmail,
+} from "@/lib/candidateEmails";
 import { markItem, readBatch, setNextAt } from "@/lib/bulkEmailStore";
 import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
 
@@ -30,9 +35,16 @@ function baseUrl(): string {
 }
 
 async function sendOne(batch: BatchState, id: string) {
-  return batch.action === "assessment"
-    ? sendAssessmentEmail(id, baseUrl())
-    : sendReminderEmail(id, baseUrl());
+  switch (batch.action) {
+    case "assessment":
+      return sendAssessmentEmail(id, baseUrl());
+    case "reminder":
+      return sendReminderEmail(id, baseUrl());
+    case "voice":
+      return sendVoiceAssessmentEmail(id, baseUrl());
+    case "voiceReminder":
+      return sendVoiceReminderEmail(id, baseUrl());
+  }
 }
 
 function clear() {

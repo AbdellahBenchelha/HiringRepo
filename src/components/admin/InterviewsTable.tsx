@@ -26,6 +26,8 @@ import { CANDIDATE_STATUSES, VOICE_STATUSES, type CandidateStatus, type VoiceSta
 import { VERIFICATION_FILTERS, type VerificationFilter } from "@/lib/verification";
 import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
 import { replyOverdue } from "@/lib/offerReminder";
+import { useBulkEmail } from "@/components/admin/BulkEmailBar";
+import { INTERVIEW_ACTIONS } from "@/lib/bulkEmail";
 import type { CandidateView } from "@/lib/candidateView";
 
 /**
@@ -220,6 +222,28 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   // candidates rather than as rows.
   const everyone = useMemo(() => live.map((r) => r.view), [live]);
   const ordered = useMemo(() => shown.map((r) => r.view), [shown]);
+
+  /**
+   * Who is ticked, for the paced batch.
+   *
+   * Ids rather than rows, and kept across pages: somebody selecting on page
+   * one and losing it on page two could never act on a filter larger than a
+   * page. Anything the filters drop falls out of the selection, because acting
+   * on a row nobody can see is how the wrong person gets emailed.
+   */
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectable = useMemo(() => new Set(ordered.map((c) => c.id)), [ordered]);
+  const chosen = useMemo(() => selected.filter((id) => selectable.has(id)), [selected, selectable]);
+  const toggleOne = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const pageIds = visible.map((r) => r.view.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => chosen.includes(id));
+  const togglePage = () =>
+    setSelected((prev) =>
+      allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])],
+    );
+
+  const bulkEmail = useBulkEmail(ordered, chosen, () => setSelected([]), INTERVIEW_ACTIONS);
   const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
     everyone,
     ordered,
@@ -439,6 +463,9 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
         </p>
       ) : null}
 
+      {bulkEmail.bar}
+      {bulkEmail.panel}
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-navy-500">
           <span className="font-semibold text-navy-900">{visible.length}</span> on this page
@@ -452,6 +479,16 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
         <table className="w-full min-w-[1400px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={allOnPage}
+                  onChange={togglePage}
+                  aria-label={allOnPage ? "Unselect this page" : "Select this page"}
+                  title={allOnPage ? "Unselect this page" : "Select this page"}
+                  className="h-4 w-4 rounded border-navy-300 text-brand-600"
+                />
+              </th>
               <th className="px-4 py-3 font-semibold">Candidate</th>
               <th className="px-4 py-3 font-semibold">Country</th>
               <th className="px-4 py-3 font-semibold">Completed</th>
@@ -471,7 +508,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-navy-400">
+                <td colSpan={10} className="px-4 py-10 text-center text-navy-400">
                   {rows.length === 0
                     ? "No completed interviews yet."
                     : "No interviews match your filters."}
@@ -485,7 +522,21 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                 // would be a score this person never got.
                 const scored = c.total != null && c.total > 0;
                 return (
-                  <tr key={c.id} className="align-top hover:bg-navy-50/40">
+                  <tr
+                    key={c.id}
+                    className={`align-top hover:bg-navy-50/40 ${
+                      chosen.includes(c.id) ? "bg-brand-50/60" : ""
+                    }`}
+                  >
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={chosen.includes(c.id)}
+                        onChange={() => toggleOne(c.id)}
+                        aria-label={`Select ${c.fullName || c.email || c.id}`}
+                        className="mt-0.5 h-4 w-4 rounded border-navy-300 text-brand-600"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-navy-900">
                       {c.fullName || "—"}
                       <span className="mt-0.5 block text-xs font-normal text-navy-500">
@@ -634,6 +685,8 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
           onClose={() => setViewing(null)}
         />
       ) : null}
+
+      {bulkEmail.dialog}
     </>
   );
 }

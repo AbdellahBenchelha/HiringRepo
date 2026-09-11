@@ -6,6 +6,7 @@ import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
   ACTION_LABEL,
+  CANDIDATE_ACTIONS,
   DEFAULT_PACE_SECONDS,
   MAX_BATCH,
   PACE_OPTIONS,
@@ -40,11 +41,28 @@ function fmtTime(iso?: string) {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
+/** The icon each action wears, so the two buttons never look interchangeable. */
+const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone"> = {
+  assessment: "mail",
+  reminder: "clock",
+  voice: "microphone",
+  voiceReminder: "clock",
+};
+
 export function useBulkEmail(
   /** Everyone the filters left, in the order shown — not just this page. */
   candidates: CandidateView[],
   selected: string[],
   clearSelection: () => void,
+  /**
+   * Which actions this tab offers.
+   *
+   * The lists hold different people at different stages: the Candidates tab
+   * chases an assessment nobody has sat, the Interviews tab asks for a
+   * recording from people who already have. Offering all four everywhere would
+   * mean every tab showing two buttons that can only ever skip everybody.
+   */
+  actions: readonly BulkAction[] = CANDIDATE_ACTIONS,
 ) {
   const [batch, setBatch] = useState<BatchState | null>(null);
   const [asking, setAsking] = useState<BulkAction | null>(null);
@@ -92,6 +110,8 @@ export function useBulkEmail(
         email: c.email,
         interviewCompleted: c.interviewCompleted,
         interviewEmailSentAt: c.interviewEmailSentAt,
+        voiceRequestedAt: c.voiceRequestedAt,
+        documents: c.documents,
       });
       const name = c.fullName || c.email || c.id;
       if (!verdict.include) skip.push({ name, reason: verdict.reason });
@@ -172,24 +192,22 @@ export function useBulkEmail(
         <p className="text-sm font-bold text-navy-900">
           {selected.length} selected
         </p>
-        <button
-          type="button"
-          onClick={() => setAsking("assessment")}
-          disabled={tooMany}
-          className="inline-flex items-center gap-1.5 rounded-full bg-navy-900 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-navy-800 disabled:opacity-40"
-        >
-          <Icon name="mail" className="h-3.5 w-3.5" />
-          Send assessment link
-        </button>
-        <button
-          type="button"
-          onClick={() => setAsking("reminder")}
-          disabled={tooMany}
-          className="inline-flex items-center gap-1.5 rounded-full border border-navy-300 bg-white px-3.5 py-1.5 text-xs font-bold text-navy-800 transition hover:bg-navy-100 disabled:opacity-40"
-        >
-          <Icon name="clock" className="h-3.5 w-3.5" />
-          Send reminder
-        </button>
+        {actions.map((action, i) => (
+          <button
+            key={action}
+            type="button"
+            onClick={() => setAsking(action)}
+            disabled={tooMany}
+            className={
+              i === 0
+                ? "inline-flex items-center gap-1.5 rounded-full bg-navy-900 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-navy-800 disabled:opacity-40"
+                : "inline-flex items-center gap-1.5 rounded-full border border-navy-300 bg-white px-3.5 py-1.5 text-xs font-bold text-navy-800 transition hover:bg-navy-100 disabled:opacity-40"
+            }
+          >
+            <Icon name={ACTION_ICON[action]} className="h-3.5 w-3.5" />
+            {ACTION_LABEL[action]}
+          </button>
+        ))}
         <button
           type="button"
           onClick={clearSelection}

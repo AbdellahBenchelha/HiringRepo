@@ -12,14 +12,22 @@
  * decided mostly by SPF, DKIM and DMARC alignment and by whether people open
  * it. This buys politeness, not deliverability.
  */
+import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
+import type { CandidateDocument } from "@/lib/documents";
 
-export const BULK_ACTIONS = ["assessment", "reminder"] as const;
+export const BULK_ACTIONS = ["assessment", "reminder", "voice", "voiceReminder"] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
 export const ACTION_LABEL: Record<BulkAction, string> = {
   assessment: "Send assessment link",
   reminder: "Send reminder",
+  voice: "Send voice assessment",
+  voiceReminder: "Send voice reminder",
 };
+
+/** Which buttons each tab offers, since the two lists hold different people. */
+export const CANDIDATE_ACTIONS: readonly BulkAction[] = ["assessment", "reminder"];
+export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder"];
 
 /** How long a batch may be. A misclick must not be able to email everybody. */
 export const MAX_BATCH = 50;
@@ -52,6 +60,9 @@ export interface BulkCandidate {
   email?: string;
   interviewCompleted?: boolean;
   interviewEmailSentAt?: string;
+  /** For the voice actions: what has been asked for, and what has arrived. */
+  voiceRequestedAt?: string;
+  documents?: CandidateDocument[];
 }
 
 export type Eligibility =
@@ -72,6 +83,31 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
   if (!c.email || !c.email.includes("@")) {
     return { include: false, reason: "no email address" };
   }
+
+  // The voice actions are about a different step, and they ask the opposite
+  // question: these people have finished the assessment, and what matters is
+  // whether a recording has been asked for and whether one has arrived.
+  if (action === "voice" || action === "voiceReminder") {
+    const recording = currentVoiceRecording(c.documents);
+    if (action === "voice") {
+      // Asking again for a fresh recording, after listening to one and not
+      // being satisfied, is a judgement about one person. It is made in their
+      // profile, not by ticking forty boxes — so a recording on file takes
+      // them out of the batch rather than quietly replacing the request.
+      if (recording) return { include: false, reason: "has already sent a recording" };
+      return c.voiceRequestedAt
+        ? { include: true, warn: "already asked — this asks again" }
+        : { include: true };
+    }
+    if (!c.voiceRequestedAt) {
+      return { include: false, reason: "has not been asked for a recording yet" };
+    }
+    if (!voiceRecordingNeeded(c)) {
+      return { include: false, reason: "has already sent their recording" };
+    }
+    return { include: true };
+  }
+
   if (c.interviewCompleted) {
     return {
       include: false,

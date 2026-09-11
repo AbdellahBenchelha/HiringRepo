@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
       email: c.email,
       interviewCompleted: !!c.interview,
       interviewEmailSentAt: c.interviewEmailSentAt,
+      voiceRequestedAt: c.voiceRequestedAt,
+      documents: c.documents,
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });
