@@ -32,6 +32,7 @@ import { isVerificationKind } from "@/lib/verification";
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
 import { effectiveOffer, type Offer } from "@/lib/offer";
+import { deadlineFrom } from "@/lib/offerReminder";
 import type { Availability } from "@/lib/availability";
 import type { ConfirmedDetails } from "@/lib/hiring";
 import type { CompanyDetails } from "@/lib/companyDetails";
@@ -86,6 +87,19 @@ export interface Candidate {
   offerAcceptedAt?: string;
   offerDeclinedAt?: string;
   offerDeclineReason?: string;
+  /**
+   * Chasing an answer to an offer, and the deadline that chase set.
+   *
+   * The deadline is stored rather than worked out on the fly: somebody told
+   * "answer by Saturday" must still have Saturday if the rule behind it is
+   * ever changed. Every reminder keeps its date, for the same reason the
+   * identity ones do — it is what you read back to someone who says nobody
+   * ever asked them.
+   */
+  offerReminderSentAt?: string;
+  offerReminderCount?: number;
+  offerReminders?: string[];
+  offerReplyDeadline?: string;
   /**
    * What the candidate re-confirmed when they accepted.
    *
@@ -636,6 +650,29 @@ export function recordVoiceReminder(id: string): Promise<Candidate | null> {
     if (!c) return { list, result: null };
     c.voiceReminderSentAt = new Date().toISOString();
     c.voiceReminderCount = (c.voiceReminderCount ?? 0) + 1;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Log a reminder chasing an answer to an offer, and set its deadline.
+ *
+ * The deadline moves with the reminder rather than being fixed to the offer:
+ * a second chase is a fresh 48 hours, because the alternative is telling
+ * somebody the time ran out before we asked them the second time.
+ */
+export function recordOfferReminder(id: string, sentAt?: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    // The caller's timestamp when it has one: the deadline stored here has to
+    // be the same moment the email named, and recomputing it after the send
+    // would drift by however long the send took.
+    const now = sentAt ?? new Date().toISOString();
+    c.offerReminders = [...(c.offerReminders ?? []), now];
+    c.offerReminderSentAt = now;
+    c.offerReminderCount = c.offerReminders.length;
+    c.offerReplyDeadline = deadlineFrom(now);
     return { list, result: c };
   });
 }

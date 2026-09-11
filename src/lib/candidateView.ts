@@ -19,6 +19,11 @@ import {
 import type { IdDocumentType } from "@/lib/identityDocuments";
 import { voiceRecordingNeeded } from "@/lib/voice";
 import type { Offer } from "@/lib/offer";
+// Whether the deadline has *passed* is deliberately not derived here: it turns
+// with the clock, and a value computed when the page was rendered would still
+// be saying "overdue" about somebody reminded again a minute ago. The tables
+// and the panel call replyOverdue themselves.
+import { offerAwaitingReply } from "@/lib/offerReminder";
 import type { ConfirmedDetails } from "@/lib/hiring";
 import { companyDetailsNeeded, type CompanyDetails } from "@/lib/companyDetails";
 import type { Availability } from "@/lib/availability";
@@ -125,6 +130,18 @@ export interface CandidateView {
   offerAcceptedAt?: string;
   offerDeclinedAt?: string;
   offerDeclineReason?: string;
+  /** Chasing an answer: when, how often, and by when they were asked to reply. */
+  offerReminderSentAt?: string;
+  offerReminderCount?: number;
+  offerReminders?: string[];
+  offerReplyDeadline?: string;
+  /**
+   * Derived: an offer is out and they have said neither yes nor no.
+   *
+   * Computed here so the table banner, the profile panel and the reminder
+   * button cannot disagree about who is still being waited on.
+   */
+  offerAwaitingReply: boolean;
   /** What they re-confirmed on accepting. Absent until they do. */
   confirmedDetails?: ConfirmedDetails;
   confirmedDetailsAt?: string;
@@ -244,6 +261,11 @@ export function toCandidateView(
     offerAcceptedAt: c.offerAcceptedAt,
     offerDeclinedAt: c.offerDeclinedAt,
     offerDeclineReason: c.offerDeclineReason,
+    offerReminderSentAt: c.offerReminderSentAt,
+    offerReminderCount: c.offerReminderCount,
+    offerReminders: c.offerReminders,
+    offerReplyDeadline: c.offerReplyDeadline,
+    offerAwaitingReply: offerAwaitingReply(c),
     confirmedDetails: c.confirmedDetails,
     confirmedDetailsAt: c.confirmedDetailsAt,
     availability: c.availability,

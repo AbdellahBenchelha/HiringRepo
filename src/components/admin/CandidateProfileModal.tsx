@@ -17,6 +17,7 @@ import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
+import { OfferReplyPanel } from "@/components/admin/OfferReplyPanel";
 import { canOffer } from "@/lib/offer";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
@@ -370,6 +371,10 @@ export function CandidateProfileModal({
                 })
               }
             />
+
+            {/* Directly under the offer, because it is the same question:
+                what happened to it. */}
+            <OfferReplyPanel candidate={candidate} onSent={(patch) => onChange(patch)} />
           </div>
         ) : null}
 

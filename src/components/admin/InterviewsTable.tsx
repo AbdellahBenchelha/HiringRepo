@@ -12,6 +12,7 @@ import {
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
+import { Icon } from "@/components/Icon";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
@@ -24,6 +25,7 @@ import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { CANDIDATE_STATUSES, VOICE_STATUSES, type CandidateStatus, type VoiceStatus } from "@/lib/candidateStatus";
 import { VERIFICATION_FILTERS, type VerificationFilter } from "@/lib/verification";
 import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
+import { replyOverdue } from "@/lib/offerReminder";
 import type { CandidateView } from "@/lib/candidateView";
 
 /**
@@ -125,6 +127,15 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
         .map((r) => (patches[r.view.id] ? { ...r, view: { ...r.view, ...patches[r.view.id] } } : r)),
     [rows, patches, deleted],
   );
+
+  /**
+   * Offers whose deadline has gone by with no answer.
+   *
+   * Counted here from the deadline rather than read off the row, so that
+   * reminding somebody again clears them from the banner immediately instead
+   * of when the page is next loaded.
+   */
+  const overdue = useMemo(() => live.filter((r) => replyOverdue(r.view)).length, [live]);
 
   // Only offer countries that actually appear, so the filter never lists
   // options that return nothing.
@@ -409,6 +420,24 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
           </div>
         ) : null}
       </div>
+
+      {/* The deadline we gave somebody, come and gone. A prompt to look at the
+          row, never an instruction: what happens next is a person's decision,
+          and the delete button is already on the row when they make it. */}
+      {overdue > 0 ? (
+        <p className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <Icon name="clock" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>
+              {overdue} {overdue === 1 ? "person was" : "people were"} given a deadline to answer
+              their offer and did not.
+            </strong>{" "}
+            They were told we would close their file and remove what we hold. Nothing has been
+            deleted — open <span className="font-semibold">View info</span> to check, then delete
+            the row if that is right.
+          </span>
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-navy-500">

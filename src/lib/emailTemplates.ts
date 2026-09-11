@@ -1278,6 +1278,232 @@ export interface CompanyDetailsEmail {
  * we hold about that company is two boxes they typed while accepting. The
  * paperwork is what turns those into something a contract can be built on.
  */
+export interface OfferReminderEmail {
+  fullName: string;
+  position?: string;
+  /** Already formatted, e.g. "$17 per hour". Omitted if the offer is unreadable. */
+  rate?: string;
+  /** Their own offer link, which still opens the accept and decline buttons. */
+  offerUrl: string;
+  /** The deadline in words: "Saturday 13 September at 14:30 UK time". */
+  deadline: string;
+}
+
+/**
+ * Chasing an answer to an offer, with a deadline attached.
+ *
+ * The hardest thing to get right here is tone. The message has to carry a
+ * consequence — after this we close the file and erase what we hold — while
+ * not reading as a threat to somebody who has simply been busy, or ill, or
+ * waiting to hear from another employer. So the consequence is stated once,
+ * plainly, as what happens rather than as a punishment, and "no" is offered as
+ * a real answer beside "yes": declining takes one click and costs them
+ * nothing, which is the outcome we would much rather have than silence.
+ *
+ * The deadline is a date and a time, never "within 48 hours". Emails are read
+ * whenever they are read, and by then "48 hours" names no moment at all.
+ */
+export function offerReminderSubject(position?: string): string {
+  return position
+    ? `Your ${position} offer is waiting for your answer`
+    : `Your ${siteConfig.company.name} offer is waiting for your answer`;
+}
+
+export function offerReminderText(invite: OfferReminderEmail): string {
+  const name = firstNameOf(invite.fullName);
+  const role = invite.position ? ` for the ${invite.position} role` : "";
+  return [
+    `Dear ${name},`,
+    ``,
+    `We wrote to you recently with an offer${role}${invite.rate ? ` at ${invite.rate}` : ""},`,
+    `and we have not heard back yet.`,
+    ``,
+    `We are still holding the place for you. Could you let us know either way by`,
+    ``,
+    `${invite.deadline}`,
+    ``,
+    `Both answers are useful to us, and neither needs an explanation. If it is no,`,
+    `saying so takes one click and there is no awkwardness in it — plans change,`,
+    `and other offers come along.`,
+    ``,
+    `Open your offer to accept or decline:`,
+    ``,
+    invite.offerUrl,
+    ``,
+    `IF WE DO NOT HEAR FROM YOU`,
+    ``,
+    `We will assume you are no longer interested, close your file, and remove your`,
+    `application and any documents you sent us from our system. Nothing further`,
+    `will be asked of you, and you would be welcome to apply again another time.`,
+    ``,
+    `WE WILL NEVER ASK YOU FOR`,
+    ``,
+    `- A payment of any kind, for anything, at any stage.`,
+    `- Your bank card details or a password.`,
+    `- Money to release your first payment.`,
+    ``,
+    `If you need more time, simply reply to this email and say so. A person will`,
+    `read it, and we would rather give you longer than lose you to a deadline.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function offerReminderHtml(invite: OfferReminderEmail): string {
+  const name = esc(firstNameOf(invite.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(invite.offerUrl);
+  const deadline = esc(invite.deadline);
+  const role = invite.position
+    ? ` for the <strong style="color:${NAVY};">${esc(invite.position)}</strong> role`
+    : "";
+  const rate = invite.rate ? ` at <strong style="color:${NAVY};">${esc(invite.rate)}</strong>` : "";
+
+  const bullet = (text: string) => `
+    <tr>
+      <td style="padding:0 0 8px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+        <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; ${text}
+      </td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(offerReminderSubject(invite.position))}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  We are still holding your place. Please let us know either way by ${deadline}.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Your offer is still open
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Dear ${name}, we wrote to you recently with an offer${role}${rate}, and we have not
+          heard back yet. <strong style="color:${NAVY};">We are still holding the place for
+          you.</strong>
+        </p>
+
+        <!-- The deadline, given as a moment rather than a duration, and set
+             apart so it survives being skim-read on a phone. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 6px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                Please answer by
+              </p>
+              <p style="margin:0;font:800 19px/1.35 Arial,Helvetica,sans-serif;color:${NAVY};">
+                ${deadline}
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Both answers are useful to us, and neither needs an explanation. If it is no, saying so
+          takes one click and there is no awkwardness in it &mdash; plans change, and other offers
+          come along.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Accept or decline my offer
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <!-- What happens next if nothing does. Said once, as a consequence
+             rather than a threat: the reader may have been ill, or waiting on
+             another employer, and neither deserves to be leaned on. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                If we do not hear from you
+              </p>
+              <p style="margin:0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                We will assume you are no longer interested, close your file, and remove your
+                application and any documents you sent us from our system. Nothing further will be
+                asked of you, and you would be welcome to apply again another time.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
+          <tr>
+            <td style="padding:20px 22px;">
+              <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                We will never ask you for
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${bullet("A payment of any kind, for anything, at any stage.")}
+                ${bullet("Your bank card details, or a password.")}
+                ${bullet("Money to release your first payment.")}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:22px 0 0 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          If you need more time, simply reply to this email and say so. A person will read it, and
+          we would rather give you longer than lose you to a deadline.
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export function companyDetailsSubject(): string {
   return `Confirm your company details before we issue your ${siteConfig.company.name} agreement`;
 }
