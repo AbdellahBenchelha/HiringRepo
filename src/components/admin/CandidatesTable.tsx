@@ -15,6 +15,11 @@ import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal"
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { useBulkEmail } from "@/components/admin/BulkEmailBar";
+import {
+  HideCountryPicker,
+  HiddenCountryChips,
+  useHiddenCountries,
+} from "@/components/admin/HiddenCountries";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import {
   VerificationBadge,
@@ -64,6 +69,9 @@ function buildWhatsAppMessage(name: string, link: string): string {
   );
 }
 
+/** This tab's own hidden list — see HiddenCountries for why it is per tab. */
+const HIDDEN_COUNTRIES_KEY = "wr.candidates.hiddenCountries";
+
 export function CandidatesTable({
   candidates,
   initialVerify,
@@ -87,6 +95,8 @@ export function CandidatesTable({
   const [quickView, setQuickView] = useState<CandidateView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
+  /** Countries taken off this table entirely, remembered in the browser. */
+  const hiddenCountries = useHiddenCountries(HIDDEN_COUNTRIES_KEY);
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
   const [verifyFilter, setVerifyFilter] = useState<VerificationFilter>(
     VERIFICATION_FILTERS.some((f) => f.value === initialVerify)
@@ -131,6 +141,9 @@ export function CandidatesTable({
         )
       )
         return false;
+      // First, because it is a decision about who belongs in this table at
+      // all — the other filters narrow whoever is left.
+      if (hiddenCountries.isHidden(c.country)) return false;
       if (countryFilter !== "all" && c.country !== countryFilter) return false;
       if (interviewFilter === "completed" && !c.interviewCompleted) return false;
       // "Opened, not submitted" and "Not opened" both exclude finishers —
@@ -162,7 +175,7 @@ export function CandidatesTable({
       }
       return true;
     });
-  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, followUps, verifyFilter, mismatchOnly, formFilter, heldOnly]);
+  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries, followUpFilter, followUps, verifyFilter, mismatchOnly, formFilter, heldOnly]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -259,7 +272,7 @@ export function CandidatesTable({
   // Any change to what is being listed sends you back to the front of it.
   useEffect(() => {
     setPage(1);
-  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, followUpFilter, verifyFilter, mismatchOnly, formFilter, heldOnly, pageSize, sort]);
+  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries, followUpFilter, verifyFilter, mismatchOnly, formFilter, heldOnly, pageSize, sort]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -320,6 +333,20 @@ export function CandidatesTable({
     if (profile?.id === id) closeProfile();
   }
 
+  function hideCountry(name: string) {
+    if (!name) return;
+    hiddenCountries.hide(name);
+    // Showing only India while hiding India is a contradiction with an empty
+    // table as its answer, so the narrower filter gives way.
+    setCountryFilter((prev) => (prev === name ? "all" : prev));
+  }
+
+  /** How many rows the hidden countries are keeping off the table. */
+  const hiddenCount = useMemo(
+    () => rows.filter((c) => hiddenCountries.isHidden(c.country)).length,
+    [rows, hiddenCountries],
+  );
+
   function toggleSort(key: SortKey) {
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
   }
@@ -361,8 +388,17 @@ export function CandidatesTable({
           <label className="label" htmlFor="country">Country</label>
           <select id="country" className="select" value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)}>
             <option value="all">All countries</option>
-            {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+            {countries
+              .filter((c) => !hiddenCountries.isHidden(c))
+              .map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+        </div>
+        <div>
+          <HideCountryPicker
+            countries={countries}
+            hidden={hiddenCountries.hidden}
+            onHide={hideCountry}
+          />
         </div>
         <div>
           <label className="label" htmlFor="followup">Follow-up</label>
@@ -408,6 +444,19 @@ export function CandidatesTable({
             />
             Invitation held only
           </label>
+        </div>
+
+        {/* Always on screen while anything is hidden. A filter that quietly
+            removes people is the one that has to say so, or the tab looks
+            empty for no reason a week later. */}
+        <div className="sm:col-span-2 lg:col-span-4">
+          <HiddenCountryChips
+            hidden={hiddenCountries.hidden}
+            count={hiddenCount}
+            noun="candidate"
+            onShow={hiddenCountries.show}
+            onShowAll={hiddenCountries.showAll}
+          />
         </div>
       </div>
 
