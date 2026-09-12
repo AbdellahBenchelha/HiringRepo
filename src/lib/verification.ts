@@ -236,8 +236,26 @@ export function identityStillNeeded(c: VerificationInput): boolean {
   return !hasBothImages(c.documents, c.identityDocumentType);
 }
 
+/**
+ * Nobody has told this candidate they need to verify.
+ *
+ * A refinement of "awaiting", not a status of its own: the check is due and no
+ * request has gone out, so the person waiting is us. "Awaiting upload" covers
+ * both them and us, and the difference is the whole question — one row needs
+ * an email sent, the other needs chasing, and only one of them is anybody's
+ * fault.
+ *
+ * One definition, three callers: the red badge, the header's hide link, and
+ * the filter. Written out separately they would disagree, and a filter that
+ * disagrees with the badge beside it is worse than no filter.
+ */
+export function notAskedYet(status: VerificationStatus, requestedAt?: string): boolean {
+  return status === "awaiting" && !requestedAt;
+}
+
 export const VERIFICATION_FILTERS = [
   { value: "all", label: "All" },
+  { value: "not_asked", label: "Not asked yet" },
   { value: "awaiting", label: "Awaiting upload" },
   { value: "provided", label: "Ready to review" },
   { value: "verified", label: "Verified" },
@@ -245,3 +263,21 @@ export const VERIFICATION_FILTERS = [
 ] as const;
 
 export type VerificationFilter = (typeof VERIFICATION_FILTERS)[number]["value"];
+
+/**
+ * Does this row survive the ID-check filter?
+ *
+ * "Awaiting upload" deliberately keeps the not-asked rows in as well: it is
+ * the wider answer to "who has not sent documents", and somebody narrowing to
+ * it should not silently lose the ones nobody has written to yet. "Not asked
+ * yet" is the narrow one.
+ */
+export function matchesVerificationFilter(
+  filter: VerificationFilter,
+  status: VerificationStatus,
+  requestedAt?: string,
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "not_asked") return notAskedYet(status, requestedAt);
+  return status === filter;
+}

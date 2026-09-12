@@ -22,7 +22,12 @@ import {
   verificationStateOf,
 } from "@/components/admin/VerificationPanel";
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
-import { VERIFICATION_FILTERS, type VerificationFilter, type VerificationStatus } from "@/lib/verification";
+import {
+  VERIFICATION_FILTERS,
+  matchesVerificationFilter,
+  type VerificationFilter,
+  type VerificationStatus,
+} from "@/lib/verification";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
@@ -141,7 +146,9 @@ export function CandidatesTable({
         return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (followUpFilter !== "all" && followUps.get(c.id)?.kind !== followUpFilter) return false;
-      if (verifyFilter !== "all" && c.verificationStatus !== verifyFilter) return false;
+      if (!matchesVerificationFilter(verifyFilter, c.verificationStatus, c.verificationRequestedAt)) {
+        return false;
+      }
       // Purely whether they submitted the application form. The "Stalled at
       // step one" option under Interview status is a narrower question — it
       // also excludes anyone who has since opened or done the assessment.

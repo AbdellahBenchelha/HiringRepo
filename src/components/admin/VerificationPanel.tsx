@@ -15,6 +15,7 @@ import {
   VERIFICATION_KINDS,
   VERIFICATION_LABEL,
   isVerificationKind,
+  notAskedYet,
   type VerificationStatus,
 } from "@/lib/verification";
 import { ID_DOCUMENT_LABEL, type IdDocumentType } from "@/lib/identityDocuments";
@@ -64,7 +65,7 @@ export function VerificationBadge({
   if (status === "not_required") {
     return <span className="text-xs text-navy-300">—</span>;
   }
-  const unasked = status === "awaiting" && !requestedAt;
+  const unasked = notAskedYet(status, requestedAt);
   const clickable = !!onOpenPhotos && (status === "provided" || status === "verified");
 
   const className = `inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${

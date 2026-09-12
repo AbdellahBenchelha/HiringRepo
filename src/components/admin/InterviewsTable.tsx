@@ -23,7 +23,11 @@ import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { CANDIDATE_STATUSES, VOICE_STATUSES, type CandidateStatus, type VoiceStatus } from "@/lib/candidateStatus";
-import { VERIFICATION_FILTERS, type VerificationFilter } from "@/lib/verification";
+import {
+  VERIFICATION_FILTERS,
+  matchesVerificationFilter,
+  type VerificationFilter,
+} from "@/lib/verification";
 import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
 import { replyOverdue } from "@/lib/offerReminder";
 import { useBulkEmail } from "@/components/admin/BulkEmailBar";
@@ -192,7 +196,9 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
       }
       if (country !== "all" && c.country !== country) return false;
       if (voice !== "all" && (c.voiceStatus ?? "Voice Assessment Not Requested") !== voice) return false;
-      if (verification !== "all" && c.verificationStatus !== verification) return false;
+      if (!matchesVerificationFilter(verification, c.verificationStatus, c.verificationRequestedAt)) {
+        return false;
+      }
       if (status !== "all" && c.status !== status) return false;
       if (offer !== "all" && offerStatus(c) !== offer) return false;
       return true;

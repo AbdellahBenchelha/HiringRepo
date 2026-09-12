@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
 import { toCandidateView } from "@/lib/candidateView";
-import { verificationStatus } from "@/lib/verification";
+import { notAskedYet, verificationStatus } from "@/lib/verification";
 import { reachedInterviewStage } from "@/lib/candidateStatus";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { InterviewsTable, type InterviewRow } from "@/components/admin/InterviewsTable";
@@ -49,7 +49,7 @@ export default async function AdminInterviewsPage({
    * uses.
    */
   const notAsked = (c: (typeof finished)[number]) =>
-    verificationStatus(c, required) === "awaiting" && !c.verificationRequestedAt;
+    notAskedYet(verificationStatus(c, required), c.verificationRequestedAt);
 
   /**
    * Everybody is listed, including them.
