@@ -259,7 +259,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, hiddenCountries, voice, verification, status, offer, pageSize]);
+  }, [search, country, hiddenCountries.hidden, voice, verification, status, offer, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);

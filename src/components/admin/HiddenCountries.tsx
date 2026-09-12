@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Taking whole countries off a table.
@@ -52,19 +52,33 @@ export function useHiddenCountries(storageKey: string) {
     }
   }, [hidden, storageKey]);
 
-  const isHidden = useMemo(() => {
-    const set = new Set(hidden);
-    return (country?: string) => !!country && set.has(country);
-  }, [hidden]);
-
-  return {
-    hidden,
-    isHidden,
-    hide: (name: string) =>
+  /**
+   * Memoised as a whole, and every function inside it kept stable.
+   *
+   * Not a tidiness point: the tables list this in the dependencies of the
+   * effect that sends you back to page one whenever the list changes. A fresh
+   * object on every render is a changed dependency on every render, so that
+   * effect fires constantly and page two snaps back to page one the instant
+   * you reach it.
+   */
+  const hide = useCallback(
+    (name: string) =>
       setHidden((prev) => (!name || prev.includes(name) ? prev : [...prev, name].sort())),
-    show: (name: string) => setHidden((prev) => prev.filter((x) => x !== name)),
-    showAll: () => setHidden([]),
-  };
+    [],
+  );
+  const show = useCallback((name: string) => setHidden((prev) => prev.filter((x) => x !== name)), []);
+  const showAll = useCallback(() => setHidden([]), []);
+
+  return useMemo(() => {
+    const set = new Set(hidden);
+    return {
+      hidden,
+      isHidden: (country?: string) => !!country && set.has(country),
+      hide,
+      show,
+      showAll,
+    };
+  }, [hidden, hide, show, showAll]);
 }
 
 /**

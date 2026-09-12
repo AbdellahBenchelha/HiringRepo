@@ -272,7 +272,7 @@ export function CandidatesTable({
   // Any change to what is being listed sends you back to the front of it.
   useEffect(() => {
     setPage(1);
-  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries, followUpFilter, verifyFilter, mismatchOnly, formFilter, heldOnly, pageSize, sort]);
+  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries.hidden, followUpFilter, verifyFilter, mismatchOnly, formFilter, heldOnly, pageSize, sort]);
 
   function goToPage(next: number) {
     setPage(next);
