@@ -32,10 +32,17 @@ export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder
 /** How long a batch may be. A misclick must not be able to email everybody. */
 export const MAX_BATCH = 50;
 
+/**
+ * Slowest first, so the list reads as a ramp and the safe end is the one you
+ * land on. The jitter below moves each gap a few seconds either way, which is
+ * why every hint says "about".
+ */
 export const PACE_OPTIONS = [
   { value: 60, label: "Careful", hint: "one email a minute" },
   { value: 45, label: "Normal", hint: "about 45 seconds apart" },
-  { value: 15, label: "Quick", hint: "15 seconds apart" },
+  { value: 35, label: "Brisk", hint: "about 35 seconds apart" },
+  { value: 25, label: "Quick", hint: "about 25 seconds apart" },
+  { value: 15, label: "Fastest", hint: "about 15 seconds apart" },
 ] as const;
 
 export const DEFAULT_PACE_SECONDS = 45;
