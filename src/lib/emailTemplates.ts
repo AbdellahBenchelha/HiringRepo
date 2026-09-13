@@ -1278,6 +1278,255 @@ export interface CompanyDetailsEmail {
  * we hold about that company is two boxes they typed while accepting. The
  * paperwork is what turns those into something a contract can be built on.
  */
+export interface VoiceAckEmail {
+  fullName: string;
+  position?: string;
+  /** When the recording actually landed, so the receipt names a moment. */
+  receivedAt?: string;
+}
+
+/**
+ * The receipt for a voice recording, and the promise of an answer.
+ *
+ * This closes the worst silence in the process. A candidate records the
+ * assessment, sends it, and then hears nothing while the file is read — which
+ * from their side is indistinguishable from having been turned down without
+ * being told. The good ones take the next offer they are given.
+ *
+ * Three things, in this order, and nothing else:
+ *
+ *   1. it arrived. That is the question they actually have;
+ *   2. what happens to it now, and who does it;
+ *   3. that places are limited, so a strong application sometimes waits —
+ *      said plainly, because implying an offer and then going quiet is how a
+ *      company earns the reputation this email exists to avoid.
+ *
+ * It promises a reply, never a job. And it asks for nothing: no link, no
+ * button, no next step. A receipt with a call to action is not a receipt.
+ */
+export function voiceAckSubject(): string {
+  return `We have your voice recording — ${siteConfig.company.name}`;
+}
+
+function ackDate(iso?: string): string {
+  if (!iso) return "";
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  return at.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export function voiceAckText(invite: VoiceAckEmail): string {
+  const name = firstNameOf(invite.fullName);
+  const when = ackDate(invite.receivedAt);
+  return [
+    `Dear ${name},`,
+    ``,
+    `Thank you — your voice recording${when ? ` reached us on ${when}` : ` has reached us`}.`,
+    `Nothing further is needed from you today.`,
+    ``,
+    `WHAT HAPPENS NOW`,
+    ``,
+    `Our team listens to your recording and reads it alongside your application`,
+    `and your assessment${invite.position ? ` for the ${invite.position} role` : ""}. That is done by a person, not a`,
+    `machine, which is why it takes a little time.`,
+    ``,
+    `ABOUT TIMING`,
+    ``,
+    `We would rather be straight with you: places open as our clients take on`,
+    `more support, so there is not always one free at the moment a good`,
+    `application arrives. If that is the case for you, it is about timing and`,
+    `nothing else.`,
+    ``,
+    `Either way, we will email you. You will not be left wondering.`,
+    ``,
+    `WE WILL NEVER ASK YOU FOR`,
+    ``,
+    `- A payment of any kind, for anything, at any stage.`,
+    `- Your bank card details or a password.`,
+    `- Money to secure a place or to start work.`,
+    ``,
+    `If anything is unclear, or your circumstances change, simply reply to this`,
+    `email and a person will read it.`,
+    ``,
+    `Thank you for the time you have given this so far.`,
+    ``,
+    `Kind regards,`,
+    `Recruitment Team`,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function voiceAckHtml(invite: VoiceAckEmail): string {
+  const name = esc(firstNameOf(invite.fullName));
+  const company = esc(siteConfig.company.name);
+  const when = esc(ackDate(invite.receivedAt));
+  const role = invite.position
+    ? ` for the <strong style="color:${NAVY};">${esc(invite.position)}</strong> role`
+    : "";
+
+  const bullet = (text: string) => `
+    <tr>
+      <td style="padding:0 0 8px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+        <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; ${text}
+      </td>
+    </tr>`;
+
+  /** A numbered step, for "what happens now". */
+  const step = (n: number, title: string, body: string) => `
+    <tr>
+      <td width="34" valign="top" style="padding:0 12px 14px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="26" height="26" align="center" valign="middle" bgcolor="${NAVY}"
+                style="border-radius:13px;font:700 13px/1 Arial,Helvetica,sans-serif;color:#ffffff;">
+              ${n}
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:0 0 14px 0;">
+        <p style="margin:0 0 2px 0;font:700 15px/1.4 Arial,Helvetica,sans-serif;color:${NAVY};">${title}</p>
+        <p style="margin:0;font:400 14px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">${body}</p>
+      </td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(voiceAckSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your recording arrived safely. Our team is reviewing it, and we will email you either way.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:0 0 38px 0;">
+
+        <!-- The receipt, as a banner. The one fact they opened the email for,
+             above everything else and impossible to miss on a phone. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#f0f9f2;border-bottom:1px solid #cdebd6;border-radius:14px 14px 0 0;">
+          <tr>
+            <td align="center" style="padding:28px 34px 24px 34px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="44" height="44" align="center" valign="middle" bgcolor="#1f9d55"
+                      style="border-radius:22px;font:700 22px/1 Arial,Helvetica,sans-serif;color:#ffffff;">
+                    &#10003;
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:14px 0 0 0;font:800 20px/1.3 Arial,Helvetica,sans-serif;color:#14532d;">
+                Your recording arrived safely
+              </p>
+              ${when ? `<p style="margin:6px 0 0 0;font:400 14px/1.5 Arial,Helvetica,sans-serif;color:#2f6b47;">Received ${when}</p>` : ""}
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding:30px 34px 0 34px;">
+
+              <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+                Dear ${name}, thank you for recording that and sending it in${role}.
+                <strong style="color:${NAVY};">Nothing further is needed from you today.</strong>
+              </p>
+
+              <p style="margin:0 0 14px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                What happens now
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${step(1, "A person listens to it", "Your recording is reviewed by our recruitment team &mdash; not by a machine.")}
+                ${step(2, "It is read with the rest of your file", "Alongside your application and your written assessment, so the picture is a whole one.")}
+                ${step(3, "We write to you", "With our decision, and what the next step would be.")}
+              </table>
+
+              <!-- The honest part. In its own box because it is the thing most
+                   companies leave out, and leaving it out is what turns a wait
+                   into a grievance. -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:22px 0 0 0;">
+                <tr>
+                  <td style="padding:20px 22px;">
+                    <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                      About timing
+                    </p>
+                    <p style="margin:0 0 12px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+                      We would rather be straight with you. Places open as our clients take on more
+                      support, so there is not always one free at the moment a good application
+                      arrives. If that turns out to be the case for you, it is about timing and
+                      nothing else.
+                    </p>
+                    <p style="margin:0;font:700 15px/1.55 Arial,Helvetica,sans-serif;color:${NAVY};">
+                      Either way, we will email you. You will not be left wondering.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:22px 0 0 0;">
+                <tr>
+                  <td style="padding:20px 22px;">
+                    <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                      We will never ask you for
+                    </p>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      ${bullet("A payment of any kind, for anything, at any stage.")}
+                      ${bullet("Your bank card details, or a password.")}
+                      ${bullet("Money to secure a place or to start work.")}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:22px 0 0 0;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+                If anything is unclear, or your circumstances change, simply reply to this email and
+                a person will read it. Thank you for the time you have given this so far.
+              </p>
+
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export interface OfferReminderEmail {
   fullName: string;
   position?: string;

@@ -13,9 +13,10 @@
  * it. This buys politeness, not deliverability.
  */
 import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
+import { ackRefusal } from "@/lib/voiceAck";
 import type { CandidateDocument } from "@/lib/documents";
 
-export const BULK_ACTIONS = ["assessment", "reminder", "voice", "voiceReminder"] as const;
+export const BULK_ACTIONS = ["assessment", "reminder", "voice", "voiceReminder", "voiceAck"] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
 export const ACTION_LABEL: Record<BulkAction, string> = {
@@ -23,11 +24,12 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   reminder: "Send reminder",
   voice: "Send voice assessment",
   voiceReminder: "Send voice reminder",
+  voiceAck: "Tell them we have it",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
 export const CANDIDATE_ACTIONS: readonly BulkAction[] = ["assessment", "reminder"];
-export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder"];
+export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder", "voiceAck"];
 
 /** How long a batch may be. A misclick must not be able to email everybody. */
 export const MAX_BATCH = 50;
@@ -70,6 +72,10 @@ export interface BulkCandidate {
   /** For the voice actions: what has been asked for, and what has arrived. */
   voiceRequestedAt?: string;
   documents?: CandidateDocument[];
+  /** For the acknowledgement: what would make it untrue to send. */
+  voiceStatus?: string;
+  voiceAckSentAt?: string;
+  offerSentAt?: string;
 }
 
 export type Eligibility =
@@ -94,6 +100,26 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
   // The voice actions are about a different step, and they ask the opposite
   // question: these people have finished the assessment, and what matters is
   // whether a recording has been asked for and whether one has arrived.
+  // The receipt for a recording. Refused wherever it would be untrue, and the
+  // reasons are the same ones the single-candidate route gives.
+  if (action === "voiceAck") {
+    const refusal = ackRefusal(c);
+    if (refusal) {
+      return {
+        include: false,
+        reason:
+          refusal === "no_recording"
+            ? "has not sent a recording"
+            : refusal === "already_offered"
+              ? "already has an offer — this would be behind the news"
+              : "has been marked as failing the assessment",
+      };
+    }
+    return c.voiceAckSentAt
+      ? { include: true, warn: "already told — this tells them again" }
+      : { include: true };
+  }
+
   if (action === "voice" || action === "voiceReminder") {
     const recording = currentVoiceRecording(c.documents);
     if (action === "voice") {

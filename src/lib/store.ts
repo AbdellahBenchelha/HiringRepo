@@ -13,6 +13,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { writeFileAtomic } from "@/lib/atomicWrite";
 import {
+  BEFORE_REVIEW,
   CANDIDATE_STATUSES,
   VOICE_STATUSES,
   type CandidateStatus,
@@ -248,6 +249,16 @@ export interface Candidate {
   voiceLastOpenedAt?: string;
   voiceOpenCount?: number;
   /** Reminders chasing an outstanding recording. Email only, by design. */
+  /**
+   * When we told them the recording had arrived and a decision was coming.
+   *
+   * Kept apart from the reminders: those chase the candidate, this one answers
+   * them. Every one is dated, because "when did you last hear from us" is the
+   * question somebody emailing after three weeks is really asking.
+   */
+  voiceAckSentAt?: string;
+  voiceAckCount?: number;
+  voiceAcks?: string[];
   voiceReminderSentAt?: string;
   voiceReminderCount?: number;
   /**
@@ -673,6 +684,30 @@ export function recordOfferReminder(id: string, sentAt?: string): Promise<Candid
     c.offerReminderSentAt = now;
     c.offerReminderCount = c.offerReminders.length;
     c.offerReplyDeadline = deadlineFrom(now);
+    return { list, result: c };
+  });
+}
+
+/**
+ * Log the email telling somebody their recording arrived.
+ *
+ * Moves them to "Under Review" at the same time, because that is exactly what
+ * was just said to them — and a status that disagrees with the last thing the
+ * candidate was told is how two people in the same panel reach different
+ * answers about where somebody is.
+ *
+ * Only ever forwards. A candidate already further along is left where they
+ * are; nothing here should be able to walk somebody backwards.
+ */
+export function recordVoiceAck(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    c.voiceAcks = [...(c.voiceAcks ?? []), now];
+    c.voiceAckSentAt = now;
+    c.voiceAckCount = c.voiceAcks.length;
+    if (BEFORE_REVIEW.includes(c.status)) c.status = "Under Review";
     return { list, result: c };
   });
 }

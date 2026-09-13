@@ -29,6 +29,7 @@ import { companyDetailsNeeded, type CompanyDetails } from "@/lib/companyDetails"
 import type { Availability } from "@/lib/availability";
 import { countryRuleApplies } from "@/lib/phoneCountry";
 import { hasSsn } from "@/lib/ssn";
+import { awaitingDecision } from "@/lib/voiceAck";
 import type { CompanyCheck } from "@/lib/companyCheck";
 import type { VoiceStatus } from "@/lib/candidateStatus";
 
@@ -105,6 +106,14 @@ export interface CandidateView {
   voiceOpenCount?: number;
   voiceReminderSentAt?: string;
   voiceReminderCount?: number;
+  /** When we told them the recording arrived and a decision was coming. */
+  voiceAckSentAt?: string;
+  voiceAckCount?: number;
+  voiceAcks?: string[];
+  /**
+   * Derived: told, and still waiting on us. The Waiting tab, in one field.
+   */
+  awaitingDecision: boolean;
   /**
    * Derived: a recording has been asked for and none newer has arrived.
    * Computed here so the table, the panel and the reminder button cannot
@@ -259,6 +268,10 @@ export function toCandidateView(
     voiceOpenCount: c.voiceOpenCount,
     voiceReminderSentAt: c.voiceReminderSentAt,
     voiceReminderCount: c.voiceReminderCount,
+    voiceAckSentAt: c.voiceAckSentAt,
+    voiceAckCount: c.voiceAckCount,
+    voiceAcks: c.voiceAcks,
+    awaitingDecision: awaitingDecision(c),
     voiceNeeded: voiceRecordingNeeded(c),
     identityReminderSentAt: c.identityReminderSentAt,
     identityReminderCount: c.identityReminderCount,

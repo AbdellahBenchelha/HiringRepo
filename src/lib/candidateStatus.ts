@@ -14,6 +14,23 @@ export const CANDIDATE_STATUSES = [
 
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
 
+/**
+ * Statuses that sit before a decision is being made.
+ *
+ * Used by the one place that moves somebody forward automatically — telling a
+ * candidate their recording has arrived and is being reviewed, which is
+ * exactly what "Under Review" means. Listed rather than derived from the array
+ * order so that reordering the list for the dropdown cannot silently change
+ * who gets moved. "Rejected" is deliberately absent: a decision already taken
+ * is not walked backwards by an email.
+ */
+export const BEFORE_REVIEW: readonly CandidateStatus[] = [
+  "New Application",
+  "Interview Invitation Sent",
+  "Interview Pending",
+  "Interview Completed",
+];
+
 /** Voice-assessment statuses (manually updated by the admin). */
 export const VOICE_STATUSES = [
   "Voice Assessment Not Requested",

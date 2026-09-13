@@ -5,6 +5,7 @@ import {
   recordReminder,
   recordVoiceRequest,
   recordVoiceReminder,
+  recordVoiceAck,
 } from "@/lib/store";
 import { sendEmail } from "@/lib/email";
 import {
@@ -20,8 +21,12 @@ import {
   voiceReminderHtml,
   voiceReminderSubject,
   voiceReminderText,
+  voiceAckHtml,
+  voiceAckSubject,
+  voiceAckText,
 } from "@/lib/emailTemplates";
-import { voiceRecordingNeeded } from "@/lib/voice";
+import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
+import { ackRefusal } from "@/lib/voiceAck";
 import { siteConfig } from "@/config/site";
 import { withSource } from "@/lib/followUp";
 
@@ -150,6 +155,52 @@ export async function sendReminderEmail(id: string, baseUrl: string): Promise<Se
   const updated = await recordReminder(id, "email");
   // eslint-disable-next-line no-console
   console.log(`[admin] reminder email sent to ${email} (${updated?.reminderEmailCount ?? 1})`);
+  return { ok: true };
+}
+
+/**
+ * Tell somebody their recording arrived and a decision is coming.
+ *
+ * Recorded only once the message is away, and the record is what moves them to
+ * "Under Review" — so the status and the last thing the candidate was told can
+ * never disagree.
+ */
+export async function sendVoiceAckEmail(id: string): Promise<SendOutcome> {
+  const candidate = await getCandidate(id);
+  if (!candidate) return { ok: false, reason: "not_found" };
+
+  const refusal = ackRefusal(candidate);
+  if (refusal) return { ok: false, reason: refusal };
+
+  const email = (candidate.email || "").trim();
+  if (!email.includes("@")) return { ok: false, reason: "no_email" };
+
+  const recording = currentVoiceRecording(candidate.documents);
+  const invite = {
+    fullName: candidate.fullName || "Candidate",
+    position: candidate.position || undefined,
+    receivedAt: recording?.uploadedAt,
+  };
+
+  const result = await sendEmail({
+    to: email,
+    toName: candidate.fullName || undefined,
+    subject: voiceAckSubject(),
+    html: voiceAckHtml(invite),
+    text: voiceAckText(invite),
+    replyTo: siteConfig.contact.recruitmentEmail,
+  });
+
+  if (!result.ok) {
+    const reason = "skipped" in result ? result.skipped : result.error;
+    // eslint-disable-next-line no-console
+    console.warn(`[voice-ack] not sent to ${email}: ${reason}`);
+    return { ok: false, reason };
+  }
+
+  const updated = await recordVoiceAck(id);
+  // eslint-disable-next-line no-console
+  console.log(`[voice-ack] sent to ${email}; status now ${updated?.status}`);
   return { ok: true };
 }
 

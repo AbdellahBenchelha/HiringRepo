@@ -22,6 +22,8 @@ import { canOffer } from "@/lib/offer";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
+import { VoiceAckButton } from "@/components/admin/VoiceAckButton";
+import { currentVoiceRecording } from "@/lib/voice";
 import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
 import { SsnField } from "@/components/admin/SsnField";
@@ -323,6 +325,24 @@ export function CandidateProfileModal({
             openCount={candidate.voiceOpenCount}
             reminderSentAt={candidate.voiceReminderSentAt}
             reminderCount={candidate.voiceReminderCount}
+          />
+
+          {/* Directly under the recording it is about: the answer to somebody
+              who has sent theirs and heard nothing. */}
+          <VoiceAckButton
+            candidate={{
+              id: candidate.id,
+              fullName: candidate.fullName,
+              email: candidate.email,
+              status: candidate.status,
+              voiceStatus: candidate.voiceStatus,
+              voiceAckSentAt: candidate.voiceAckSentAt,
+              voiceAckCount: candidate.voiceAckCount,
+              voiceAcks: candidate.voiceAcks,
+              offerSentAt: candidate.offerSentAt,
+              hasRecording: !!currentVoiceRecording(candidate.documents),
+            }}
+            onSent={(patch) => onChange(patch)}
           />
         </div>
 
