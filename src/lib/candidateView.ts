@@ -28,6 +28,7 @@ import type { ConfirmedDetails } from "@/lib/hiring";
 import { companyDetailsNeeded, type CompanyDetails } from "@/lib/companyDetails";
 import type { Availability } from "@/lib/availability";
 import { countryRuleApplies } from "@/lib/phoneCountry";
+import { hasSsn } from "@/lib/ssn";
 import type { CompanyCheck } from "@/lib/companyCheck";
 import type { VoiceStatus } from "@/lib/candidateStatus";
 
@@ -122,6 +123,15 @@ export interface CandidateView {
    * anyone else points at a page that will not ask them for anything.
    */
   identityNeeded: boolean;
+  /**
+   * Whether a Social Security Number is on file — never the number.
+   *
+   * A boolean, deliberately. The panel needs to know whether there is
+   * something to show; the number itself is fetched one candidate at a time
+   * when somebody presses Show, so a table listing forty people does not send
+   * forty SSNs to the browser to render none of them.
+   */
+  hasSsn: boolean;
   /** Interview follow-up state, for the Interviews tab's own filters. */
   interviewCompletedAt?: string;
   voiceRequestedAt?: string;
@@ -254,6 +264,7 @@ export function toCandidateView(
     identityReminderCount: c.identityReminderCount,
     identityReminders: c.identityReminders,
     identityNeeded: !!c.offerAcceptedAt && identityStillNeeded(c),
+    hasSsn: hasSsn(c.application),
     interviewCompletedAt: c.interview?.completedAt,
     voiceRequestedAt: c.voiceRequestedAt,
     offer: c.offer,

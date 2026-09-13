@@ -24,6 +24,8 @@ import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
 import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
+import { SsnField } from "@/components/admin/SsnField";
+import { ssnExpected } from "@/lib/ssn";
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -269,6 +271,14 @@ export function CandidateProfileModal({
               )
             }
           />
+          {/* Only for the people it is asked of. An empty "SSN —" against
+              somebody in Morocco reads as missing rather than inapplicable. */}
+          {ssnExpected(candidate.country) || candidate.hasSsn ? (
+            <Field
+              label="Social Security Number"
+              value={<SsnField candidateId={candidate.id} hasSsn={candidate.hasSsn} />}
+            />
+          ) : null}
           <Field label="City" value={candidate.city} />
           <Field label="Full address" value={candidate.address} full />
           <Field label="Languages" value={candidate.languages.join(", ")} full />
