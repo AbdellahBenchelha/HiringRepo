@@ -36,6 +36,18 @@ export function offerAwaitingReply(c: OfferReminderState): boolean {
 }
 
 /**
+ * An offer went out and no yes came back — either silence, or a no.
+ *
+ * The two belong together on one tab because they are the same question
+ * answered and unanswered: an offer we made that did not become a hire. The
+ * accepted ones have a tab of their own, and a decline is a fact worth keeping
+ * beside the silence rather than filing somewhere else.
+ */
+export function offerUnaccepted(c: OfferReminderState): boolean {
+  return !!c.offerSentAt && !c.offerAcceptedAt;
+}
+
+/**
  * The deadline currently in force, or nothing.
  *
  * Stored rather than recomputed, because the answer has to survive the

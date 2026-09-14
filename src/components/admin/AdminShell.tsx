@@ -11,6 +11,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/candidates", label: "Candidates", icon: "users" },
   { href: "/admin/interviews", label: "Interviews", icon: "chat" },
   { href: "/admin/waiting", label: "Waiting", icon: "clock" },
+  { href: "/admin/offers", label: "Offers", icon: "handshake" },
   { href: "/admin/accepted", label: "Accepted", icon: "checkCircle" },
   // One entry, three sections behind it. As three items they sat among the
   // tabs where candidates are actually worked, making rules you change once a
