@@ -4,6 +4,7 @@ import {
   sendVoiceAssessmentEmail,
   sendVoiceReminderEmail,
   sendVoiceAckEmail,
+  sendOfferReminderEmail,
 } from "@/lib/candidateEmails";
 import { markItem, readBatch, setNextAt } from "@/lib/bulkEmailStore";
 import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
@@ -48,6 +49,8 @@ async function sendOne(batch: BatchState, id: string) {
     case "voiceAck":
       // No link in this email, so no base URL to build one from.
       return sendVoiceAckEmail(id);
+    case "offerReminder":
+      return sendOfferReminderEmail(id, baseUrl());
   }
 }
 

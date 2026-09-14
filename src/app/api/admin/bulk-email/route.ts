@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
       voiceStatus: c.voiceStatus,
       voiceAckSentAt: c.voiceAckSentAt,
       offerSentAt: c.offerSentAt,
+      offerAcceptedAt: c.offerAcceptedAt,
+      offerDeclinedAt: c.offerDeclinedAt,
+      offerReminderCount: c.offerReminderCount,
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });

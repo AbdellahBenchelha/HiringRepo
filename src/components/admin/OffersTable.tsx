@@ -17,6 +17,8 @@ import {
 } from "@/components/admin/HiddenCountries";
 import { adminPost } from "@/lib/adminClient";
 import { offerAwaitingReply, replyOverdue } from "@/lib/offerReminder";
+import { useBulkEmail } from "@/components/admin/BulkEmailBar";
+import { OFFER_ACTIONS } from "@/lib/bulkEmail";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
 import type { CandidateView } from "@/lib/candidateView";
@@ -155,6 +157,27 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
     [sorted, current, pageSize],
   );
 
+  /**
+   * Who is ticked, for a paced batch of reminders.
+   *
+   * Ids rather than rows, and kept across pages. Anything the filters drop
+   * falls out of the selection, because acting on a row nobody can see is how
+   * the wrong person gets emailed.
+   */
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectable = useMemo(() => new Set(sorted.map((c) => c.id)), [sorted]);
+  const chosen = useMemo(() => selected.filter((id) => selectable.has(id)), [selected, selectable]);
+  const toggleOne = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const pageIds = visible.map((c) => c.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => chosen.includes(id));
+  const togglePage = () =>
+    setSelected((prev) =>
+      allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])],
+    );
+
+  const bulkEmail = useBulkEmail(sorted, chosen, () => setSelected([]), OFFER_ACTIONS);
+
   const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
     live,
     sorted,
@@ -277,6 +300,9 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
         </p>
       ) : null}
 
+      {bulkEmail.bar}
+      {bulkEmail.panel}
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-navy-500">
           <span className="font-semibold text-navy-900">{sorted.length}</span> offer
@@ -289,6 +315,16 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={allOnPage}
+                  onChange={togglePage}
+                  aria-label={allOnPage ? "Unselect this page" : "Select this page"}
+                  title={allOnPage ? "Unselect this page" : "Select this page"}
+                  className="h-4 w-4 rounded border-navy-300 text-brand-600"
+                />
+              </th>
               <th className="px-4 py-3 font-semibold">Candidate</th>
               <th className="px-4 py-3 font-semibold">Country</th>
               <th className="px-4 py-3 font-semibold">Offer sent</th>
@@ -301,7 +337,7 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-navy-400">
+                <td colSpan={8} className="px-4 py-10 text-center text-navy-400">
                   {live.length === 0
                     ? "No offers are outstanding. Everyone who was sent one has accepted."
                     : "No offers match your filters."}
@@ -315,7 +351,21 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
                 const declined = !!c.offerDeclinedAt;
                 const days = daysSince(c.offerSentAt);
                 return (
-                  <tr key={c.id} className="align-top hover:bg-navy-50/40">
+                  <tr
+                    key={c.id}
+                    className={`align-top hover:bg-navy-50/40 ${
+                      chosen.includes(c.id) ? "bg-brand-50/60" : ""
+                    }`}
+                  >
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={chosen.includes(c.id)}
+                        onChange={() => toggleOne(c.id)}
+                        aria-label={`Select ${c.fullName || c.email || c.id}`}
+                        className="mt-0.5 h-4 w-4 rounded border-navy-300 text-brand-600"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                       <p className="text-xs text-navy-500">{c.email || "no email"}</p>
@@ -442,6 +492,8 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
           onClose={() => setViewing(null)}
         />
       ) : null}
+
+      {bulkEmail.dialog}
     </>
   );
 }

@@ -6,6 +6,7 @@ import {
   recordVoiceRequest,
   recordVoiceReminder,
   recordVoiceAck,
+  recordOfferReminder,
 } from "@/lib/store";
 import { sendEmail } from "@/lib/email";
 import {
@@ -24,9 +25,15 @@ import {
   voiceAckHtml,
   voiceAckSubject,
   voiceAckText,
+  offerReminderHtml,
+  offerReminderSubject,
+  offerReminderText,
 } from "@/lib/emailTemplates";
 import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
 import { ackRefusal } from "@/lib/voiceAck";
+import { deadlineFrom, formatDeadline, offerAwaitingReply } from "@/lib/offerReminder";
+import { effectiveOffer, formatRate } from "@/lib/offer";
+import { createOfferToken } from "@/lib/token";
 import { siteConfig } from "@/config/site";
 import { withSource } from "@/lib/followUp";
 
@@ -61,6 +68,16 @@ export type VoiceRequestOutcome =
 
 export type VoiceReminderOutcome =
   | { ok: true; voiceReminderSentAt?: string; voiceReminderCount?: number }
+  | { ok: false; reason: string };
+
+export type OfferReminderOutcome =
+  | {
+      ok: true;
+      offerReminderSentAt?: string;
+      offerReminderCount?: number;
+      offerReminders?: string[];
+      offerReplyDeadline?: string;
+    }
   | { ok: false; reason: string };
 
 /** Their assessment link, the same permanent one every message uses. */
@@ -156,6 +173,69 @@ export async function sendReminderEmail(id: string, baseUrl: string): Promise<Se
   // eslint-disable-next-line no-console
   console.log(`[admin] reminder email sent to ${email} (${updated?.reminderEmailCount ?? 1})`);
   return { ok: true };
+}
+
+/**
+ * Chase an answer to an offer, and set the deadline that chase gives them.
+ *
+ * The deadline is fixed before the send so the email and the record name the
+ * same moment, and recorded only once the message is away — a deadline on file
+ * that nobody was told about is worse than none.
+ */
+export async function sendOfferReminderEmail(
+  id: string,
+  baseUrl: string,
+): Promise<OfferReminderOutcome> {
+  const candidate = await getCandidate(id);
+  if (!candidate) return { ok: false, reason: "not_found" };
+  if (!candidate.offerSentAt) return { ok: false, reason: "no_offer" };
+  if (!offerAwaitingReply(candidate)) return { ok: false, reason: "already_answered" };
+
+  const email = (candidate.email || "").trim();
+  if (!email.includes("@")) return { ok: false, reason: "no_email" };
+
+  const sentAt = new Date().toISOString();
+  const deadline = deadlineFrom(sentAt);
+
+  // Their existing offer link. It still opens the accept and decline buttons,
+  // and it is the link they have already been sent — a reminder pointing
+  // somewhere new is a reminder that looks like somebody else's email.
+  const token = createOfferToken({ id, offerSentAt: candidate.offerSentAt });
+  const offer = candidate.offer ? effectiveOffer(candidate.offer) : undefined;
+  const invite = {
+    fullName: candidate.fullName || "Candidate",
+    position: offer?.position || candidate.position || undefined,
+    rate: offer ? formatRate(offer) : undefined,
+    offerUrl: `${baseUrl}/offer?t=${encodeURIComponent(token)}`,
+    deadline: formatDeadline(deadline),
+  };
+
+  const result = await sendEmail({
+    to: email,
+    toName: candidate.fullName || undefined,
+    subject: offerReminderSubject(invite.position),
+    html: offerReminderHtml(invite),
+    text: offerReminderText(invite),
+    replyTo: siteConfig.contact.recruitmentEmail,
+  });
+
+  if (!result.ok) {
+    const reason = "skipped" in result ? result.skipped : result.error;
+    // eslint-disable-next-line no-console
+    console.warn(`[offer] reminder not sent to ${email}: ${reason}`);
+    return { ok: false, reason };
+  }
+
+  const updated = await recordOfferReminder(id, sentAt);
+  // eslint-disable-next-line no-console
+  console.log(`[offer] reply chased from ${email} (${updated?.offerReminderCount ?? 1})`);
+  return {
+    ok: true,
+    offerReminderSentAt: updated?.offerReminderSentAt,
+    offerReminderCount: updated?.offerReminderCount,
+    offerReminders: updated?.offerReminders,
+    offerReplyDeadline: updated?.offerReplyDeadline,
+  };
 }
 
 /**

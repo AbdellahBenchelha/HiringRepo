@@ -16,7 +16,9 @@ import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
 import { ackRefusal } from "@/lib/voiceAck";
 import type { CandidateDocument } from "@/lib/documents";
 
-export const BULK_ACTIONS = ["assessment", "reminder", "voice", "voiceReminder", "voiceAck"] as const;
+export const BULK_ACTIONS = [
+  "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder",
+] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
 export const ACTION_LABEL: Record<BulkAction, string> = {
@@ -25,11 +27,13 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   voice: "Send voice assessment",
   voiceReminder: "Send voice reminder",
   voiceAck: "Tell them we have it",
+  offerReminder: "Remind to answer",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
 export const CANDIDATE_ACTIONS: readonly BulkAction[] = ["assessment", "reminder"];
 export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder", "voiceAck"];
+export const OFFER_ACTIONS: readonly BulkAction[] = ["offerReminder"];
 
 /** How long a batch may be. A misclick must not be able to email everybody. */
 export const MAX_BATCH = 50;
@@ -75,7 +79,11 @@ export interface BulkCandidate {
   /** For the acknowledgement: what would make it untrue to send. */
   voiceStatus?: string;
   voiceAckSentAt?: string;
+  /** For the offer chase: whether one is out, and whether it was answered. */
   offerSentAt?: string;
+  offerAcceptedAt?: string;
+  offerDeclinedAt?: string;
+  offerReminderCount?: number;
 }
 
 export type Eligibility =
@@ -100,6 +108,18 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
   // The voice actions are about a different step, and they ask the opposite
   // question: these people have finished the assessment, and what matters is
   // whether a recording has been asked for and whether one has arrived.
+  // Chasing an answer to an offer. Refused for anybody who has answered:
+  // telling somebody who accepted on Tuesday that we are about to close their
+  // file is the one mistake this could make, and it must be impossible.
+  if (action === "offerReminder") {
+    if (!c.offerSentAt) return { include: false, reason: "has not been sent an offer" };
+    if (c.offerAcceptedAt) return { include: false, reason: "has already accepted" };
+    if (c.offerDeclinedAt) return { include: false, reason: "has already declined" };
+    return (c.offerReminderCount ?? 0) > 0
+      ? { include: true, warn: "already reminded — this sends another and moves their deadline" }
+      : { include: true };
+  }
+
   // The receipt for a recording. Refused wherever it would be untrue, and the
   // reasons are the same ones the single-candidate route gives.
   if (action === "voiceAck") {
