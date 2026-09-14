@@ -30,6 +30,7 @@ import {
 } from "@/lib/verification";
 import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
 import { replyOverdue } from "@/lib/offerReminder";
+import { PERIODS, dayKey, resolvePeriod, type PeriodId } from "@/lib/analytics";
 import { useBulkEmail } from "@/components/admin/BulkEmailBar";
 import {
   HideCountryPicker,
@@ -91,6 +92,16 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   const [verification, setVerification] = useState<VerificationFilter>("all");
   const [status, setStatus] = useState<"all" | CandidateStatus>("all");
   const [offer, setOffer] = useState<"all" | OfferStatus>("all");
+  /**
+   * When the interview was completed.
+   *
+   * The same periods the dashboard uses, so "last month" means one thing in
+   * this system rather than two. "Custom" opens a pair of dates, which is also
+   * how a single day is asked for: the same date in both boxes.
+   */
+  const [completed, setCompleted] = useState<"all" | PeriodId>("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -147,6 +158,18 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
     [rows],
   );
 
+  /**
+   * Today in the site's own timezone, not the browser's.
+   *
+   * A recruiter in Casablanca and the figures on the dashboard have to agree
+   * about which day "today" is, or the same filter gives two answers.
+   */
+  const today = useMemo(() => dayKey(new Date()), []);
+  const range = useMemo(
+    () => (completed === "all" ? null : resolvePeriod(completed, today, { from, to })),
+    [completed, today, from, to],
+  );
+
   function hideCountry(name: string) {
     if (!name) return;
     hiddenCountries.hide(name);
@@ -171,9 +194,17 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
       }
       if (status !== "all" && c.status !== status) return false;
       if (offer !== "all" && offerStatus(c) !== offer) return false;
+      // No completion date at all means the interview happened somewhere else
+      // and somebody set the status by hand. There is no day to match, so any
+      // dated question excludes them rather than guessing one.
+      if (range) {
+        if (!c.interviewCompletedAt) return false;
+        const day = dayKey(new Date(c.interviewCompletedAt));
+        if (day < range.from || day > range.to) return false;
+      }
       return true;
     });
-  }, [live, search, country, hiddenCountries, voice, verification, status, offer]);
+  }, [live, search, country, hiddenCountries, voice, verification, status, offer, range]);
 
   /** How many rows the hidden countries are keeping off the table. */
   const hiddenCount = useMemo(
@@ -259,7 +290,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, hiddenCountries.hidden, voice, verification, status, offer, pageSize]);
+  }, [search, country, hiddenCountries.hidden, voice, verification, status, offer, range, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -290,6 +321,55 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
               ))}
             </select>
           </label>
+
+          {/* When the interview was completed. The presets answer the question
+              people actually ask — "who finished today?" — and Custom covers
+              both a stretch of dates and a single one, by putting the same
+              date in both boxes. */}
+          <label className="block">
+            <span className="label">Completed</span>
+            <select
+              id="completed"
+              className="select"
+              value={completed}
+              onChange={(e) => setCompleted(e.target.value as typeof completed)}
+            >
+              <option value="all">Any time</option>
+              {PERIODS.map((period) => (
+                <option key={period.id} value={period.id}>
+                  {period.label}
+                </option>
+              ))}
+              <option value="custom">Between two dates…</option>
+            </select>
+          </label>
+
+          {completed === "custom" ? (
+            <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+              <label className="block">
+                <span className="label">From</span>
+                <input
+                  id="completed-from"
+                  type="date"
+                  className="input"
+                  max={today}
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="label">To</span>
+                <input
+                  id="completed-to"
+                  type="date"
+                  className="input"
+                  max={today}
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                />
+              </label>
+            </div>
+          ) : null}
 
           <label className="block">
             <span className="label">Offer</span>
@@ -370,6 +450,9 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                 setVerification("all");
                 setStatus("all");
                 setOffer("all");
+                setCompleted("all");
+                setFrom("");
+                setTo("");
               }}
               className="rounded-full px-3 py-1 text-xs font-semibold text-navy-600 transition hover:bg-navy-100"
             >
