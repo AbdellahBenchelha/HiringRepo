@@ -88,7 +88,9 @@ export function CandidatesTable({
 }) {
   const [rows, setRows] = useState(candidates);
   const [search, setSearch] = useState("");
-  const [interviewFilter, setInterviewFilter] = useState<"all" | "completed" | "opened" | "notopened" | "noform">("all");
+  const [interviewFilter, setInterviewFilter] = useState<
+    "all" | "completed" | "opened" | "notopened" | "noform" | "linksent" | "nolink"
+  >("all");
   const [statusFilter, setStatusFilter] = useState<"all" | CandidateStatus>("all");
   const [dateFrom, setDateFrom] = useState("");
   /** The candidate whose photos are open in the quick view, if any. */
@@ -157,6 +159,11 @@ export function CandidatesTable({
         (c.formCompleted || c.interviewCompleted || c.interviewOpenedAt)
       )
         return false;
+      // What we have sent, rather than what they have done. "Never sent" is
+      // the queue the bulk send exists for: filter to it, tick the header box,
+      // and the list in front of you is exactly the list to email.
+      if (interviewFilter === "linksent" && !c.interviewEmailSentAt) return false;
+      if (interviewFilter === "nolink" && c.interviewEmailSentAt) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (followUpFilter !== "all" && followUps.get(c.id)?.kind !== followUpFilter) return false;
       if (!matchesVerificationFilter(verifyFilter, c.verificationStatus, c.verificationRequestedAt)) {
@@ -363,10 +370,20 @@ export function CandidatesTable({
           <label className="label" htmlFor="interview">Interview status</label>
           <select id="interview" className="select" value={interviewFilter} onChange={(e) => setInterviewFilter(e.target.value as typeof interviewFilter)}>
             <option value="all">All</option>
-            <option value="completed">Completed</option>
-            <option value="opened">Opened, not submitted</option>
-            <option value="notopened">Not opened</option>
-            <option value="noform">Stalled at step one</option>
+            {/* Two different questions, kept apart: what the candidate has
+                done with the assessment, and whether we ever sent it to them.
+                Mixed in one flat list they read as alternatives to each
+                other, which they are not. */}
+            <optgroup label="What they have done">
+              <option value="completed">Completed</option>
+              <option value="opened">Opened, not submitted</option>
+              <option value="notopened">Not opened</option>
+              <option value="noform">Stalled at step one</option>
+            </optgroup>
+            <optgroup label="Assessment link">
+              <option value="linksent">Already sent</option>
+              <option value="nolink">Never sent</option>
+            </optgroup>
           </select>
         </div>
         <div>
