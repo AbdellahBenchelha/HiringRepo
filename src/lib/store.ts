@@ -888,6 +888,20 @@ export function setVerificationDecision(
       c.rejectionReason = reason?.slice(0, 300) || undefined;
       delete c.verifiedAt;
     }
+    // A decision is the end of the question, so it closes any outstanding
+    // request for new photographs.
+    //
+    // Without this the two disagree permanently and the request wins: asking
+    // again outranks the decision in the derived status — deliberately, so
+    // that somebody asked for a clearer picture is not left sitting in the
+    // review queue with the pictures that were just refused — so a recruiter
+    // who asked, then looked again and decided the originals were fine, saw
+    // "Verified" until the page reloaded and "Awaiting upload" ever after.
+    //
+    // Asking again after a decision still reopens it: requestIdentityReupload
+    // clears the decision in the same way, from the other side.
+    delete c.identityReuploadRequestedAt;
+    delete c.identityReuploadReason;
     return { list, result: c };
   });
 }
