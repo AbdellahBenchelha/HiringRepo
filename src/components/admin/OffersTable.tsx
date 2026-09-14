@@ -194,8 +194,8 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
             onChange={(e) => setAnswer(e.target.value as Answer)}
           >
             <option value="all">All</option>
-            <option value="waiting">No answer yet</option>
-            <option value="declined">Declined</option>
+            <option value="waiting">Offer sent</option>
+            <option value="declined">Rejected</option>
           </select>
         </label>
 
@@ -333,18 +333,16 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
                       ) : null}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-col items-start gap-1">
-                        <StatusBadge status={c.status} />
-                        {declined ? (
-                          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
-                            Declined {fmtDate(c.offerDeclinedAt)}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                            No answer yet
-                          </span>
-                        )}
-                      </div>
+                      {/* The status and nothing beside it. Every row here is an
+                          offer that was sent, so a second chip saying "no
+                          answer yet" repeated the heading of the tab on every
+                          line without narrowing anything down. */}
+                      <StatusBadge status={c.status} />
+                      {declined ? (
+                        <p className="mt-1 text-xs text-navy-500">
+                          Declined {fmtDate(c.offerDeclinedAt)}
+                        </p>
+                      ) : null}
                       {/* Their own words, where they gave any. It is usually the
                           answer to "should we have offered more". */}
                       {c.offerDeclineReason ? (
