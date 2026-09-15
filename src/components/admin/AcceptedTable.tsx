@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
+import { RefreshButton } from "@/components/admin/RefreshButton";
 import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
@@ -272,6 +273,12 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
         <p className="text-sm text-navy-500">
           <span className="font-semibold text-navy-900">{visible.length}</span> on this page
         </p>
+        <RefreshButton
+          onRefreshed={() => {
+            setPatches({});
+            setDeleted([]);
+          }}
+        />
         {companyCheck.control}
       </div>
 

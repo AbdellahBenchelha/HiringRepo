@@ -12,6 +12,7 @@ import {
 import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
+import { RefreshButton } from "@/components/admin/RefreshButton";
 import { Icon } from "@/components/Icon";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
@@ -487,7 +488,15 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
         <p className="text-sm text-navy-500">
           <span className="font-semibold text-navy-900">{visible.length}</span> on this page
         </p>
-        {companyCheck.control}
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshButton
+            onRefreshed={() => {
+              setPatches({});
+              setDeleted([]);
+            }}
+          />
+          {companyCheck.control}
+        </div>
       </div>
 
       {companyCheck.panel}

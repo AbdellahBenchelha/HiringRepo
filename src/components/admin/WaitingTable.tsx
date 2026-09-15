@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
+import { RefreshButton } from "@/components/admin/RefreshButton";
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
@@ -207,6 +208,12 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
         <p className="text-sm text-navy-500">
           <span className="font-semibold text-navy-900">{sorted.length}</span> waiting
         </p>
+        <RefreshButton
+          onRefreshed={() => {
+            setPatches({});
+            setDeleted([]);
+          }}
+        />
       </div>
 
       <div className="card overflow-x-auto p-0">

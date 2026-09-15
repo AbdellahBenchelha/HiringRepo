@@ -9,6 +9,7 @@ import { siteConfig } from "@/config/site";
 import { adminPost } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
+import { RefreshButton } from "@/components/admin/RefreshButton";
 import { ReminderActions } from "@/components/admin/ReminderActions";
 import { DocumentChips } from "@/components/admin/DocumentChips";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
@@ -86,7 +87,19 @@ export function CandidatesTable({
   initialVerify?: string;
   initialHeld?: boolean;
 }) {
+  /**
+   * The rows, with this session's edits applied.
+   *
+   * Seeded from the prop and then written to directly — a status changed here,
+   * a row deleted — rather than kept as a separate patch map. That makes the
+   * sync below necessary: fresh rows arriving from the server (the Refresh
+   * button asks for them) are a new prop, and without this they would be
+   * ignored in favour of the copy made when the page first loaded.
+   */
   const [rows, setRows] = useState(candidates);
+  useEffect(() => {
+    setRows(candidates);
+  }, [candidates]);
   const [search, setSearch] = useState("");
   const [interviewFilter, setInterviewFilter] = useState<
     "all" | "completed" | "opened" | "notopened" | "noform" | "linksent" | "nolink"
@@ -495,6 +508,7 @@ export function CandidatesTable({
           )}
         </p>
         <div className="flex flex-wrap items-center gap-3">
+          <RefreshButton />
           {/* Beside the export, and deliberately the opposite scope: this one
               covers only the rows on screen. */}
           {companyCheck.control}

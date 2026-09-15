@@ -7,6 +7,7 @@ import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
+import { RefreshButton } from "@/components/admin/RefreshButton";
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
@@ -309,6 +310,12 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
           {sorted.length === 1 ? "" : "s"}
           {waiting > 0 ? `, ${waiting} still waiting on an answer` : ""}
         </p>
+        <RefreshButton
+          onRefreshed={() => {
+            setPatches({});
+            setDeleted([]);
+          }}
+        />
       </div>
 
       <div className="card overflow-x-auto p-0">
