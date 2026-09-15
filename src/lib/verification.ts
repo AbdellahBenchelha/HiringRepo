@@ -260,6 +260,9 @@ export const VERIFICATION_FILTERS = [
   { value: "provided", label: "Ready to review" },
   { value: "verified", label: "Verified" },
   { value: "rejected", label: "Rejected" },
+  // Last, because it is the one option outside the process rather than a step
+  // within it: these people are not waiting on anything and never were.
+  { value: "not_required", label: "Not required" },
 ] as const;
 
 export type VerificationFilter = (typeof VERIFICATION_FILTERS)[number]["value"];
@@ -271,6 +274,13 @@ export type VerificationFilter = (typeof VERIFICATION_FILTERS)[number]["value"];
  * the wider answer to "who has not sent documents", and somebody narrowing to
  * it should not silently lose the ones nobody has written to yet. "Not asked
  * yet" is the narrow one.
+ *
+ * "Not required" is the row showing a dash rather than a badge: their country
+ * is not on the list and nobody has asked them, so there is nothing to chase
+ * and nothing to review. It is worth being able to ask for on its own — those
+ * are the people who can go straight on to the next step, and picking them out
+ * of a list by eye means reading every row for an absence, which is the one
+ * thing eyes are worst at.
  */
 export function matchesVerificationFilter(
   filter: VerificationFilter,
