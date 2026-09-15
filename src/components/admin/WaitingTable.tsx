@@ -17,6 +17,7 @@ import {
 } from "@/components/admin/HiddenCountries";
 import { useBulkEmail } from "@/components/admin/BulkEmailBar";
 import { useBulkOffer } from "@/components/admin/BulkOfferEditor";
+import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { adminPost } from "@/lib/adminClient";
 import { daysWaiting, WAITING_TOO_LONG_DAYS } from "@/lib/voiceAck";
 import type { CandidateDocument } from "@/lib/documents";
@@ -153,6 +154,19 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
   const bulkEmail = useBulkEmail(sorted, chosen, () => setSelected([]), [], bulkOffer.button);
   refreshBatch.current = () => void bulkEmail.refresh();
 
+  /**
+   * The UK register, for the rows on screen.
+   *
+   * The same scan the other three tables carry, and this is the tab where the
+   * answer changes what happens next: an offer from here is about to ask
+   * whether they contract through a company, and knowing beforehand that one
+   * is already on the register saves asking somebody a question we can answer
+   * ourselves. Scoped to this page, never the whole list — see BulkCompanyCheck.
+   */
+  const companyCheck = useBulkCompanyCheck(visible, (id, check) =>
+    patch(id, { companyCheck: check }),
+  );
+
   // Stepping through the list follows the same order the table shows, and
   // turns the page when it reaches the end of this one.
   const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
@@ -244,13 +258,19 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
         <p className="text-sm text-navy-500">
           <span className="font-semibold text-navy-900">{sorted.length}</span> waiting
         </p>
-        <RefreshButton
-          onRefreshed={() => {
-            setPatches({});
-            setDeleted([]);
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshButton
+            onRefreshed={() => {
+              setPatches({});
+              setDeleted([]);
+            }}
+          />
+          {/* Only the rows on screen, the same as everywhere else it appears. */}
+          {companyCheck.control}
+        </div>
       </div>
+
+      {companyCheck.panel}
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[960px] text-left text-sm">
