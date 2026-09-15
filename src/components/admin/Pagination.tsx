@@ -39,6 +39,7 @@ export function Pagination({
   total,
   pageSize,
   noun,
+  plural,
   onPage,
   onPageSize,
 }: {
@@ -49,9 +50,12 @@ export function Pagination({
   pageSize: number;
   /** Singular name of a row, for the count line. */
   noun: string;
+  /** When an "s" will not do it — "person" becomes "people", not "persons". */
+  plural?: string;
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
 }) {
+  const many = plural ?? `${noun}s`;
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
 
@@ -59,12 +63,11 @@ export function Pagination({
     <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
       <p className="text-sm text-navy-500">
         {total === 0 ? (
-          <>No {noun}s to show</>
+          <>No {many} to show</>
         ) : (
           <>
             Showing <span className="font-semibold text-navy-900">{first}–{last}</span> of {total}{" "}
-            {noun}
-            {total === 1 ? "" : "s"}
+            {total === 1 ? noun : many}
           </>
         )}
       </p>

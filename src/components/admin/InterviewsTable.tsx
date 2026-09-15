@@ -33,6 +33,7 @@ import { offerStatus, OFFER_LABEL, type OfferStatus } from "@/lib/offer";
 import { replyOverdue } from "@/lib/offerReminder";
 import { PERIODS, dayKey, resolvePeriod, type PeriodId } from "@/lib/analytics";
 import { useBulkEmail } from "@/components/admin/BulkEmailBar";
+import { useBulkOffer } from "@/components/admin/BulkOfferEditor";
 import {
   HideCountryPicker,
   HiddenCountryChips,
@@ -251,7 +252,25 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
       allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])],
     );
 
-  const bulkEmail = useBulkEmail(ordered, chosen, () => setSelected([]), INTERVIEW_ACTIONS);
+  /**
+   * The offer editor and the selection bar each need something from the other:
+   * the bar shows the editor's button, and the editor has to tell the bar that
+   * a batch has begun so the progress panel appears at once rather than on the
+   * next poll. A ref rather than a reorder, because the two are genuinely
+   * mutual.
+   */
+  const refreshBatch = useRef<() => void>(() => {});
+  const bulkOffer = useBulkOffer(ordered, chosen, () => setSelected([]), () =>
+    refreshBatch.current(),
+  );
+  const bulkEmail = useBulkEmail(
+    ordered,
+    chosen,
+    () => setSelected([]),
+    INTERVIEW_ACTIONS,
+    bulkOffer.button,
+  );
+  refreshBatch.current = () => void bulkEmail.refresh();
   const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
     everyone,
     ordered,
@@ -713,6 +732,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
       ) : null}
 
       {bulkEmail.dialog}
+      {bulkOffer.dialog}
     </>
   );
 }

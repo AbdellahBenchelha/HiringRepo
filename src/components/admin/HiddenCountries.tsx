@@ -126,6 +126,7 @@ export function HiddenCountryChips({
   hidden,
   count,
   noun,
+  plural,
   onShow,
   onShowAll,
 }: {
@@ -134,6 +135,8 @@ export function HiddenCountryChips({
   count: number;
   /** "candidate", "interview" — whatever the rows are. */
   noun: string;
+  /** When an "s" will not do it — "person" becomes "people", not "persons". */
+  plural?: string;
   onShow: (name: string) => void;
   onShowAll: () => void;
 }) {
@@ -157,8 +160,7 @@ export function HiddenCountryChips({
         </button>
       ))}
       <span className="text-xs text-navy-500">
-        {count} {noun}
-        {count === 1 ? "" : "s"} kept off this table
+        {count} {count === 1 ? noun : (plural ?? `${noun}s`)} kept off this table
       </span>
       <button
         type="button"

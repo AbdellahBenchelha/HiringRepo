@@ -14,10 +14,11 @@
  */
 import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
 import { ackRefusal } from "@/lib/voiceAck";
+import { canOffer, type Offer } from "@/lib/offer";
 import type { CandidateDocument } from "@/lib/documents";
 
 export const BULK_ACTIONS = [
-  "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder",
+  "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer",
 ] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
@@ -28,6 +29,7 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   voiceReminder: "Send voice reminder",
   voiceAck: "Tell them we have it",
   offerReminder: "Remind to answer",
+  offer: "Send offers",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
@@ -81,6 +83,8 @@ export interface BulkCandidate {
   voiceAckSentAt?: string;
   /** For the offer chase: whether one is out, and whether it was answered. */
   offerSentAt?: string;
+  /** For a new offer: whether they are far enough along to have one. */
+  voiceStatusForOffer?: string;
   offerAcceptedAt?: string;
   offerDeclinedAt?: string;
   offerReminderCount?: number;
@@ -105,9 +109,18 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
     return { include: false, reason: "no email address" };
   }
 
-  // The voice actions are about a different step, and they ask the opposite
-  // question: these people have finished the assessment, and what matters is
-  // whether a recording has been asked for and whether one has arrived.
+  // A written offer, with its own terms per person. Refused for anybody who
+  // already has one: replacing terms somebody is holding in their inbox is a
+  // decision about one person, made in their profile with the revised-offer
+  // form, not by ticking a box in a list.
+  if (action === "offer") {
+    if (c.offerSentAt) return { include: false, reason: "already has an offer" };
+    if (!canOffer(c.voiceStatusForOffer, { offerSentAt: c.offerSentAt })) {
+      return { include: false, reason: "has not sent a voice recording yet" };
+    }
+    return { include: true };
+  }
+
   // Chasing an answer to an offer. Refused for anybody who has answered:
   // telling somebody who accepted on Tuesday that we are about to close their
   // file is the one mistake this could make, and it must be impossible.
@@ -140,6 +153,9 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
       : { include: true };
   }
 
+  // The voice actions are about a different step, and they ask the opposite
+  // question: these people have finished the assessment, and what matters is
+  // whether a recording has been asked for and whether one has arrived.
   if (action === "voice" || action === "voiceReminder") {
     const recording = currentVoiceRecording(c.documents);
     if (action === "voice") {
@@ -180,6 +196,15 @@ export interface BatchItem {
   id: string;
   name: string;
   email: string;
+  /**
+   * This person's own terms, for an offer batch.
+   *
+   * The one action where the message differs per candidate: everything else
+   * here sends the same words to everybody. Carried on the item rather than on
+   * the batch so that a queue resumed after a restart still knows what each
+   * person was promised.
+   */
+  offer?: Offer;
   state: "pending" | "sent" | "failed" | "skipped";
   /** Why it failed or was skipped, in the words the server used. */
   reason?: string;

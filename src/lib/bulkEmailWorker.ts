@@ -5,6 +5,7 @@ import {
   sendVoiceReminderEmail,
   sendVoiceAckEmail,
   sendOfferReminderEmail,
+  sendOfferEmail,
 } from "@/lib/candidateEmails";
 import { markItem, readBatch, setNextAt } from "@/lib/bulkEmailStore";
 import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
@@ -51,6 +52,13 @@ async function sendOne(batch: BatchState, id: string) {
       return sendVoiceAckEmail(id);
     case "offerReminder":
       return sendOfferReminderEmail(id, baseUrl());
+    case "offer": {
+      // The terms ride on the item, so a batch resumed after a restart still
+      // sends what was agreed rather than a default.
+      const item = batch.items.find((i) => i.id === id);
+      if (!item?.offer) return { ok: false as const, reason: "no_terms" };
+      return sendOfferEmail(id, item.offer, baseUrl());
+    }
   }
 }
 

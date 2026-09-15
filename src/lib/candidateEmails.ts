@@ -7,6 +7,7 @@ import {
   recordVoiceReminder,
   recordVoiceAck,
   recordOfferReminder,
+  recordOffer,
 } from "@/lib/store";
 import { sendEmail } from "@/lib/email";
 import {
@@ -28,11 +29,21 @@ import {
   offerReminderHtml,
   offerReminderSubject,
   offerReminderText,
+  offerHtml,
+  offerSubject,
+  offerText,
 } from "@/lib/emailTemplates";
 import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
 import { ackRefusal } from "@/lib/voiceAck";
 import { deadlineFrom, formatDeadline, offerAwaitingReply } from "@/lib/offerReminder";
-import { effectiveOffer, formatRate } from "@/lib/offer";
+import {
+  effectiveOffer,
+  formatRate,
+  offerProblems,
+  ENGAGEMENT_TYPES,
+  type Offer,
+} from "@/lib/offer";
+import { sampleAgreement } from "@/lib/sampleAgreement";
 import { createOfferToken } from "@/lib/token";
 import { siteConfig } from "@/config/site";
 import { withSource } from "@/lib/followUp";
@@ -172,6 +183,78 @@ export async function sendReminderEmail(id: string, baseUrl: string): Promise<Se
   const updated = await recordReminder(id, "email");
   // eslint-disable-next-line no-console
   console.log(`[admin] reminder email sent to ${email} (${updated?.reminderEmailCount ?? 1})`);
+  return { ok: true };
+}
+
+/**
+ * Send a written offer and record the exact terms.
+ *
+ * The offer is recorded only if the email actually left. An offer marked sent
+ * that never arrived is worse than no record at all: the candidate hears
+ * nothing while the panel says they were told.
+ *
+ * The moment of sending is fixed before the email is built, because the
+ * acceptance link is signed against it — one moment, agreed by the link and
+ * the record.
+ */
+export async function sendOfferEmail(
+  id: string,
+  offer: Offer,
+  baseUrl: string,
+): Promise<SendOutcome> {
+  const candidate = await getCandidate(id);
+  if (!candidate) return { ok: false, reason: "not_found" };
+
+  // Validated here as well as in the form: a form can be bypassed, and a
+  // malformed offer would be emailed to a real person.
+  const problems = offerProblems(offer);
+  if (!ENGAGEMENT_TYPES.includes(offer.engagement)) problems.push("Unknown engagement type.");
+  if (problems.length) return { ok: false, reason: "invalid" };
+
+  const email = (candidate.email || "").trim();
+  if (!email.includes("@")) return { ok: false, reason: "no_email" };
+
+  const sentAt = new Date().toISOString();
+  const token = createOfferToken({ id, offerSentAt: sentAt });
+  const offerUrl = `${baseUrl}/offer?t=${encodeURIComponent(token)}`;
+  const sample = sampleAgreement(baseUrl);
+
+  const payload = {
+    fullName: candidate.fullName || "Candidate",
+    position: offer.position,
+    rate: formatRate(offer),
+    engagement: offer.engagement,
+    // The figure the offer page will show, so the email and the page cannot
+    // quote different weekly hours to the same person.
+    hoursPerWeek: effectiveOffer(offer).hoursPerWeek,
+    startDate: offer.startDate,
+    probation: offer.probation,
+    note: offer.note,
+    acceptUrl: offerUrl,
+    declineUrl: `${offerUrl}&a=decline`,
+    sampleUrl: sample?.url,
+    sampleVersion: sample?.version,
+  };
+
+  const result = await sendEmail({
+    to: email,
+    toName: candidate.fullName || undefined,
+    subject: offerSubject(offer.position),
+    html: offerHtml(payload),
+    text: offerText(payload),
+    replyTo: siteConfig.contact.recruitmentEmail,
+  });
+
+  if (!result.ok) {
+    const reason = "skipped" in result ? result.skipped : result.error;
+    // eslint-disable-next-line no-console
+    console.warn(`[offer] ${id} not sent to ${email}: ${reason}`);
+    return { ok: false, reason };
+  }
+
+  await recordOffer(id, offer, sentAt);
+  // eslint-disable-next-line no-console
+  console.log(`[offer] ${id} sent to ${email} at ${formatRate(offer)}`);
   return { ok: true };
 }
 

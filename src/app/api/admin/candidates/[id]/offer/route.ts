@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest, getAdminSession } from "@/lib/adminAuth";
-import { getCandidate, recordOffer, setOfferOutcome } from "@/lib/store";
-import { sendEmail } from "@/lib/email";
-import { offerHtml, offerSubject, offerText } from "@/lib/emailTemplates";
-import { siteConfig } from "@/config/site";
-import {
-  effectiveOffer,
-  formatRate,
-  offerProblems,
-  ENGAGEMENT_TYPES,
-  type Offer,
-} from "@/lib/offer";
-import { sampleAgreement } from "@/lib/sampleAgreement";
-import { createOfferToken } from "@/lib/token";
+import { getCandidate, setOfferOutcome } from "@/lib/store";
+import { sendOfferEmail } from "@/lib/candidateEmails";
+import { offerProblems, ENGAGEMENT_TYPES, type Offer } from "@/lib/offer";
 
 /**
  * Send a written offer, and record what the candidate said.
@@ -105,57 +95,17 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ ok: false, error: "no_email" }, { status: 400 });
   }
 
-  /**
-   * Fixed before the email is built, because the acceptance link is signed
-   * against it — and written to storage afterwards, only if the mail left.
-   * One moment, agreed by the link and the record, with the existing "never
-   * record an offer that was not sent" rule intact.
-   */
-  const sentAt = new Date().toISOString();
-  const token = createOfferToken({ id, offerSentAt: sentAt });
-  const offerUrl = `${baseUrl(req)}/offer?t=${encodeURIComponent(token)}`;
-  const sample = sampleAgreement(baseUrl(req));
-
-  const payload = {
-    fullName: candidate.fullName || "Candidate",
-    position: offer.position,
-    rate: formatRate(offer),
-    engagement: offer.engagement,
-    // The figure the offer page will show, so the email and the page cannot
-    // quote different weekly hours to the same person.
-    hoursPerWeek: effectiveOffer(offer).hoursPerWeek,
-    startDate: offer.startDate,
-    probation: offer.probation,
-    note: offer.note,
-    acceptUrl: offerUrl,
-    declineUrl: `${offerUrl}&a=decline`,
-    // Absolute, because a relative path in an email resolves against the mail
-    // client, not the site. Absent when nothing is published, and the email
-    // then says nothing about it.
-    sampleUrl: sample?.url,
-    sampleVersion: sample?.version,
-  };
-
-  const result = await sendEmail({
-    to: email,
-    toName: candidate.fullName || undefined,
-    subject: offerSubject(offer.position),
-    html: offerHtml(payload),
-    text: offerText(payload),
-    replyTo: siteConfig.contact.recruitmentEmail,
-  });
-
+  // The send itself lives in candidateEmails, so this route and a paced batch
+  // of fifty offers build, sign, send and record the same way.
+  const result = await sendOfferEmail(id, offer, baseUrl(req));
   if (!result.ok) {
-    const reason = "skipped" in result ? result.skipped : result.error;
-    // Nothing is recorded — see the note at the top of this file.
-    // eslint-disable-next-line no-console
-    console.warn(`[offer] ${id} not sent to ${email}: ${reason}`);
-    return NextResponse.json({ ok: false, error: reason }, { status: 502 });
+    const status = result.reason === "invalid" ? 400 : result.reason === "not_found" ? 404 : 502;
+    return NextResponse.json({ ok: false, error: result.reason }, { status });
   }
 
-  const updated = await recordOffer(id, offer, sentAt);
+  const updated = await getCandidate(id);
   // eslint-disable-next-line no-console
-  console.log(`[offer] ${id} sent to ${email} by ${session?.u ?? "admin"}`);
+  console.log(`[offer] ${id} sent by ${session?.u ?? "admin"}`);
   return NextResponse.json({
     ok: true,
     status: updated?.status,

@@ -13,6 +13,7 @@ import {
   type BulkAction,
 } from "@/lib/bulkEmail";
 import { clearBatch, readBatch, startBatch } from "@/lib/bulkEmailStore";
+import { offerProblems, ENGAGEMENT_TYPES, type Offer } from "@/lib/offer";
 import { ensureWorker } from "@/lib/bulkEmailWorker";
 
 /**
@@ -29,6 +30,36 @@ import { ensureWorker } from "@/lib/bulkEmailWorker";
 
 export const runtime = "nodejs";
 
+function num(v: unknown): number | undefined {
+  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+/**
+ * One candidate's terms, or nothing.
+ *
+ * The same shape and the same validation the single-offer route applies. A
+ * batch that trusted the browser would be the one way to get an unchecked
+ * figure into a real offer email.
+ */
+function readOffer(raw: unknown): Offer | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const offer: Offer = {
+    position: typeof o.position === "string" ? o.position.trim() : "",
+    rate: num(o.rate) ?? 0,
+    currency: typeof o.currency === "string" ? o.currency.trim().toUpperCase() : "",
+    unit: o.unit as Offer["unit"],
+    hoursPerWeek: num(o.hoursPerWeek),
+    startDate: typeof o.startDate === "string" && o.startDate ? o.startDate : undefined,
+    engagement: o.engagement as Offer["engagement"],
+    probation: undefined,
+    note: undefined,
+  };
+  if (offerProblems(offer).length) return null;
+  if (!ENGAGEMENT_TYPES.includes(offer.engagement)) return null;
+  return offer;
+}
+
 export async function GET() {
   // Reading takes a session but no CSRF token: it changes nothing, and the
   // panel polls it every couple of seconds.
@@ -44,10 +75,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const parsed = await readJsonBody<{ action?: string; ids?: unknown; paceSeconds?: unknown }>(
-    req,
-    32 * 1024,
-  );
+  const parsed = await readJsonBody<{
+    action?: string;
+    ids?: unknown;
+    paceSeconds?: unknown;
+    /** For an offer batch: this person's terms, by candidate id. */
+    offers?: Record<string, unknown>;
+  }>(req, 64 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
 
   const action = parsed.data.action as BulkAction;
@@ -90,11 +124,26 @@ export async function POST(req: NextRequest) {
       offerAcceptedAt: c.offerAcceptedAt,
       offerDeclinedAt: c.offerDeclinedAt,
       offerReminderCount: c.offerReminderCount,
+      voiceStatusForOffer: c.voiceStatus,
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });
       continue;
     }
+
+    // An offer is the one action whose message differs per person, so the
+    // terms travel with the item — and are validated here rather than taken on
+    // trust, because they arrive from a browser and end up in a contract.
+    if (action === "offer") {
+      const terms = readOffer((parsed.data.offers ?? {})[id]);
+      if (!terms) {
+        skipped.push({ name, reason: "the terms sent for them were not valid" });
+        continue;
+      }
+      items.push({ id, name, email: c.email, state: "pending", offer: terms });
+      continue;
+    }
+
     items.push({ id, name, email: c.email, state: "pending" });
   }
 

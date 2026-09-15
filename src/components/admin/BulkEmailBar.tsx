@@ -42,13 +42,14 @@ function fmtTime(iso?: string) {
 }
 
 /** The icon each action wears, so the two buttons never look interchangeable. */
-const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCircle"> = {
+const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCircle" | "handshake"> = {
   assessment: "mail",
   reminder: "clock",
   voice: "microphone",
   voiceReminder: "clock",
   voiceAck: "checkCircle",
   offerReminder: "clock",
+  offer: "handshake",
 };
 
 export function useBulkEmail(
@@ -65,6 +66,14 @@ export function useBulkEmail(
    * mean every tab showing two buttons that can only ever skip everybody.
    */
   actions: readonly BulkAction[] = CANDIDATE_ACTIONS,
+  /**
+   * Buttons that belong in this bar but do not send a fixed message.
+   *
+   * The offer editor is the only one: it opens a table of terms rather than a
+   * confirmation, so it cannot go through the dialog below — but it is the
+   * same selection and belongs in the same bar.
+   */
+  extra?: React.ReactNode,
 ) {
   const [batch, setBatch] = useState<BatchState | null>(null);
   const [asking, setAsking] = useState<BulkAction | null>(null);
@@ -216,6 +225,7 @@ export function useBulkEmail(
             {ACTION_LABEL[action]}
           </button>
         ))}
+        {extra}
         <button
           type="button"
           onClick={clearSelection}
@@ -330,7 +340,7 @@ export function useBulkEmail(
     />
   );
 
-  return { bar, panel, dialog };
+  return { bar, panel, dialog, refresh };
 }
 
 function BatchPanel({

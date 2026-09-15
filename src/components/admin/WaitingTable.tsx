@@ -15,6 +15,8 @@ import {
   HiddenCountryChips,
   useHiddenCountries,
 } from "@/components/admin/HiddenCountries";
+import { useBulkEmail } from "@/components/admin/BulkEmailBar";
+import { useBulkOffer } from "@/components/admin/BulkOfferEditor";
 import { adminPost } from "@/lib/adminClient";
 import { daysWaiting, WAITING_TOO_LONG_DAYS } from "@/lib/voiceAck";
 import type { CandidateDocument } from "@/lib/documents";
@@ -121,6 +123,36 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
     [sorted, current, pageSize],
   );
 
+  /**
+   * Who is ticked, for a batch of offers.
+   *
+   * This is the queue where the company owes somebody an answer, so writing
+   * that answer to twenty of them at once is the whole point of ticking boxes
+   * here. Ids, kept across pages, and anything the filters drop falls out of
+   * the selection — acting on a row nobody can see is how the wrong person
+   * gets emailed.
+   */
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectable = useMemo(() => new Set(sorted.map((c) => c.id)), [sorted]);
+  const chosen = useMemo(() => selected.filter((id) => selectable.has(id)), [selected, selectable]);
+  const toggleOne = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const pageIds = visible.map((c) => c.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => chosen.includes(id));
+  const togglePage = () =>
+    setSelected((prev) =>
+      allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])],
+    );
+
+  // The bar carries no fixed-message action on this tab — everybody here has
+  // already been written to, and an offer is the only thing left to send.
+  const refreshBatch = useRef<() => void>(() => {});
+  const bulkOffer = useBulkOffer(sorted, chosen, () => setSelected([]), () =>
+    refreshBatch.current(),
+  );
+  const bulkEmail = useBulkEmail(sorted, chosen, () => setSelected([]), [], bulkOffer.button);
+  refreshBatch.current = () => void bulkEmail.refresh();
+
   // Stepping through the list follows the same order the table shows, and
   // turns the page when it reaches the end of this one.
   const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
@@ -183,6 +215,7 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
             hidden={hiddenCountries.hidden}
             count={hiddenCount}
             noun="person"
+            plural="people"
             onShow={hiddenCountries.show}
             onShowAll={hiddenCountries.showAll}
           />
@@ -204,6 +237,9 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
         </p>
       ) : null}
 
+      {bulkEmail.bar}
+      {bulkEmail.panel}
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-navy-500">
           <span className="font-semibold text-navy-900">{sorted.length}</span> waiting
@@ -217,9 +253,19 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
       </div>
 
       <div className="card overflow-x-auto p-0">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={allOnPage}
+                  onChange={togglePage}
+                  aria-label={allOnPage ? "Unselect this page" : "Select this page"}
+                  title={allOnPage ? "Unselect this page" : "Select this page"}
+                  className="h-4 w-4 rounded border-navy-300 text-brand-600"
+                />
+              </th>
               <th className="px-4 py-3 font-semibold">Candidate</th>
               <th className="px-4 py-3 font-semibold">Country</th>
               <th className="px-4 py-3 font-semibold">Position</th>
@@ -232,7 +278,7 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-navy-400">
+                <td colSpan={8} className="px-4 py-10 text-center text-navy-400">
                   {live.length === 0
                     ? "Nobody is waiting. Tell somebody their recording arrived and they appear here."
                     : "Nobody matches your filters."}
@@ -243,7 +289,21 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
                 const days = daysWaiting(c);
                 const late = days >= WAITING_TOO_LONG_DAYS;
                 return (
-                  <tr key={c.id} className="align-top hover:bg-navy-50/40">
+                  <tr
+                    key={c.id}
+                    className={`align-top hover:bg-navy-50/40 ${
+                      chosen.includes(c.id) ? "bg-brand-50/60" : ""
+                    }`}
+                  >
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={chosen.includes(c.id)}
+                        onChange={() => toggleOne(c.id)}
+                        aria-label={`Select ${c.fullName || c.email || c.id}`}
+                        className="mt-0.5 h-4 w-4 rounded border-navy-300 text-brand-600"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                       <p className="text-xs text-navy-500">{c.email || "no email"}</p>
@@ -297,6 +357,7 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
         total={sorted.length}
         pageSize={pageSize}
         noun="person"
+        plural="people"
         onPage={(next) => {
           setPage(next);
           tableTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -329,6 +390,9 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
           onClose={() => setViewing(null)}
         />
       ) : null}
+
+      {bulkEmail.dialog}
+      {bulkOffer.dialog}
     </>
   );
 }
