@@ -33,6 +33,33 @@ export const ID_DOCUMENT_HINT: Record<IdDocumentType, string> = {
 };
 
 /**
+ * Filtering a table by which document somebody sent.
+ *
+ * Built from the three types rather than written out again, so a fourth kind
+ * of document would appear in the filter by existing rather than by somebody
+ * remembering this list.
+ *
+ * "Not recorded" is the row that would otherwise be unreachable, and it covers
+ * two different people: somebody who has sent nothing yet, and somebody who
+ * uploaded before the picker existed, whose photographs are on file with
+ * nothing saying which document they are of. Both show a dash, and asking for
+ * the dash has to return them.
+ */
+export type IdTypeFilter = "all" | IdDocumentType | "none";
+
+export const ID_TYPE_FILTERS: { value: IdTypeFilter; label: string }[] = [
+  { value: "all", label: "Any document" },
+  ...ID_DOCUMENT_TYPES.map((t) => ({ value: t as IdTypeFilter, label: ID_DOCUMENT_LABEL[t] })),
+  { value: "none", label: "Not recorded" },
+];
+
+export function matchesIdTypeFilter(filter: IdTypeFilter, type?: string): boolean {
+  if (filter === "all") return true;
+  if (filter === "none") return !type;
+  return type === filter;
+}
+
+/**
  * Does this document carry information on the reverse?
  *
  * A passport's photo page holds everything. A card does not: the number, the

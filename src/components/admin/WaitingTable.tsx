@@ -3,6 +3,12 @@
 import { useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import {
+  VerificationBadge,
+  verificationPatch,
+  verificationStateOf,
+} from "@/components/admin/VerificationPanel";
+import { VerificationQuickView } from "@/components/admin/VerificationQuickView";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
@@ -20,6 +26,12 @@ import { useBulkOffer } from "@/components/admin/BulkOfferEditor";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { adminPost } from "@/lib/adminClient";
 import { daysWaiting, WAITING_TOO_LONG_DAYS } from "@/lib/voiceAck";
+import {
+  ID_DOCUMENT_LABEL,
+  ID_TYPE_FILTERS,
+  matchesIdTypeFilter,
+  type IdTypeFilter,
+} from "@/lib/identityDocuments";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
 import type { CandidateView } from "@/lib/candidateView";
@@ -50,6 +62,8 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
   const hiddenCountries = useHiddenCountries(HIDDEN_COUNTRIES_KEY);
+  /** Which identity document they sent — passport, card, licence, or none yet. */
+  const [idType, setIdType] = useState<IdTypeFilter>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -57,6 +71,8 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
   const [patches, setPatches] = useState<Record<string, Partial<CandidateView>>>({});
   const [deleted, setDeleted] = useState<string[]>([]);
   const [viewing, setViewing] = useState<CandidateDocument | null>(null);
+  /** The candidate whose identity photos are open in the quick view, if any. */
+  const [quickView, setQuickView] = useState<CandidateView | null>(null);
 
   const patch = (id: string, p: Partial<CandidateView>) =>
     setPatches((prev) => ({ ...prev, [id]: { ...prev[id], ...p } }));
@@ -97,9 +113,10 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
         return false;
       }
       if (country !== "all" && c.country !== country) return false;
+      if (!matchesIdTypeFilter(idType, c.identityDocumentType)) return false;
       return true;
     });
-  }, [live, search, country, hiddenCountries]);
+  }, [live, search, country, hiddenCountries, idType]);
 
   const hiddenCount = useMemo(
     () => live.filter((c) => hiddenCountries.isHidden(c.country)).length,
@@ -218,6 +235,25 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
           </select>
         </label>
 
+        {/* Which document they sent. Worth asking for on its own: a passport
+            is one photograph and a card is three, so "who is still missing a
+            back" is a question about the document, not about the person. */}
+        <label className="block">
+          <span className="label">ID document</span>
+          <select
+            id="idtype"
+            className="select"
+            value={idType}
+            onChange={(e) => setIdType(e.target.value as IdTypeFilter)}
+          >
+            {ID_TYPE_FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <HideCountryPicker
           countries={countries}
           hidden={hiddenCountries.hidden}
@@ -273,7 +309,7 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
       {companyCheck.panel}
 
       <div className="card overflow-x-auto p-0">
-        <table className="w-full min-w-[960px] text-left text-sm">
+        <table className="w-full min-w-[1100px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
               <th className="w-10 px-3 py-3">
@@ -292,13 +328,14 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
               <th className="px-4 py-3 font-semibold">Told</th>
               <th className="px-4 py-3 font-semibold">Waiting</th>
               <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">ID check</th>
               <th className="px-4 py-3 font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-navy-400">
+                <td colSpan={9} className="px-4 py-10 text-center text-navy-400">
                   {live.length === 0
                     ? "Nobody is waiting. Tell somebody their recording arrived and they appear here."
                     : "Nobody matches your filters."}
@@ -348,6 +385,21 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
                     <td className="px-4 py-3">
                       <StatusBadge status={c.status} />
                     </td>
+                    {/* The document is named under the badge, not only
+                        filterable: a filter for something the table never
+                        shows is one nobody can check the answer of. */}
+                    <td className="px-4 py-3">
+                      <VerificationBadge
+                        status={c.verificationStatus}
+                        requestedAt={c.verificationRequestedAt}
+                        onOpenPhotos={() => setQuickView(c)}
+                      />
+                      {c.identityDocumentType ? (
+                        <p className="mt-0.5 text-xs text-navy-500">
+                          {ID_DOCUMENT_LABEL[c.identityDocumentType]}
+                        </p>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
@@ -384,6 +436,24 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
         }}
         onPageSize={setPageSize}
       />
+
+      {quickView ? (
+        <VerificationQuickView
+          id={quickView.id}
+          fullName={quickView.fullName}
+          documents={quickView.documents}
+          initial={verificationStateOf(quickView)}
+          onClose={() => setQuickView(null)}
+          onChange={(v) => {
+            const p = verificationPatch(v);
+            patch(quickView.id, p);
+            // The dialog reads its own snapshot rather than the row's patch
+            // map, so it has to be told directly or verifying would show the
+            // old badge until it is closed and reopened.
+            setQuickView((q) => (q ? { ...q, ...p } : q));
+          }}
+        />
+      ) : null}
 
       {profile ? (
         <CandidateProfileModal
