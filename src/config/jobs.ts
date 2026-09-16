@@ -5,37 +5,36 @@
  * human-readable URL (e.g. /jobs/customer-support-representative) and to power
  * the JobPosting structured data for SEO.
  *
- * Pay: set `salary` on a job to publish it. It appears in the "At a glance"
- * panel and as `baseSalary` in the JobPosting structured data, which is what
- * Google Search Console asks for and what lets a listing appear in salary
- * filters. Leave it off and neither is emitted — never guess a figure, because
- * this is published to candidates and to Google as a statement of fact.
+ * Pay is NOT published. `payBand` below is an internal figure only: it fills
+ * in the offer form in the Admin Panel and warns when an offer is typed below
+ * it. Nothing renders it on a page, and no `baseSalary` is emitted in the
+ * JobPosting structured data.
+ *
+ * It was public once, on the job cards and in the "At a glance" panel. It came
+ * off at the registrar's request, so if you are adding it back, that is the
+ * thing to check first — and it would have to go back in three places at once
+ * (card, panel, structured data) rather than by setting a field.
  */
 
 /** ISO 4217 currency, e.g. "USD", "EUR", "GBP", "MAD", "NGN". */
 export type CurrencyCode = string;
 
 /**
- * What the role pays.
+ * What this role is worth paying, for our own use.
  *
- * `max` is optional: leave it out for a single fixed rate. The period must be
- * one of schema.org's, because Google reads `unitText` literally.
+ * Not advertised anywhere. It is where the offer form starts, and what an
+ * offer is measured against before it is sent — a candidate who came through
+ * six stages and is then offered below the band is the complaint worth making
+ * hard to cause by accident.
+ *
+ * `max` is optional: leave it out for a single fixed rate. The units are
+ * schema.org's because the offer shares them, not because anything is indexed.
  */
-export interface Salary {
+export interface PayBand {
   currency: CurrencyCode;
   min: number;
   max?: number;
   unit: "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
-  /**
-   * Short qualifier shown beside the rate, e.g. "plus commission". Kept short
-   * because it has to fit on a job card next to the figure.
-   */
-  note?: string;
-  /**
-   * A fuller sentence, shown only in the job page's "At a glance" panel and
-   * appended to the indexed description. Room to explain what the note means.
-   */
-  detail?: string;
 }
 
 export interface JobPosting {
@@ -57,7 +56,7 @@ export interface JobPosting {
   updatedAt?: string;
   employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "TEMPORARY";
   /** Omit entirely rather than guessing — see the note at the top of this file. */
-  salary?: Salary;
+  payBand?: PayBand;
   responsibilities: string[];
   requirements: string[];
 }
@@ -66,7 +65,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "customer-support-representative",
     title: "Customer Support Representative",
-    salary: { currency: "USD", min: 20, max: 28, unit: "HOUR" },
+    payBand: { currency: "USD", min: 20, max: 28, unit: "HOUR" },
     shortDescription:
       "Be the friendly, knowledgeable voice that helps customers across phone, email, and live chat — resolving issues and creating positive experiences.",
     workArrangement: "Remote",
@@ -95,7 +94,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "call-center-agent",
     title: "Call Center Agent",
-    salary: { currency: "USD", min: 18, max: 25, unit: "HOUR" },
+    payBand: { currency: "USD", min: 18, max: 25, unit: "HOUR" },
     shortDescription:
       "Handle inbound or outbound calls with confidence, helping customers understand products and services while meeting quality and performance standards.",
     workArrangement: "Remote",
@@ -124,7 +123,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "live-chat-and-email-support-agent",
     title: "Live Chat and Email Support Agent",
-    salary: { currency: "USD", min: 19, max: 26, unit: "HOUR" },
+    payBand: { currency: "USD", min: 19, max: 26, unit: "HOUR" },
     shortDescription:
       "Deliver fast, accurate, and professional written support across live chat and email, managing multiple conversations with care.",
     workArrangement: "Remote",
@@ -151,7 +150,7 @@ export const jobs: JobPosting[] = [
   {
     slug: "technical-support-representative",
     title: "Technical Support Representative",
-    salary: { currency: "USD", min: 29, max: 35, unit: "HOUR" },
+    payBand: { currency: "USD", min: 29, max: 35, unit: "HOUR" },
     shortDescription:
       "Guide customers through technical issues with patience and clarity, turning frustration into confidence with simple, helpful solutions.",
     workArrangement: "Remote",
@@ -178,16 +177,9 @@ export const jobs: JobPosting[] = [
   {
     slug: "sales-and-retention-agent",
     title: "Sales and Retention Agent",
-    salary: {
-      currency: "USD",
-      min: 22,
-      max: 30,
-      unit: "HOUR",
-      // Base only. Commission is real pay but not base pay, so it is described
-      // rather than folded into the figure Google reads as baseSalary.
-      note: "plus commission",
-      detail: "Commission is paid on top of the base rate.",
-    },
+    // Base only — commission is paid on top of this rate, and folding it in
+    // would make every offer built from this band too high.
+    payBand: { currency: "USD", min: 22, max: 30, unit: "HOUR" },
     shortDescription:
       "Build relationships, understand customer needs, and present the right solutions — helping customers stay and grow with the brands we support.",
     workArrangement: "Remote",
@@ -213,61 +205,6 @@ export const jobs: JobPosting[] = [
     ],
   },
 ];
-
-const UNIT_LABEL: Record<Salary["unit"], string> = {
-  HOUR: "hour",
-  DAY: "day",
-  WEEK: "week",
-  MONTH: "month",
-  YEAR: "year",
-};
-
-export interface SalaryParts {
-  /** The figures alone, e.g. "$20 – $28". */
-  amount: string;
-  /** The period alone, e.g. "per hour". */
-  period: string;
-  /** The qualifier, e.g. "plus commission". */
-  note?: string;
-}
-
-/**
- * Pay broken into its parts, for the one place that styles them differently.
- *
- * The job page sets the figure apart from its period; everywhere else wants
- * the whole thing as one string and uses formatSalary below.
- */
-export function salaryParts(salary: Salary): SalaryParts {
-  const money = (n: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: salary.currency,
-      maximumFractionDigits: 0,
-    }).format(n);
-  return {
-    amount:
-      salary.max !== undefined && salary.max !== salary.min
-        ? `${money(salary.min)} – ${money(salary.max)}`
-        : money(salary.min),
-    period: `per ${UNIT_LABEL[salary.unit]}`,
-    note: salary.note,
-  };
-}
-
-/**
- * Human-readable pay, e.g. "$5 – $8 per hour".
- *
- * Intl.NumberFormat gives the right symbol and grouping for the currency
- * without a table of our own. No decimals: nobody advertises $5.00 an hour.
- *
- * Formatted as en-US rather than the en-GB used for dates elsewhere, because
- * en-GB renders USD as "US$5" — correct, but not how a job advert reads. The
- * unambiguous currency code goes to Google in the structured data regardless.
- */
-export function formatSalary(salary: Salary): string {
-  const { amount, period, note } = salaryParts(salary);
-  return [amount, period, note].filter(Boolean).join(" ");
-}
 
 export function getJobBySlug(slug: string): JobPosting | undefined {
   return jobs.find((job) => job.slug === slug);

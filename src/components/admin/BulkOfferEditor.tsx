@@ -13,8 +13,8 @@ import {
   type BatchState,
 } from "@/lib/bulkEmail";
 import {
-  advertisedFor,
-  belowAdvertised,
+  belowBand,
+  payBandFor,
   formatRate,
   offerProblems,
   type Offer,
@@ -62,8 +62,8 @@ const ENGAGEMENT: Offer["engagement"] = "Independent contractor";
  * Currencies offered in the dropdown.
  *
  * A list rather than a text box: "usd", "US$" and a stray space all validate
- * as a currency and then throw inside Intl when the email is formatted. A
- * candidate's own advertised currency is added to the list if it is not here.
+ * as a currency and then throw inside Intl when the email is formatted. The
+ * currency already on a row is added to the list if it is not here.
  */
 const CURRENCIES = ["USD", "EUR", "GBP", "MAD", "NGN"];
 
@@ -75,16 +75,16 @@ const UNITS: { value: Offer["unit"]; label: string }[] = [
   { value: "YEAR", label: "per year" },
 ];
 
-/** What this person's role advertises, which is where their row starts. */
+/** The band for this person's role, which is where their row starts. */
 function draftFor(c: CandidateView): Draft {
-  const advertised = advertisedFor(c.position);
+  const band = payBandFor(c.position);
   return {
     position: c.position || "",
-    // The bottom of the published band. It is the figure that was promised,
-    // and the one that is right more often than any other guess.
-    rate: advertised?.min,
-    currency: advertised?.currency ?? "USD",
-    unit: advertised?.unit ?? "HOUR",
+    // The bottom of the band for the role — internal, not advertised anywhere,
+    // and the figure that is right more often than any other guess.
+    rate: band?.min,
+    currency: band?.currency ?? "USD",
+    unit: band?.unit ?? "HOUR",
     // Five days of up to five hours — the schedule everybody is offered.
     hoursPerWeek: MAX_HOURS_PER_WEEK,
   };
@@ -176,12 +176,12 @@ export function useBulkOffer(
   const ready = plan.include.length > 0 && Object.keys(problems).length === 0;
   const duration = batchDuration(plan.include.length, pace);
 
-  /** Rows promising less than the advert did. Said out loud, never blocked. */
+  /** Rows below the band for the role. Said out loud, never blocked. */
   const lowCount = useMemo(
     () =>
       plan.include.filter((c) => {
         const d = drafts[c.id];
-        return d && !problems[c.id] && belowAdvertised(toOffer(d));
+        return d && !problems[c.id] && belowBand(toOffer(d));
       }).length,
     [plan.include, drafts, problems],
   );
@@ -247,7 +247,7 @@ export function useBulkOffer(
                   Send {plan.include.length} offer{plan.include.length === 1 ? "" : "s"}
                 </h2>
                 <p className="mt-0.5 text-xs text-navy-500">
-                  Each row starts at the bottom of what that role advertises. Change anything you
+                  Each row starts at the bottom of the band for that role. Change anything you
                   agreed differently before sending.
                 </p>
               </div>
@@ -297,7 +297,7 @@ export function useBulkOffer(
                         const d = drafts[c.id];
                         if (!d) return null;
                         const problem = problems[c.id];
-                        const low = problem ? null : belowAdvertised(toOffer(d));
+                        const low = problem ? null : belowBand(toOffer(d));
                         const currencies = CURRENCIES.includes(d.currency)
                           ? CURRENCIES
                           : [d.currency, ...CURRENCIES];
@@ -349,8 +349,8 @@ export function useBulkOffer(
                                 </select>
                               </div>
                               {/* A warning, not a refusal: somebody who came
-                                  through six stages on a published figure and
-                                  is then offered less is the complaint that
+                                  through six stages and is then offered less
+                                  than the role is worth is the complaint that
                                   gets a company reported. */}
                               {low ? (
                                 <p className="mt-1 text-xs font-medium text-amber-700">
@@ -360,7 +360,7 @@ export function useBulkOffer(
                                     currency: low.currency,
                                     unit: low.unit,
                                   })}{" "}
-                                  advertised.
+                                  band for this role.
                                 </p>
                               ) : null}
                             </td>
@@ -488,7 +488,7 @@ export function useBulkOffer(
         busy={busy}
         warning={
           lowCount
-            ? `${lowCount} ${lowCount === 1 ? "offer is" : "offers are"} below what the role advertises.`
+            ? `${lowCount} ${lowCount === 1 ? "offer is" : "offers are"} below the band for the role.`
             : undefined
         }
         onCancel={() => setConfirming(false)}

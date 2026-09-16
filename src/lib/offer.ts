@@ -9,7 +9,7 @@
  * job listing at read time. A listing's advertised pay changes; what you
  * actually offered someone on a particular day must not change with it.
  */
-import { jobs, type Salary } from "@/config/jobs";
+import { jobs, type PayBand } from "@/config/jobs";
 import { MAX_HOURS_PER_DAY, MAX_HOURS_PER_WEEK, REQUIRED_DAYS } from "@/lib/availability";
 
 export const ENGAGEMENT_TYPES = ["Independent contractor", "Employee"] as const;
@@ -20,7 +20,7 @@ export interface Offer {
   /** Agreed rate. A single number, not a range — a range is an advert. */
   rate: number;
   currency: string;
-  unit: Salary["unit"];
+  unit: PayBand["unit"];
   hoursPerWeek?: number;
   /**
    * What the weekly hours were before the schedule cap brought them down.
@@ -100,27 +100,33 @@ export function canOffer(voiceStatus: string | undefined, state: OfferState): bo
   return voiceStatus === "Voice Recording Received" || voiceStatus === "Voice Assessment Passed";
 }
 
-/** The advertised pay for a role, so the form can prefill and warn. */
-export function advertisedFor(position: string): Salary | undefined {
-  return jobs.find((j) => j.title === position)?.salary;
+/**
+ * What we are willing to pay for a role, so the form can prefill and warn.
+ *
+ * Internal, and no longer advertised anywhere — see the note at the top of
+ * config/jobs.ts. It is still the right number to start an offer from: it is
+ * what the role is worth, whether or not a page says so.
+ */
+export function payBandFor(position: string): PayBand | undefined {
+  return jobs.find((j) => j.title === position)?.payBand;
 }
 
 /**
- * Is the offered rate below what was advertised for the role?
+ * Is the offered rate below the band for the role?
  *
  * Worth saying out loud before the email goes: a candidate who came through
- * six stages on the strength of a published figure and is then offered less
- * is the complaint that gets a company reported, and it is easy to do by
- * accident when typing quickly.
+ * six stages and is then offered less than the role is worth is the complaint
+ * that gets a company reported, and it is easy to do by accident when typing
+ * quickly.
  *
- * Compares against the bottom of the advertised band — offering the minimum is
- * fine, offering below it is not what was promised.
+ * Compares against the bottom of the band — offering the minimum is fine,
+ * offering below it is a decision somebody should take deliberately.
  */
-export function belowAdvertised(offer: Offer): Salary | null {
-  const advertised = advertisedFor(offer.position);
-  if (!advertised) return null;
-  if (advertised.currency !== offer.currency || advertised.unit !== offer.unit) return null;
-  return offer.rate < advertised.min ? advertised : null;
+export function belowBand(offer: Offer): PayBand | null {
+  const band = payBandFor(offer.position);
+  if (!band) return null;
+  if (band.currency !== offer.currency || band.unit !== offer.unit) return null;
+  return offer.rate < band.min ? band : null;
 }
 
 /** Everything wrong with this offer, in the order a person would fix it. */
@@ -167,7 +173,7 @@ export function offerWarnings(offer: Partial<Offer>): string[] {
   return problems;
 }
 
-const UNIT_LABEL: Record<Salary["unit"], string> = {
+const UNIT_LABEL: Record<PayBand["unit"], string> = {
   HOUR: "hour",
   DAY: "day",
   WEEK: "week",
