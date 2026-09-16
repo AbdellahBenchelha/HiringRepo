@@ -92,8 +92,16 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row">
+          {/* The registered name and number, on every page rather than only on
+              the legal notice. Somebody deciding whether a recruiter is real
+              checks the register, and the fastest way to satisfy them is to
+              put the number where they already are. */}
           <p className="text-xs text-navy-400">
             © {year} {siteConfig.legal.registeredName}. All rights reserved.
+            <span className="mt-1 block sm:mt-0 sm:inline">
+              <span className="hidden sm:inline"> · </span>
+              Registered in Scotland no. {siteConfig.legal.registrationNumber}
+            </span>
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
             <CookiePreferencesLink className="text-navy-300 transition hover:text-white" />

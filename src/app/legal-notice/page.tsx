@@ -23,7 +23,12 @@ export default function LegalNoticePage() {
     { label: "Email", value: contact.recruitmentEmail },
     { label: "Phone number", value: contact.phone },
     { label: "Website owner", value: legal.websiteOwner },
-    { label: "Hosting provider", value: legal.hostingProvider },
+    // Left out entirely when it is not known. See the note in site.ts: a row
+    // of placeholder text on a legal page discredits the rows either side of
+    // it, and this one is not required of a UK company.
+    ...(legal.hostingProvider
+      ? [{ label: "Hosting provider", value: legal.hostingProvider }]
+      : []),
   ];
 
   return (
@@ -33,8 +38,9 @@ export default function LegalNoticePage() {
       intro="Company identification and legal information for this website."
     >
       <p>
-        The details below identify the operator of this website. All values are configurable and
-        must be completed with verified company information before publishing.
+        The details below identify the operator of this website. The company can be checked
+        independently on the Companies House register under registration number{" "}
+        {legal.registrationNumber}.
       </p>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-cream-300">

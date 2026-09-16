@@ -39,7 +39,7 @@ const notHiringFrom: string[] = [];
 
 export const siteConfig = {
   /** Public site URL — used for canonical URLs, sitemap and Open Graph. */
-  url: "https://workroute.work",
+  url: "https://workroute.co.uk",
 
   /**
    * The specimen contractor agreement candidates can read before accepting.
@@ -127,9 +127,9 @@ export const siteConfig = {
   /** CONTACT — editable placeholders, review before publishing.              */
   /** ----------------------------------------------------------------------- */
   contact: {
-    recruitmentEmail: "careers@workroute.work",
-    supportEmail: "support@workroute.work",
-    privacyEmail: "privacy@workroute.work",
+    recruitmentEmail: "careers@workroute.co.uk",
+    supportEmail: "support@workroute.co.uk",
+    privacyEmail: "privacy@workroute.co.uk",
     /**
      * The published contact number.
      *
@@ -196,7 +196,16 @@ export const siteConfig = {
     registrationNumber: "SC238030",
     registeredAddress: "168/170 Main Street, Bellshill, Lanarkshire, ML4 1AE, United Kingdom",
     websiteOwner: "Routes to Work Limited",
-    hostingProvider: "Your Hosting Provider Inc., 1 Datacenter Road, Country", // PLACEHOLDER
+    /**
+     * Who runs the servers, in their own legal name.
+     *
+     * Empty until it is known, and the legal notice leaves the row out rather
+     * than printing filler. A legal page carrying "Your Hosting Provider Inc.,
+     * 1 Datacenter Road, Country" is worse than one that is silent on the
+     * question: it is the first thing anybody checking this company would
+     * notice, and it makes every other row on the page look unverified too.
+     */
+    hostingProvider: "",
     /** How long applicant data is retained, in months. Used across legal pages. */
     applicantDataRetentionMonths: 12, // PLACEHOLDER — confirm with legal counsel
   },

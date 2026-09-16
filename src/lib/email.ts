@@ -6,7 +6,7 @@
  *                            Paste the value only; the "Zoho-enczapikey " prefix
  *                            is added here, and including it twice fails auth.
  *   ZEPTOMAIL_FROM_ADDRESS — a verified sender on your domain, e.g.
- *                            careers@workroute.work
+ *                            careers@workroute.co.uk
  *   ZEPTOMAIL_FROM_NAME    — optional display name (defaults to the company).
  *   ZEPTOMAIL_REGION       — optional: "eu" if your Zoho account is in the EU
  *                            data centre. The wrong region rejects the token.
