@@ -74,6 +74,44 @@ export function buildInterviewResultMessage(
   return lines.join("\n");
 }
 
+/** Who this is about — the same three facts in both live-check messages. */
+function whoLines(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+): string[] {
+  const lines = [`<b>Name:</b> ${escapeHtml(name || "Unnamed candidate")}`];
+  if (email) lines.push(`<b>Email:</b> ${escapeHtml(email)}`);
+  if (country) lines.push(`<b>Country:</b> ${escapeHtml(country)}`);
+  return lines;
+}
+
+/**
+ * Somebody has opened the page their live check was emailed to.
+ *
+ * The first half of a two-message story, and the two are worth keeping apart:
+ * an email that was never opened may never have arrived, while a page opened
+ * and abandoned is a person hesitating — and only the second is worth a word
+ * from a recruiter.
+ *
+ * Once per emailed link, not once per visit. The record counts every open
+ * because that is a real number, but somebody who looks at the page four times
+ * over a weekend should not be four messages.
+ */
+export function buildLiveCheckOpenedMessage(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+): string {
+  return [
+    "👀 <b>Live ID check opened</b>",
+    "",
+    ...whoLines(name, email, country),
+    "",
+    "They have opened the page. Nothing has gone to the provider yet.",
+  ].join("\n");
+}
+
 /**
  * Somebody has just been handed over to the identity provider.
  *
@@ -83,8 +121,8 @@ export function buildInterviewResultMessage(
  * message names the provider — knowing somebody started is only useful if you
  * know where to go and look at the result.
  *
- * Sent once per link. A re-sent check clears the mark, so a second link
- * genuinely being started does say so again.
+ * Sent once per link. A re-sent check, or a replaced provider session, clears
+ * the mark — so a link genuinely being started again does say so again.
  */
 export function buildLiveCheckStartedMessage(
   name: string,
@@ -92,20 +130,15 @@ export function buildLiveCheckStartedMessage(
   country: string | undefined,
   provider: string | null,
 ): string {
-  const lines = [
+  return [
     "🪪 <b>Live ID check started</b>",
     "",
-    `<b>Name:</b> ${escapeHtml(name || "Unnamed candidate")}`,
-  ];
-  if (email) lines.push(`<b>Email:</b> ${escapeHtml(email)}`);
-  if (country) lines.push(`<b>Country:</b> ${escapeHtml(country)}`);
-  lines.push(
+    ...whoLines(name, email, country),
     "",
     provider
       ? `They have gone through to ${escapeHtml(provider)}. The result will be in its dashboard.`
       : "They have gone through to the provider. The result will be in its dashboard.",
-  );
-  return lines.join("\n");
+  ].join("\n");
 }
 
 /** Build the "Personal information" message (sent after the first step). */

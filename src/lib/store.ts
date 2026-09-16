@@ -604,22 +604,30 @@ export function replaceLiveVerificationLink(id: string, url: string): Promise<Ca
 }
 
 /** They opened the page we sent them. Throttled like the other opens. */
-export function recordLiveVerificationOpened(id: string): Promise<boolean> {
-  return withWrite((list) => {
+export function recordLiveVerificationOpened(
+  id: string,
+): Promise<{ recorded: boolean; firstOpen: boolean }> {
+  type Result = { recorded: boolean; firstOpen: boolean };
+  return withWrite<Result>((list) => {
     const c = list.find((x) => x.id === id);
-    if (!c) return { list, result: false };
+    if (!c) return { list, result: { recorded: false, firstOpen: false } };
 
     const now = Date.now();
     const last = c.liveVerificationLastOpenedAt ?? c.liveVerificationOpenedAt;
     if (last && now - new Date(last).getTime() < REOPEN_THROTTLE_MS) {
-      return { list, result: false };
+      return { list, result: { recorded: false, firstOpen: false } };
     }
 
+    // Reported separately from "recorded" because they answer different
+    // questions. Every un-throttled open is worth counting; only the first is
+    // worth telling somebody about, or a candidate who looks at the page four
+    // times over a weekend becomes four messages.
+    const firstOpen = !c.liveVerificationOpenedAt;
     const iso = new Date(now).toISOString();
-    if (!c.liveVerificationOpenedAt) c.liveVerificationOpenedAt = iso;
+    if (firstOpen) c.liveVerificationOpenedAt = iso;
     c.liveVerificationLastOpenedAt = iso;
     c.liveVerificationOpenCount = (c.liveVerificationOpenCount ?? 0) + 1;
-    return { list, result: true };
+    return { list, result: { recorded: true, firstOpen } };
   });
 }
 

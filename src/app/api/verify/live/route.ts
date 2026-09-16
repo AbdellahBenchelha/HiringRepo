@@ -8,7 +8,11 @@ import {
 } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
-import { buildLiveCheckStartedMessage, sendTelegramMessage } from "@/lib/telegram";
+import {
+  buildLiveCheckOpenedMessage,
+  buildLiveCheckStartedMessage,
+  sendTelegramMessage,
+} from "@/lib/telegram";
 import { providerFor } from "@/lib/liveVerification";
 
 /**
@@ -43,16 +47,18 @@ const WINDOW_MS = 10 * 60 * 1000;
  * The quiet-hours setting does not apply: it silences the messages that come
  * before the assessment, and nobody is sent a live check until long after it.
  */
-async function announceStart(c: Candidate): Promise<void> {
+async function announce(phase: "opened" | "started", c: Candidate): Promise<void> {
   try {
     const name = c.fullName || [c.firstName, c.lastName].filter(Boolean).join(" ");
     await sendTelegramMessage(
-      buildLiveCheckStartedMessage(
-        name,
-        c.email,
-        c.country,
-        c.liveVerificationUrl ? providerFor(c.liveVerificationUrl) : null,
-      ),
+      phase === "opened"
+        ? buildLiveCheckOpenedMessage(name, c.email, c.country)
+        : buildLiveCheckStartedMessage(
+            name,
+            c.email,
+            c.country,
+            c.liveVerificationUrl ? providerFor(c.liveVerificationUrl) : null,
+          ),
     );
   } catch {
     /* a notification must never become an error the candidate can see */
@@ -73,10 +79,19 @@ export async function POST(req: NextRequest) {
 
   if (phase === "opened") {
     try {
-      const first = await recordLiveVerificationOpened(token.link.id);
-      if (first) {
+      const { recorded, firstOpen } = await recordLiveVerificationOpened(token.link.id);
+      if (recorded) {
         // eslint-disable-next-line no-console
         console.log(`[live-verify] ${token.link.id} opened their check`);
+      }
+      // Only the first open of an emailed link. Every open is counted on the
+      // record, but a candidate who looks at the page four times over a
+      // weekend must not be four messages.
+      if (firstOpen) {
+        const candidate = await getCandidate(token.link.id);
+        if (candidate && candidate.liveVerificationSentAt === token.link.sentAt) {
+          void announce("opened", candidate);
+        }
       }
     } catch {
       /* bookkeeping only */
@@ -111,7 +126,7 @@ export async function POST(req: NextRequest) {
         // Only the first time, which is what `first` means here. Replacing the
         // provider link clears the mark, so starting the new session does say
         // so again — that is the point of clearing it.
-        void announceStart(candidate);
+        void announce("started", candidate);
       }
     }
   } catch {
