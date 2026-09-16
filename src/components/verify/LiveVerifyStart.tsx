@@ -24,10 +24,10 @@ import { Icon } from "@/components/Icon";
  * phones whose user agent lies — and correcting downward matters more than
  * upward, since a phone shown a QR code has nothing to scan it with.
  *
- * Opening the page is recorded either way, from here rather than the server
- * render: mail scanners fetch every link in an email, and counting those would
- * report every candidate as having opened their check seconds after it was
- * sent.
+ * Opening the page is recorded by RecordOpen, which the page renders beside
+ * this — it used to live here, until there was a second thing the page could
+ * show and the open stopped being recorded for anyone held on the waiting
+ * page.
  */
 export function LiveVerifyStart({
   token,
@@ -43,16 +43,6 @@ export function LiveVerifyStart({
 }) {
   const [isMobile, setIsMobile] = useState(serverIsMobile);
   const [going, setGoing] = useState(false);
-
-  useEffect(() => {
-    void fetch("/api/verify/live", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ t: token, phase: "opened" }),
-    }).catch(() => {
-      /* bookkeeping only */
-    });
-  }, [token]);
 
   useEffect(() => {
     try {
@@ -87,11 +77,12 @@ export function LiveVerifyStart({
         body: JSON.stringify({ t: token, phase: "started" }),
         keepalive: true,
       });
-      const data = (await res.json()) as { url?: string; stale?: boolean };
-      // A newer check has been emailed since this page was drawn. Their link
-      // is not the current one any more, and the page itself explains that
-      // far better than a silent hop to the wrong session would.
-      if (data?.stale) {
+      const data = (await res.json()) as { url?: string; stale?: boolean; held?: boolean };
+      // Two reasons not to hand them over, and the same answer to both: draw
+      // the page again and let it say what is true now. One is a newer check
+      // emailed since this page was rendered; the other is a session marked
+      // dead, where the page they get back is the waiting one.
+      if (data?.stale || data?.held) {
         window.location.reload();
         return;
       }

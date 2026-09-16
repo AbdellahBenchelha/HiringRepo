@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
+  HOLD_TOO_LONG_MINUTES,
   LIVE_STAGE_LABEL,
   checkVerificationLink,
+  heldFor,
   liveVerificationStage,
   providerFor,
   type LiveVerificationState,
@@ -70,6 +72,14 @@ export function LiveVerificationButton({
    * has to be chosen.
    */
   const [mode, setMode] = useState<"send" | "replace">("send");
+  /**
+   * "The session behind their link is dead."
+   *
+   * Ticked, the button stops being about a URL at all: there is no working one
+   * to paste, which is the entire situation. Untick it with a new link in the
+   * box and the same button lets them through again.
+   */
+  const [expired, setExpired] = useState(false);
 
   // Recognised on sight, or not. Either way the link can be sent — this only
   // decides whether the dialog nods at it or raises an eyebrow.
@@ -81,9 +91,62 @@ export function LiveVerificationButton({
   const changes = state.liveVerificationLinkChangeCount ?? 0;
   const stage = liveVerificationStage(state);
   const replacing = mode === "replace";
+  /**
+   * Minutes on the waiting page, recomputed on a timer.
+   *
+   * It turns with the clock, so a figure worked out when the profile was
+   * opened would still read "1 minute" twenty minutes later — and the line
+   * that says to email them would never appear in front of somebody sitting
+   * with the dialog open, which is exactly when it is needed.
+   */
+  const [, retick] = useState(0);
+  useEffect(() => {
+    if (!state.liveVerificationHeldAt) return;
+    const t = setInterval(() => retick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, [state.liveVerificationHeldAt]);
+  const waiting = heldFor(state);
+  const waitingTooLong = waiting !== null && waiting >= HOLD_TOO_LONG_MINUTES;
+  /** Marking it dead is the whole action; pasting a link is the other one. */
+  const holding = replacing && expired;
 
   async function submit() {
     if (busy) return;
+
+    // Holding somebody needs no link — there is no working one, which is why
+    // they are being held. So the URL is not checked, and whatever is in the
+    // box is left exactly as it was.
+    if (holding) {
+      setBusy(true);
+      setProblem("");
+      try {
+        const res = await adminPost(`/api/admin/candidates/${id}/live-verification`, {
+          action: "hold",
+        });
+        const data = (await res.json()) as LiveVerificationState & {
+          ok?: boolean;
+          error?: string;
+        };
+        if (data.ok) {
+          const next = { ...state, liveVerificationHeldAt: data.liveVerificationHeldAt };
+          setState(next);
+          setSent(
+            "Marked as expired. Anyone opening their link now waits on our page until you paste a new one.",
+          );
+          setAsking(false);
+          onChange?.(next);
+        } else if (data.error === "never_sent") {
+          setProblem("Nothing has been sent to them yet, so there is nobody to hold.");
+        } else {
+          setProblem(`Could not save (${data.error ?? "unknown"}).`);
+        }
+      } catch {
+        setProblem("Could not save. Please try again.");
+      }
+      setBusy(false);
+      return;
+    }
+
     // Checked here so the recruiter is told without a round trip, and again on
     // the server, because this endpoint emails a link to a real person.
     const link = checkVerificationLink(url);
@@ -121,11 +184,16 @@ export function LiveVerificationButton({
           liveVerificationStartedAt: replacing ? data.liveVerificationStartedAt : undefined,
           liveVerificationLinkChangedAt: data.liveVerificationLinkChangedAt,
           liveVerificationLinkChangeCount: data.liveVerificationLinkChangeCount,
+          // Both paths end the wait: a replacement is what the waiting page
+          // was waiting for, and a fresh email is a fresh link.
+          liveVerificationHeldAt: undefined,
         };
         setState(next);
         setSent(
           replacing
-            ? "Link replaced. Their email still works and points at the new session."
+            ? state.liveVerificationHeldAt
+              ? "Link replaced. Anyone on the waiting page will be let through within a few seconds."
+              : "Link replaced. Their email still works and points at the new session."
             : "Live verification link emailed.",
         );
         setAsking(false);
@@ -152,6 +220,7 @@ export function LiveVerificationButton({
           // Replacing is the common case once one is out; a second email has
           // to be asked for.
           setMode(count ? "replace" : "send");
+          setExpired(!!state.liveVerificationHeldAt);
           setAsking(true);
         }}
         // Replacing needs no address, and anyone with a check out has already
@@ -198,19 +267,58 @@ export function LiveVerificationButton({
         </p>
       ) : null}
 
+      {/* Somebody is sitting in front of a holding message right now. The one
+          state on this panel that is costing a real person their time, so it
+          is a line of its own rather than a word in the status above — and
+          once the page has stopped promising them a couple of minutes, it says
+          what has to happen next. */}
+      {waiting !== null ? (
+        <p
+          className={`flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
+            waitingTooLong
+              ? "border-red-200 bg-red-50 font-medium text-red-800"
+              : "border-amber-200 bg-amber-50 text-amber-900"
+          }`}
+        >
+          <Icon name="clock" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            {waitingTooLong ? (
+              <>
+                <strong>
+                  Waiting {waiting} minutes on the page that says we are preparing it.
+                </strong>{" "}
+                They have been told it is taking longer than expected and that we will email them.
+                Send them a new link.
+              </>
+            ) : (
+              <>
+                <strong>
+                  Held on the waiting page{waiting > 0 ? ` — ${waiting} minute${waiting === 1 ? "" : "s"}` : " just now"}.
+                </strong>{" "}
+                Paste a working link to let them through.
+              </>
+            )}
+          </span>
+        </p>
+      ) : null}
+
       {sent ? <p className="w-full text-xs font-medium text-green-700">{sent}</p> : null}
 
       <ConfirmDialog
         open={asking}
         icon="phone"
         title={
-          replacing
-            ? "Replace their verification link?"
-            : count
-              ? "Send another live check?"
-              : "Send a live identity check?"
+          holding
+            ? "Hold them on a waiting page?"
+            : replacing
+              ? "Replace their verification link?"
+              : count
+                ? "Send another live check?"
+                : "Send a live identity check?"
         }
-        confirmLabel={replacing ? "Replace link" : "Send link"}
+        confirmLabel={
+          holding ? "Hold them on a waiting page" : replacing ? "Replace link" : "Send link"
+        }
         busy={busy}
         warning={
           !replacing && count
@@ -250,7 +358,20 @@ export function LiveVerificationButton({
               </div>
             ) : null}
 
-            {replacing ? (
+            {holding ? (
+              <p>
+                Anyone opening{" "}
+                <strong className="text-navy-900">{fullName || "this candidate"}</strong>&rsquo;s
+                link will see{" "}
+                <span className="font-medium text-navy-800">
+                  &ldquo;we are preparing your verification page&rdquo;
+                </span>{" "}
+                instead of a button that ends at a closed session.{" "}
+                <span className="font-medium text-navy-800">No email is sent.</span> Their page
+                checks every few seconds and lets them through on its own the moment you come back
+                here and paste a working link.
+              </p>
+            ) : replacing ? (
               <p>
                 The link already in{" "}
                 <strong className="text-navy-900">{fullName || "this candidate"}</strong>&rsquo;s
@@ -275,7 +396,36 @@ export function LiveVerificationButton({
               </p>
             )}
 
-            <label className="mt-3 block text-xs font-bold text-navy-700">
+            {/* The two situations in one tick: either there is a working link
+                to paste, or there is not and somebody has to wait. Ticked, the
+                box below stops mattering — and saying so is better than
+                leaving a field that looks required and is not. */}
+            {replacing ? (
+              <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-navy-200 bg-cream-50 p-3">
+                <input
+                  type="checkbox"
+                  checked={expired}
+                  onChange={(e) => {
+                    setExpired(e.target.checked);
+                    setProblem("");
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-navy-300 text-brand-600"
+                />
+                <span className="text-xs leading-relaxed text-navy-700">
+                  <span className="font-bold text-navy-900">This link has expired</span> — hold
+                  them on a waiting page until I paste a new one.
+                  <span className="mt-0.5 block text-navy-500">
+                    Untick it, paste the new link, and they are let through.
+                  </span>
+                </span>
+              </label>
+            ) : null}
+
+            <label
+              className={`mt-3 block text-xs font-bold text-navy-700 ${
+                holding ? "pointer-events-none opacity-40" : ""
+              }`}
+            >
               {replacing ? "The new link from your provider" : "Their verification link"}
               <input
                 value={url}
@@ -293,7 +443,11 @@ export function LiveVerificationButton({
                 because the mistake worth catching is a link pasted from the
                 wrong browser tab, and only the person who created it knows
                 which tab was right. */}
-            {provider ? (
+            {holding ? (
+              <p className="mt-1.5 text-xs text-navy-500">
+                No link is needed while they are held. Whatever is in the box is left as it is.
+              </p>
+            ) : provider ? (
               <p className="mt-1.5 text-xs font-medium text-green-700">
                 Recognised as a {provider} link.
               </p>

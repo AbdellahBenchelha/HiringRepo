@@ -243,6 +243,16 @@ export interface Candidate {
   liveVerificationLinkChangedAt?: string;
   liveVerificationLinkChangeCount?: number;
   /**
+   * When the recruiter marked the provider session dead, and with it the
+   * candidate held on a waiting page.
+   *
+   * One field for two facts, because they are the same fact: its presence
+   * means held, and its value means since when. A separate boolean would let
+   * "held" and "held since" disagree, and the second is what tells you
+   * somebody has been sitting in front of a holding message for ten minutes.
+   */
+  liveVerificationHeldAt?: string;
+  /**
    * Whether the candidate has actually opened the voice-assessment page, and
    * how often.
    *
@@ -568,6 +578,7 @@ export function recordLiveVerificationSent(id: string, url: string): Promise<Can
     c.liveVerificationLinkChanges = undefined;
     c.liveVerificationLinkChangedAt = undefined;
     c.liveVerificationLinkChangeCount = undefined;
+    c.liveVerificationHeldAt = undefined;
     return { list, result: c };
   });
 }
@@ -599,6 +610,35 @@ export function replaceLiveVerificationLink(id: string, url: string): Promise<Ca
     c.liveVerificationLinkChangedAt = now;
     c.liveVerificationLinkChangeCount = c.liveVerificationLinkChanges.length;
     c.liveVerificationStartedAt = undefined;
+    // A working session is exactly what the waiting page was waiting for.
+    c.liveVerificationHeldAt = undefined;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Hold a candidate on a waiting page, or let them through.
+ *
+ * Marks the provider session dead without touching anything else. The link in
+ * their inbox still opens — it just shows "we are preparing your verification"
+ * instead of a button that would end at a session the provider has closed.
+ *
+ * Refuses when nothing has been sent, for the same reason replacing does:
+ * there is no page for anybody to be held on.
+ */
+export function setLiveVerificationHold(
+  id: string,
+  held: boolean,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || !c.liveVerificationSentAt) return { list, result: null };
+    // Re-marking an already-held candidate keeps the original moment. The
+    // waiting message changes with how long they have been there, and
+    // restarting the clock would quietly tell somebody who has waited twenty
+    // minutes that they have waited one.
+    if (held) c.liveVerificationHeldAt = c.liveVerificationHeldAt ?? new Date().toISOString();
+    else c.liveVerificationHeldAt = undefined;
     return { list, result: c };
   });
 }

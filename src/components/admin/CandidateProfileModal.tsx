@@ -19,6 +19,7 @@ import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
 import { OfferReplyPanel } from "@/components/admin/OfferReplyPanel";
 import { canOffer } from "@/lib/offer";
+import { liveStateOf } from "@/lib/liveVerification";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
@@ -353,15 +354,7 @@ export function CandidateProfileModal({
             email={candidate.email}
             documents={candidate.documents}
             initial={verification}
-            live={{
-              liveVerificationUrl: candidate.liveVerificationUrl,
-              liveVerificationSentAt: candidate.liveVerificationSentAt,
-              liveVerificationCount: candidate.liveVerificationCount,
-              liveVerificationOpenedAt: candidate.liveVerificationOpenedAt,
-              liveVerificationLastOpenedAt: candidate.liveVerificationLastOpenedAt,
-              liveVerificationOpenCount: candidate.liveVerificationOpenCount,
-              liveVerificationStartedAt: candidate.liveVerificationStartedAt,
-            }}
+            live={liveStateOf(candidate)}
             onLiveChange={(live) => onChange(live)}
             onChange={(v) =>
               onChange(verificationPatch(v))

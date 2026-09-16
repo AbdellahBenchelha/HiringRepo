@@ -7,6 +7,9 @@ import { getCandidate } from "@/lib/store";
 import { siteConfig } from "@/config/site";
 import { Icon } from "@/components/Icon";
 import { LiveVerifyStart } from "@/components/verify/LiveVerifyStart";
+import { LiveVerifyWaiting } from "@/components/verify/LiveVerifyWaiting";
+import { RecordOpen } from "@/components/verify/RecordOpen";
+import { heldFor } from "@/lib/liveVerification";
 
 /**
  * Where a candidate starts their live identity check.
@@ -92,6 +95,24 @@ export default async function LiveVerifyPage({
     );
   }
 
+  /**
+   * The provider session is dead and a recruiter is fetching a new one.
+   *
+   * Everything below this point — the QR code, the button, the link itself —
+   * would send them to a session that has been closed, so none of it is built
+   * and none of it reaches their browser. They wait on our page instead, and
+   * it lets itself out when the replacement lands.
+   */
+  const held = heldFor(candidate);
+  if (held !== null) {
+    return (
+      <Shell>
+        <RecordOpen token={token ?? ""} />
+        <LiveVerifyWaiting token={token ?? ""} heldMinutes={held} />
+      </Shell>
+    );
+  }
+
   // Drawn here, on the server, rather than fetched from a chart service: the
   // link is personal to this candidate and there is no reason for anybody else
   // to see it.
@@ -107,6 +128,7 @@ export default async function LiveVerifyPage({
 
   return (
     <Shell>
+      <RecordOpen token={token ?? ""} />
       <div className="card p-6 sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
           Identity check

@@ -115,6 +115,57 @@ export interface LiveVerificationState {
   /** Times the session behind their link was swapped, without emailing again. */
   liveVerificationLinkChangedAt?: string;
   liveVerificationLinkChangeCount?: number;
+  /** Set while the session is dead and the candidate is on a waiting page. */
+  liveVerificationHeldAt?: string;
+}
+
+/**
+ * The live-check fields of a candidate, as one object.
+ *
+ * Written once here rather than listed by hand at each call site. Spelling the
+ * fields out in a component is how a new one gets added to the model, used by
+ * the panel, and then silently never arrives — the panel reads its own copy,
+ * and the copy was built by somebody enumerating the fields that existed that
+ * day. Picking them from the record means adding a field is enough.
+ */
+export function liveStateOf(c: LiveVerificationState): LiveVerificationState {
+  return {
+    liveVerificationUrl: c.liveVerificationUrl,
+    liveVerificationSentAt: c.liveVerificationSentAt,
+    liveVerificationCount: c.liveVerificationCount,
+    liveVerificationOpenedAt: c.liveVerificationOpenedAt,
+    liveVerificationLastOpenedAt: c.liveVerificationLastOpenedAt,
+    liveVerificationOpenCount: c.liveVerificationOpenCount,
+    liveVerificationStartedAt: c.liveVerificationStartedAt,
+    liveVerificationLinkChangedAt: c.liveVerificationLinkChangedAt,
+    liveVerificationLinkChangeCount: c.liveVerificationLinkChangeCount,
+    liveVerificationHeldAt: c.liveVerificationHeldAt,
+  };
+}
+
+/**
+ * How long somebody may reasonably be left on the waiting page.
+ *
+ * Not a rule anything enforces — nothing is sent and nothing changes when it
+ * passes. It decides two things: what the candidate is told, because "one to
+ * three minutes" stops being true and continuing to say it is a lie they can
+ * measure; and whether the Admin Panel says in red that this person now needs
+ * an email, because a page nobody is coming back to is worse than no page.
+ */
+export const HOLD_TOO_LONG_MINUTES = 5;
+
+/** Whole minutes on the waiting page, or null when they are not on it. */
+export function heldFor(c: LiveVerificationState, now: number = Date.now()): number | null {
+  if (!c.liveVerificationHeldAt) return null;
+  const at = Date.parse(c.liveVerificationHeldAt);
+  if (Number.isNaN(at)) return null;
+  return Math.max(0, Math.floor((now - at) / 60_000));
+}
+
+/** Held, and past the point where "a couple of minutes" is still true. */
+export function holdOverdue(c: LiveVerificationState, now: number = Date.now()): boolean {
+  const minutes = heldFor(c, now);
+  return minutes !== null && minutes >= HOLD_TOO_LONG_MINUTES;
 }
 
 /**

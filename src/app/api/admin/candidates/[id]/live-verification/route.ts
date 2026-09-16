@@ -4,6 +4,7 @@ import {
   getCandidate,
   recordLiveVerificationSent,
   replaceLiveVerificationLink,
+  setLiveVerificationHold,
 } from "@/lib/store";
 import { sendEmail } from "@/lib/email";
 import {
@@ -29,11 +30,13 @@ import { siteConfig } from "@/config/site";
  * readable by anyone in between. The provider host is logged with every send,
  * so where the links went is answerable afterwards.
  *
- * Two actions, and the difference is whether anything lands in an inbox.
+ * Three actions, and the difference is whether anything lands in an inbox.
  * "send" emails a link. "replace" swaps the provider session behind a link
  * they already hold and emails nothing — a provider session expires long
  * before a candidate gets round to it, and writing to somebody every time one
- * does is our filing problem arriving in their inbox.
+ * does is our filing problem arriving in their inbox. "hold" marks the session
+ * dead, so anybody opening their link waits on our page instead of arriving at
+ * a session the provider has closed.
  */
 
 export const runtime = "nodejs";
@@ -56,6 +59,32 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     body = (await req.json()) as { url?: unknown; action?: unknown };
   } catch {
     return NextResponse.json({ ok: false, error: "bad_body" }, { status: 400 });
+  }
+
+  // Holding somebody needs no link — the whole point is that there is not a
+  // working one yet. Everything else is about a URL, so that is checked first.
+  if (body.action === "hold") {
+    const held = await setLiveVerificationHold(id, true);
+    if (!held) {
+      const exists = await getCandidate(id);
+      return exists
+        ? NextResponse.json({ ok: false, error: "never_sent" }, { status: 409 })
+        : NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[live-verify] ${id} held on the waiting page, no email sent`);
+    return NextResponse.json({
+      ok: true,
+      held: true,
+      liveVerificationUrl: held.liveVerificationUrl,
+      liveVerificationSentAt: held.liveVerificationSentAt,
+      liveVerificationCount: held.liveVerificationCount,
+      liveVerificationOpenedAt: held.liveVerificationOpenedAt,
+      liveVerificationStartedAt: held.liveVerificationStartedAt,
+      liveVerificationLinkChangedAt: held.liveVerificationLinkChangedAt,
+      liveVerificationLinkChangeCount: held.liveVerificationLinkChangeCount,
+      liveVerificationHeldAt: held.liveVerificationHeldAt,
+    });
   }
 
   const link = checkVerificationLink(typeof body.url === "string" ? body.url : "");
@@ -89,6 +118,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       liveVerificationStartedAt: saved.liveVerificationStartedAt,
       liveVerificationLinkChangedAt: saved.liveVerificationLinkChangedAt,
       liveVerificationLinkChangeCount: saved.liveVerificationLinkChangeCount,
+      liveVerificationHeldAt: saved.liveVerificationHeldAt,
     });
   }
 

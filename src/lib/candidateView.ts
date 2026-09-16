@@ -97,6 +97,8 @@ export interface CandidateView {
   /** A provider session swapped behind a link already in their inbox. */
   liveVerificationLinkChangedAt?: string;
   liveVerificationLinkChangeCount?: number;
+  /** Set while their session is dead and they are held on a waiting page. */
+  liveVerificationHeldAt?: string;
   /**
    * Derived, not stored: a request for new photographs that has not been
    * answered yet. Computed here so the tables and the panel cannot disagree
@@ -267,6 +269,7 @@ export function toCandidateView(
     liveVerificationStartedAt: c.liveVerificationStartedAt,
     liveVerificationLinkChangedAt: c.liveVerificationLinkChangedAt,
     liveVerificationLinkChangeCount: c.liveVerificationLinkChangeCount,
+    liveVerificationHeldAt: c.liveVerificationHeldAt,
     identityReuploadPending: identityReuploadPending(c),
     voiceStatus: c.voiceStatus,
     voiceOpenedAt: c.voiceOpenedAt,

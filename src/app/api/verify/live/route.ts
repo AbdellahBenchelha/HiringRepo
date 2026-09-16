@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
    */
   let url: string | undefined;
   let stale = false;
+  let held = false;
   try {
     const candidate = await getCandidate(token.link.id);
     // A *re-sent* check is a different link with a different token. Theirs is
@@ -117,6 +118,11 @@ export async function POST(req: NextRequest) {
     // undo a decision to start again.
     if (!candidate || candidate.liveVerificationSentAt !== token.link.sentAt) {
       stale = true;
+    } else if (candidate.liveVerificationHeldAt) {
+      // Somebody with the page already open, pressing a button that was drawn
+      // before the session was marked dead. The start is not recorded, because
+      // nothing was started — they are sent to the waiting page instead.
+      held = true;
     } else {
       url = candidate.liveVerificationUrl;
       const first = await recordLiveVerificationStarted(token.link.id);
@@ -132,5 +138,10 @@ export async function POST(req: NextRequest) {
   } catch {
     /* bookkeeping only — the browser falls back to the link it was given */
   }
-  return NextResponse.json({ ok: true, url, stale: stale || undefined });
+  return NextResponse.json({
+    ok: true,
+    url,
+    stale: stale || undefined,
+    held: held || undefined,
+  });
 }
