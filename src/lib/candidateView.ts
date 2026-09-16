@@ -94,6 +94,9 @@ export interface CandidateView {
   liveVerificationLastOpenedAt?: string;
   liveVerificationOpenCount?: number;
   liveVerificationStartedAt?: string;
+  /** A provider session swapped behind a link already in their inbox. */
+  liveVerificationLinkChangedAt?: string;
+  liveVerificationLinkChangeCount?: number;
   /**
    * Derived, not stored: a request for new photographs that has not been
    * answered yet. Computed here so the tables and the panel cannot disagree
@@ -262,6 +265,8 @@ export function toCandidateView(
     liveVerificationLastOpenedAt: c.liveVerificationLastOpenedAt,
     liveVerificationOpenCount: c.liveVerificationOpenCount,
     liveVerificationStartedAt: c.liveVerificationStartedAt,
+    liveVerificationLinkChangedAt: c.liveVerificationLinkChangedAt,
+    liveVerificationLinkChangeCount: c.liveVerificationLinkChangeCount,
     identityReuploadPending: identityReuploadPending(c),
     voiceStatus: c.voiceStatus,
     voiceOpenedAt: c.voiceOpenedAt,

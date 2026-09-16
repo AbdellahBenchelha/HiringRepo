@@ -112,6 +112,9 @@ export interface LiveVerificationState {
   liveVerificationOpenCount?: number;
   /** When they pressed through to the provider, which is not the same as opening. */
   liveVerificationStartedAt?: string;
+  /** Times the session behind their link was swapped, without emailing again. */
+  liveVerificationLinkChangedAt?: string;
+  liveVerificationLinkChangeCount?: number;
 }
 
 /**

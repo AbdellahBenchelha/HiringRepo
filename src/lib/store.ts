@@ -231,6 +231,18 @@ export interface Candidate {
   liveVerificationOpenCount?: number;
   liveVerificationStartedAt?: string;
   /**
+   * Times the provider link behind an already-sent check was swapped.
+   *
+   * Kept apart from the send count because they are different events: one put
+   * something in somebody's inbox, the other changed where a link they already
+   * hold points. A provider session expires long before a candidate gets round
+   * to it, and emailing them again every time one does would be our filing
+   * problem landing in their inbox.
+   */
+  liveVerificationLinkChanges?: string[];
+  liveVerificationLinkChangedAt?: string;
+  liveVerificationLinkChangeCount?: number;
+  /**
    * Whether the candidate has actually opened the voice-assessment page, and
    * how often.
    *
@@ -550,6 +562,42 @@ export function recordLiveVerificationSent(id: string, url: string): Promise<Can
     c.liveVerificationOpenedAt = undefined;
     c.liveVerificationLastOpenedAt = undefined;
     c.liveVerificationOpenCount = undefined;
+    c.liveVerificationStartedAt = undefined;
+    // A new email starts the story again, so the swaps made against the old
+    // one are not a fact about this link.
+    c.liveVerificationLinkChanges = undefined;
+    c.liveVerificationLinkChangedAt = undefined;
+    c.liveVerificationLinkChangeCount = undefined;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Point an already-sent check at a new provider session.
+ *
+ * The link in the candidate's inbox is ours, and their token is checked
+ * against `liveVerificationSentAt` — so leaving that field alone is what keeps
+ * their email working. Only the destination behind it changes.
+ *
+ * `liveVerificationStartedAt` is cleared deliberately. Whatever they started
+ * was the session that has since died; whether they start this one is a fresh
+ * question, and the recruiter should be told about it when they do. What
+ * happened is not lost — the swap is dated here, and the opens are untouched,
+ * because opening our page is still something they did.
+ *
+ * Refuses when nothing has been sent. There is no link in anybody's inbox to
+ * re-point, and quietly storing a URL nobody has would look like a check was
+ * out when none was.
+ */
+export function replaceLiveVerificationLink(id: string, url: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || !c.liveVerificationSentAt) return { list, result: null };
+    const now = new Date().toISOString();
+    c.liveVerificationUrl = url;
+    c.liveVerificationLinkChanges = [...(c.liveVerificationLinkChanges ?? []), now];
+    c.liveVerificationLinkChangedAt = now;
+    c.liveVerificationLinkChangeCount = c.liveVerificationLinkChanges.length;
     c.liveVerificationStartedAt = undefined;
     return { list, result: c };
   });

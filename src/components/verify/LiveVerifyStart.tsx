@@ -64,19 +64,42 @@ export function LiveVerifyStart({
     }
   }, []);
 
+  /**
+   * Hand over to the provider, at whatever session is current now.
+   *
+   * The destination comes back from the server rather than from this page.
+   * Sessions expire at the provider long before some candidates get round to
+   * opening the email, and the recruiter pastes a replacement without writing
+   * to them again — so a page that has been sitting in a tab since yesterday
+   * must not send them to yesterday's dead session.
+   *
+   * The link rendered into the page is kept as the fallback. If the request
+   * fails there is nothing useful to say to a candidate about our bookkeeping,
+   * and the older link is far better than a button that does nothing.
+   */
   async function start() {
     setGoing(true);
+    let target = url;
     try {
-      await fetch("/api/verify/live", {
+      const res = await fetch("/api/verify/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ t: token, phase: "started" }),
         keepalive: true,
       });
+      const data = (await res.json()) as { url?: string; stale?: boolean };
+      // A newer check has been emailed since this page was drawn. Their link
+      // is not the current one any more, and the page itself explains that
+      // far better than a silent hop to the wrong session would.
+      if (data?.stale) {
+        window.location.reload();
+        return;
+      }
+      if (typeof data?.url === "string" && data.url) target = data.url;
     } catch {
       /* never stand between them and the check */
     }
-    window.location.href = url;
+    window.location.href = target;
   }
 
   if (isMobile) {

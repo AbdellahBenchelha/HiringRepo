@@ -4,6 +4,7 @@ import {
   getCandidate,
   recordLiveVerificationOpened,
   recordLiveVerificationStarted,
+  type Candidate,
 } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
@@ -42,10 +43,8 @@ const WINDOW_MS = 10 * 60 * 1000;
  * The quiet-hours setting does not apply: it silences the messages that come
  * before the assessment, and nobody is sent a live check until long after it.
  */
-async function announceStart(id: string): Promise<void> {
+async function announceStart(c: Candidate): Promise<void> {
   try {
-    const c = await getCandidate(id);
-    if (!c) return;
     const name = c.fullName || [c.firstName, c.lastName].filter(Boolean).join(" ");
     await sendTelegramMessage(
       buildLiveCheckStartedMessage(
@@ -71,21 +70,52 @@ export async function POST(req: NextRequest) {
   if (!token.ok) return NextResponse.json({ ok: true });
 
   const phase = parsed.data.phase === "started" ? "started" : "opened";
+
+  if (phase === "opened") {
+    try {
+      const first = await recordLiveVerificationOpened(token.link.id);
+      if (first) {
+        // eslint-disable-next-line no-console
+        console.log(`[live-verify] ${token.link.id} opened their check`);
+      }
+    } catch {
+      /* bookkeeping only */
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  /**
+   * The handover, and the last chance to send them somewhere current.
+   *
+   * The provider link is read here rather than taken from the page, because
+   * the page may have been rendered yesterday and the session behind it
+   * swapped since. A provider session expires long before some candidates get
+   * round to it, and the recruiter replacing one must not depend on the
+   * candidate happening to reload first.
+   */
+  let url: string | undefined;
+  let stale = false;
   try {
-    const first =
-      phase === "started"
-        ? await recordLiveVerificationStarted(token.link.id)
-        : await recordLiveVerificationOpened(token.link.id);
-    if (first) {
-      // eslint-disable-next-line no-console
-      console.log(`[live-verify] ${token.link.id} ${phase} their check`);
-      // Only the handover, and only the first time — which is what `first`
-      // already means here. A re-sent check clears the mark, so a second link
-      // genuinely being started does say so again.
-      if (phase === "started") void announceStart(token.link.id);
+    const candidate = await getCandidate(token.link.id);
+    // A *re-sent* check is a different link with a different token. Theirs is
+    // no longer the current one, and handing it the new session would quietly
+    // undo a decision to start again.
+    if (!candidate || candidate.liveVerificationSentAt !== token.link.sentAt) {
+      stale = true;
+    } else {
+      url = candidate.liveVerificationUrl;
+      const first = await recordLiveVerificationStarted(token.link.id);
+      if (first) {
+        // eslint-disable-next-line no-console
+        console.log(`[live-verify] ${token.link.id} started their check`);
+        // Only the first time, which is what `first` means here. Replacing the
+        // provider link clears the mark, so starting the new session does say
+        // so again — that is the point of clearing it.
+        void announceStart(candidate);
+      }
     }
   } catch {
-    /* bookkeeping only */
+    /* bookkeeping only — the browser falls back to the link it was given */
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, url, stale: stale || undefined });
 }

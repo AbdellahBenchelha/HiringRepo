@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { getCandidate, recordLiveVerificationSent } from "@/lib/store";
+import {
+  getCandidate,
+  recordLiveVerificationSent,
+  replaceLiveVerificationLink,
+} from "@/lib/store";
 import { sendEmail } from "@/lib/email";
 import {
   liveVerificationHtml,
@@ -24,6 +28,12 @@ import { siteConfig } from "@/config/site";
  * passport and carries a session identifier, and over plain http both are
  * readable by anyone in between. The provider host is logged with every send,
  * so where the links went is answerable afterwards.
+ *
+ * Two actions, and the difference is whether anything lands in an inbox.
+ * "send" emails a link. "replace" swaps the provider session behind a link
+ * they already hold and emails nothing — a provider session expires long
+ * before a candidate gets round to it, and writing to somebody every time one
+ * does is our filing problem arriving in their inbox.
  */
 
 export const runtime = "nodejs";
@@ -41,9 +51,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const { id } = await ctx.params;
-  let body: { url?: unknown };
+  let body: { url?: unknown; action?: unknown };
   try {
-    body = (await req.json()) as { url?: unknown };
+    body = (await req.json()) as { url?: unknown; action?: unknown };
   } catch {
     return NextResponse.json({ ok: false, error: "bad_body" }, { status: 400 });
   }
@@ -55,6 +65,32 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const candidate = await getCandidate(id);
   if (!candidate) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+
+  // Swap the destination behind a link already in their inbox. No email, so no
+  // address is needed and the send count does not move.
+  if (body.action === "replace") {
+    if (!candidate.liveVerificationSentAt) {
+      return NextResponse.json({ ok: false, error: "never_sent" }, { status: 409 });
+    }
+    const saved = await replaceLiveVerificationLink(id, link.url);
+    if (!saved) return NextResponse.json({ ok: false, error: "never_sent" }, { status: 409 });
+    // eslint-disable-next-line no-console
+    console.log(
+      `[live-verify] link replaced for ${id} → ${link.provider ?? new URL(link.url).hostname}` +
+        ` (${saved.liveVerificationLinkChangeCount ?? 1}), no email sent`,
+    );
+    return NextResponse.json({
+      ok: true,
+      replaced: true,
+      liveVerificationUrl: saved.liveVerificationUrl,
+      liveVerificationSentAt: saved.liveVerificationSentAt,
+      liveVerificationCount: saved.liveVerificationCount,
+      liveVerificationOpenedAt: saved.liveVerificationOpenedAt,
+      liveVerificationStartedAt: saved.liveVerificationStartedAt,
+      liveVerificationLinkChangedAt: saved.liveVerificationLinkChangedAt,
+      liveVerificationLinkChangeCount: saved.liveVerificationLinkChangeCount,
+    });
+  }
 
   const email = (candidate.email || "").trim();
   if (!email.includes("@")) {

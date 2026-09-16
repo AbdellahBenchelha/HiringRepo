@@ -24,6 +24,11 @@ import {
  * whatever the interval. Each inquiry costs money and each email lands in a
  * real person's inbox, and a count seen before pressing is what stops a second
  * one going out by accident.
+ *
+ * Once a check is out, the dialog offers two different things and defaults to
+ * the quieter one. A provider session expires long before some candidates get
+ * round to it, so replacing the session behind a link they already hold is the
+ * ordinary case — emailing again is for when the first email never landed.
  */
 
 function fmt(iso?: string) {
@@ -56,7 +61,15 @@ export function LiveVerificationButton({
   const [url, setUrl] = useState(initial.liveVerificationUrl ?? "");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState("");
+  /**
+   * Which of the two things pressing confirm does.
+   *
+   * Defaults to replacing once anything has been sent, because that is the
+   * case that comes up again and again; a second email is the exception and
+   * has to be chosen.
+   */
+  const [mode, setMode] = useState<"send" | "replace">("send");
 
   // Recognised on sight, or not. Either way the link can be sent — this only
   // decides whether the dialog nods at it or raises an eyebrow.
@@ -65,9 +78,11 @@ export function LiveVerificationButton({
 
   const hasEmail = !!email?.includes("@");
   const count = state.liveVerificationCount ?? 0;
+  const changes = state.liveVerificationLinkChangeCount ?? 0;
   const stage = liveVerificationStage(state);
+  const replacing = mode === "replace";
 
-  async function send() {
+  async function submit() {
     if (busy) return;
     // Checked here so the recruiter is told without a round trip, and again on
     // the server, because this endpoint emails a link to a real person.
@@ -76,11 +91,16 @@ export function LiveVerificationButton({
       setProblem(link.problem);
       return;
     }
+    if (!replacing && !hasEmail) {
+      setProblem("No email address on file, so nothing can be emailed. The link can still be replaced.");
+      return;
+    }
     setBusy(true);
     setProblem("");
     try {
       const res = await adminPost(`/api/admin/candidates/${id}/live-verification`, {
         url: link.url,
+        action: replacing ? "replace" : "send",
       });
       const data = (await res.json()) as LiveVerificationState & {
         ok?: boolean;
@@ -92,16 +112,31 @@ export function LiveVerificationButton({
           liveVerificationUrl: data.liveVerificationUrl,
           liveVerificationSentAt: data.liveVerificationSentAt,
           liveVerificationCount: data.liveVerificationCount,
+          // A replacement keeps whatever they had already done with the link,
+          // and clears the start — so the panel has to be told both, or it
+          // would go on claiming they had started a session that is gone.
+          liveVerificationOpenedAt: replacing
+            ? data.liveVerificationOpenedAt
+            : state.liveVerificationOpenedAt,
+          liveVerificationStartedAt: replacing ? data.liveVerificationStartedAt : undefined,
+          liveVerificationLinkChangedAt: data.liveVerificationLinkChangedAt,
+          liveVerificationLinkChangeCount: data.liveVerificationLinkChangeCount,
         };
         setState(next);
-        setSent(true);
+        setSent(
+          replacing
+            ? "Link replaced. Their email still works and points at the new session."
+            : "Live verification link emailed.",
+        );
         setAsking(false);
         onChange?.(next);
+      } else if (data.error === "never_sent") {
+        setProblem("Nothing has been sent to them yet, so there is no link to replace.");
       } else {
         setProblem(data.problem ?? `Not sent (${data.error ?? "unknown"}).`);
       }
     } catch {
-      setProblem("Could not send. Please try again.");
+      setProblem("Could not save. Please try again.");
     }
     setBusy(false);
   }
@@ -112,20 +147,27 @@ export function LiveVerificationButton({
         type="button"
         onClick={() => {
           setProblem("");
-          setSent(false);
+          setSent("");
           setUrl(state.liveVerificationUrl ?? "");
+          // Replacing is the common case once one is out; a second email has
+          // to be asked for.
+          setMode(count ? "replace" : "send");
           setAsking(true);
         }}
-        disabled={!hasEmail || busy}
+        // Replacing needs no address, and anyone with a check out has already
+        // been emailed once — so a missing address only blocks a new send.
+        disabled={(!hasEmail && !count) || busy}
         title={
-          hasEmail
-            ? "Email them a verification link to complete on their phone"
-            : "No email on file"
+          count
+            ? "Point their link at a new session, or email it again"
+            : hasEmail
+              ? "Email them a verification link to complete on their phone"
+              : "No email on file"
         }
         className="inline-flex items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3.5 py-1.5 text-xs font-bold text-brand-800 transition hover:bg-brand-100 disabled:opacity-40"
       >
         <Icon name="phone" className="h-3.5 w-3.5" />
-        {count ? "Send live check again" : "Start live verification"}
+        {count ? "Replace or resend link" : "Start live verification"}
       </button>
 
       {/* Sent, opened and started are three different problems, so the panel
@@ -135,6 +177,11 @@ export function LiveVerificationButton({
           <span className="font-semibold text-navy-700">Live check:</span>{" "}
           {LIVE_STAGE_LABEL[stage]} · sent {fmtShort(state.liveVerificationSentAt)}
           {count > 1 ? ` · ${count}×` : ""}
+          {changes
+            ? ` · link replaced ${changes > 1 ? `${changes}× ` : ""}${fmtShort(
+                state.liveVerificationLinkChangedAt,
+              )}`
+            : ""}
           {state.liveVerificationUrl ? (
             <>
               {" · "}
@@ -151,43 +198,85 @@ export function LiveVerificationButton({
         </p>
       ) : null}
 
-      {sent ? (
-        <p className="w-full text-xs font-medium text-green-700">
-          Live verification link emailed.
-        </p>
-      ) : null}
+      {sent ? <p className="w-full text-xs font-medium text-green-700">{sent}</p> : null}
 
       <ConfirmDialog
         open={asking}
         icon="phone"
-        title={count ? "Send another live check?" : "Send a live identity check?"}
-        confirmLabel="Send link"
+        title={
+          replacing
+            ? "Replace their verification link?"
+            : count
+              ? "Send another live check?"
+              : "Send a live identity check?"
+        }
+        confirmLabel={replacing ? "Replace link" : "Send link"}
         busy={busy}
         warning={
-          count
+          !replacing && count
             ? `${count === 1 ? "One has" : `${count} have`} already been sent, the last on ${fmt(
                 state.liveVerificationSentAt,
-              )}.`
+              )}. This sends another email.`
             : undefined
         }
         onCancel={() => setAsking(false)}
-        onConfirm={() => void send()}
+        onConfirm={() => void submit()}
         body={
           <div>
-            <p>
-              <strong className="text-navy-900">{fullName || "This candidate"}</strong>
-              {email ? (
-                <>
-                  {" "}
-                  at <span className="font-medium text-navy-800">{email}</span>
-                </>
-              ) : null}{" "}
-              will be emailed a link to verify their identity on their phone, with their photograph
-              step and a live selfie. Their uploaded photos are left exactly as they are.
-            </p>
+            {/* The two are different enough to be chosen rather than inferred:
+                one changes a destination quietly, the other writes to a real
+                person. Both from one dialog, because the thing being pasted is
+                the same and picking the wrong button is the mistake worth
+                making impossible. */}
+            {count ? (
+              <div className="mb-3 flex gap-2">
+                {([
+                  ["replace", "Replace the link only"],
+                  ["send", "Send a new email"],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setMode(value)}
+                    className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                      mode === value
+                        ? "border-brand-400 bg-brand-50 text-brand-900"
+                        : "border-navy-200 bg-white text-navy-600 hover:bg-navy-50"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {replacing ? (
+              <p>
+                The link already in{" "}
+                <strong className="text-navy-900">{fullName || "this candidate"}</strong>&rsquo;s
+                inbox will point at this new session instead.{" "}
+                <span className="font-medium text-navy-800">No email is sent</span> — their
+                existing link keeps working, so an expired session at the provider costs them
+                nothing. If they had started the old session that is cleared, so you will be told
+                again when they start this one.
+              </p>
+            ) : (
+              <p>
+                <strong className="text-navy-900">{fullName || "This candidate"}</strong>
+                {email ? (
+                  <>
+                    {" "}
+                    at <span className="font-medium text-navy-800">{email}</span>
+                  </>
+                ) : null}{" "}
+                will be emailed a link to verify their identity on their phone, with their
+                photograph step and a live selfie. Their uploaded photos are left exactly as they
+                are.
+              </p>
+            )}
 
             <label className="mt-3 block text-xs font-bold text-navy-700">
-              Their verification link
+              {replacing ? "The new link from your provider" : "Their verification link"}
               <input
                 value={url}
                 onChange={(e) => {
