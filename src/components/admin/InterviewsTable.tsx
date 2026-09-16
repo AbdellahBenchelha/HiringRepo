@@ -23,7 +23,8 @@ import type { CandidateDocument } from "@/lib/documents";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
-import { CANDIDATE_STATUSES, VOICE_STATUSES, type CandidateStatus, type VoiceStatus } from "@/lib/candidateStatus";
+import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
+import { VOICE_FILTERS, matchesVoiceFilter, type VoiceFilter } from "@/lib/voice";
 import {
   VERIFICATION_FILTERS,
   matchesVerificationFilter,
@@ -90,7 +91,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   const [country, setCountry] = useState("all");
   /** Countries taken out of the table entirely, remembered in the browser. */
   const hiddenCountries = useHiddenCountries(HIDDEN_COUNTRIES_KEY);
-  const [voice, setVoice] = useState<"all" | VoiceStatus>("all");
+  const [voice, setVoice] = useState<VoiceFilter>("all");
   const [verification, setVerification] = useState<VerificationFilter>("all");
   const [status, setStatus] = useState<"all" | CandidateStatus>("all");
   const [offer, setOffer] = useState<"all" | OfferStatus>("all");
@@ -190,7 +191,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
         return false;
       }
       if (country !== "all" && c.country !== country) return false;
-      if (voice !== "all" && (c.voiceStatus ?? "Voice Assessment Not Requested") !== voice) return false;
+      if (!matchesVoiceFilter(voice, c)) return false;
       if (!matchesVerificationFilter(verification, c.verificationStatus, c.verificationRequestedAt)) {
         return false;
       }
@@ -334,10 +335,16 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
 
           <label className="block">
             <span className="label">Voice assessment</span>
-            <select id="voice" className="select" value={voice} onChange={(e) => setVoice(e.target.value as typeof voice)}>
-              <option value="all">All</option>
-              {VOICE_STATUSES.map((v) => (
-                <option key={v} value={v}>{v.replace("Voice Assessment ", "").replace("Voice ", "")}</option>
+            <select
+              id="voice"
+              className="select"
+              value={voice}
+              onChange={(e) => setVoice(e.target.value as VoiceFilter)}
+            >
+              {VOICE_FILTERS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
               ))}
             </select>
           </label>

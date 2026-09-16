@@ -11,6 +11,7 @@
  * anybody does.
  */
 import { currentDocument, type CandidateDocument } from "@/lib/documents";
+import type { VoiceStatus } from "@/lib/candidateStatus";
 
 /**
  * The script read aloud for the voice assessment, exactly as it was when this
@@ -68,4 +69,52 @@ export function voiceRecordingNeeded(c: VoiceInput): boolean {
     .sort()
     .at(-1);
   return !newest || newest <= asked;
+}
+
+/**
+ * Filtering a table by where somebody is with their voice assessment.
+ *
+ * The five statuses, plus a split of the one that has work attached to it.
+ * "Requested" covers two different jobs: a recording that has been asked for
+ * and never chased, and one that has been chased already. The first is an
+ * email to send; the second is a decision about whether to keep chasing — and
+ * they are indistinguishable in a list until they are asked for separately.
+ *
+ * The split is defined by voiceRecordingNeeded rather than by the status
+ * label, so the rows it returns are exactly the ones the reminder button will
+ * act on. A filter that offers somebody the button cannot refuse is worse than
+ * no filter, and a recruiter's first move after narrowing to these is to tick
+ * the lot and press it.
+ */
+export type VoiceFilter = "all" | VoiceStatus | "requested_unreminded" | "requested_reminded";
+
+/**
+ * The options, in the order somebody works through them. The two refinements
+ * sit under "Requested" rather than at the end, because that is the row they
+ * describe.
+ */
+export const VOICE_FILTERS: { value: VoiceFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "Voice Assessment Not Requested", label: "Not requested" },
+  { value: "Voice Assessment Requested", label: "Requested" },
+  { value: "requested_unreminded", label: "Requested — never reminded" },
+  { value: "requested_reminded", label: "Requested — already reminded" },
+  { value: "Voice Recording Received", label: "Recording received" },
+  { value: "Voice Assessment Passed", label: "Passed" },
+  { value: "Voice Assessment Failed", label: "Failed" },
+];
+
+export interface VoiceFilterInput {
+  voiceStatus?: string;
+  /** Asked for, and nothing newer has arrived. */
+  voiceNeeded?: boolean;
+  voiceReminderCount?: number;
+}
+
+export function matchesVoiceFilter(filter: VoiceFilter, c: VoiceFilterInput): boolean {
+  if (filter === "all") return true;
+  const reminded = (c.voiceReminderCount ?? 0) > 0;
+  if (filter === "requested_unreminded") return !!c.voiceNeeded && !reminded;
+  if (filter === "requested_reminded") return !!c.voiceNeeded && reminded;
+  return (c.voiceStatus ?? "Voice Assessment Not Requested") === filter;
 }
