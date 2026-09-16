@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { jobs, getJobBySlug } from "@/config/jobs";
+import { jobs, getJobBySlug, salaryParts } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -59,7 +59,9 @@ function jobPostingJsonLd(slug: string) {
     title: job.title,
     description: `${job.shortDescription} Responsibilities include: ${job.responsibilities.join(
       "; "
-    )}. Requirements: ${job.requirements.join("; ")}.`,
+    )}. Requirements: ${job.requirements.join("; ")}.${
+      job.salary?.detail ? ` ${job.salary.detail}` : ""
+    }`,
     identifier: {
       "@type": "PropertyValue",
       name: siteConfig.company.name,
@@ -80,10 +82,24 @@ function jobPostingJsonLd(slug: string) {
     })),
     jobLocationType: "TELECOMMUTE",
     directApply: true,
-    // No baseSalary. Search Console reports it as a missing recommended field
-    // and that is the intended state: pay is not published on this site, and
-    // marking up a figure the page does not show is worse than omitting it —
-    // structured data is meant to describe what a visitor can actually read.
+    ...(job.salary
+      ? {
+          baseSalary: {
+            "@type": "MonetaryAmount",
+            currency: job.salary.currency,
+            value: {
+              "@type": "QuantitativeValue",
+              // A range needs min and max; a fixed rate needs a single value.
+              // Sending both, or a range whose ends are equal, is what trips
+              // the Rich Results test.
+              ...(job.salary.max !== undefined && job.salary.max !== job.salary.min
+                ? { minValue: job.salary.min, maxValue: job.salary.max }
+                : { value: job.salary.min }),
+              unitText: job.salary.unit,
+            },
+          },
+        }
+      : {}),
   };
 }
 
@@ -162,9 +178,35 @@ export default async function JobDetailPage({
               </h2>
 
               <dl className="mt-4 space-y-4 text-sm">
-                {/* No pay here. It is discussed with the candidate rather
-                    than published, so the panel opens on the arrangement
-                    instead of on a figure. */}
+                {/* No box around it. Weight and colour carry the emphasis: the
+                    figure is the only bold, oversized thing in the panel, and
+                    everything around it stays plain text. A container would
+                    make it a second card inside a card.
+                    Shown as well as marked up: Google expects structured data
+                    to reflect what a visitor can actually read on the page. */}
+                {job.salary ? (
+                  <div>
+                    <dt className="font-medium text-navy-500">Pay</dt>
+                    <dd className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-xl font-bold tracking-tight text-navy-900">
+                        {salaryParts(job.salary).amount}
+                      </span>
+                      <span className="text-xs font-medium text-navy-500">
+                        {salaryParts(job.salary).period}
+                      </span>
+                    </dd>
+                    {salaryParts(job.salary).note ? (
+                      <dd className="mt-0.5 text-xs font-bold uppercase tracking-wide text-green-700">
+                        {salaryParts(job.salary).note}
+                      </dd>
+                    ) : null}
+                    {job.salary.detail ? (
+                      <dd className="mt-1.5 text-xs leading-relaxed text-navy-500">
+                        {job.salary.detail}
+                      </dd>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div>
                   <dt className="font-medium text-navy-500">Work arrangement</dt>
                   <dd className="mt-0.5 text-navy-800">{job.workArrangement}</dd>

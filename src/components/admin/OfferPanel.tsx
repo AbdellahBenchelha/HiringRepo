@@ -5,8 +5,8 @@ import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
-  belowBand,
-  payBandFor,
+  advertisedFor,
+  belowAdvertised,
   formatRate,
   offerProblems,
   offerStatus,
@@ -66,15 +66,15 @@ export function OfferPanel({
   onChange: (patch: OfferState & { status?: string }) => void;
 }) {
   const [state, setState] = useState(initial);
-  const band = payBandFor(position);
+  const advertised = advertisedFor(position);
 
   const [form, setForm] = useState<Partial<Offer>>({
     position,
-    // Prefilled with the bottom of the band for the role. Internal, not
-    // advertised anywhere — the real figure comes from the call.
-    rate: state.offer?.rate ?? band?.min,
-    currency: state.offer?.currency ?? band?.currency ?? "USD",
-    unit: state.offer?.unit ?? band?.unit ?? "HOUR",
+    // Prefilled with the bottom of the advertised band, since that is the
+    // number that was promised. The real figure comes from the call.
+    rate: state.offer?.rate ?? advertised?.min,
+    currency: state.offer?.currency ?? advertised?.currency ?? "USD",
+    unit: state.offer?.unit ?? advertised?.unit ?? "HOUR",
     // The schedule everybody is offered — 5 days of up to 5 hours — so it is
     // the number already in the box rather than one to remember to type.
     hoursPerWeek: state.offer?.hoursPerWeek ?? MAX_HOURS_PER_WEEK,
@@ -94,7 +94,7 @@ export function OfferPanel({
   const status = offerStatus(state);
   const problems = offerProblems(form);
   const warnings = offerWarnings(form);
-  const low = problems.length === 0 ? belowBand(form as Offer) : null;
+  const low = problems.length === 0 ? belowAdvertised(form as Offer) : null;
   const showForm = status === "none" || editing;
 
   function set<K extends keyof Offer>(key: K, value: Offer[K] | undefined) {
@@ -349,7 +349,7 @@ export function OfferPanel({
         busy={busy}
         warning={
           low
-            ? `This is below the ${formatRate({ rate: low.min, currency: low.currency, unit: low.unit })} band for ${form.position}.`
+            ? `This is below the ${formatRate({ rate: low.min, currency: low.currency, unit: low.unit })} you advertise for ${form.position}.`
             : status !== "none"
               ? "This replaces the offer they already have, and clears their previous answer."
               : undefined
