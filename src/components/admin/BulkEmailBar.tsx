@@ -10,6 +10,7 @@ import {
   DEFAULT_PACE_SECONDS,
   MAX_BATCH,
   PACE_OPTIONS,
+  batchDuration,
   counts,
   eligibility,
   isFinished,
@@ -324,10 +325,8 @@ export function useBulkEmail(
             </select>
           </label>
           <p className="mt-1.5 text-xs text-navy-500">
-            About{" "}
-            {Math.max(1, Math.round((plan.include.length * pace) / 60))} minute
-            {Math.round((plan.include.length * pace) / 60) === 1 ? "" : "s"} in all. The sending
-            happens on the server — you can close this tab.
+            About {batchDuration(plan.include.length, pace)} in all. The sending happens on the
+            server — you can close this tab.
           </p>
 
           {error ? (

@@ -7,8 +7,8 @@ import { isFinished, type BatchItem, type BatchState } from "@/lib/bulkEmail";
  * SERVER-ONLY persistence for the current paced batch.
  *
  * On disk rather than in memory, because the whole point of the feature is
- * that the recruiter can walk away: a batch of fifty at a minute apart is the
- * best part of an hour, and a deploy or a restart in the middle of it must not
+ * that the recruiter can walk away: a batch of a hundred at a minute apart is
+ * the best part of two hours, and a deploy or a restart in the middle of it must not
  * lose track of who has already been emailed. Each item is marked the moment
  * its message is away, so a resumed queue picks up exactly where it stopped
  * and nobody is written to twice.

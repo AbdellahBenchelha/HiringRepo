@@ -96,7 +96,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   // The send itself lives in candidateEmails, so this route and a paced batch
-  // of fifty offers build, sign, send and record the same way.
+  // of a hundred offers build, sign, send and record the same way.
   const result = await sendOfferEmail(id, offer, baseUrl(req));
   if (!result.ok) {
     const status = result.reason === "invalid" ? 400 : result.reason === "not_found" ? 404 : 502;

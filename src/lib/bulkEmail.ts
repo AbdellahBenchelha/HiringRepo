@@ -5,7 +5,7 @@
  * route that starts a batch and the worker that runs it agree on what can be
  * sent to whom.
  *
- * The gap is the point. Fifty identical messages leaving in the same second is
+ * The gap is the point. A hundred identical messages leaving in the same second is
  * the shape of a blast, and it is also how a sending domain earns a
  * rate-limit. Worth being honest about the limits of it: pacing avoids
  * rate-based blocks and looks less like a machine, but where mail *lands* is
@@ -38,7 +38,25 @@ export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder
 export const OFFER_ACTIONS: readonly BulkAction[] = ["offerReminder"];
 
 /** How long a batch may be. A misclick must not be able to email everybody. */
-export const MAX_BATCH = 50;
+export const MAX_BATCH = 100;
+
+/**
+ * How long a batch will take, in words.
+ *
+ * A hundred at a minute apart is the best part of two hours, and "about 100
+ * minutes" is a number nobody converts in their head — so past the hour it is
+ * said in hours. Shared by the selection bar and the offer editor, because a
+ * figure that two screens computed separately is a figure they would one day
+ * disagree about.
+ */
+export function batchDuration(count: number, paceSeconds: number): string {
+  const minutes = Math.max(1, Math.round((count * paceSeconds) / 60));
+  const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+  if (minutes < 60) return plural(minutes, "minute");
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${plural(hours, "hour")} ${plural(rest, "minute")}` : plural(hours, "hour");
+}
 
 /**
  * Slowest first, so the list reads as a ramp and the safe end is the one you

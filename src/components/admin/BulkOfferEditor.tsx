@@ -8,6 +8,7 @@ import {
   DEFAULT_PACE_SECONDS,
   MAX_BATCH,
   PACE_OPTIONS,
+  batchDuration,
   eligibility,
   type BatchState,
 } from "@/lib/bulkEmail";
@@ -173,7 +174,7 @@ export function useBulkOffer(
   }, [plan.include, drafts]);
 
   const ready = plan.include.length > 0 && Object.keys(problems).length === 0;
-  const minutes = Math.max(1, Math.round((plan.include.length * pace) / 60));
+  const duration = batchDuration(plan.include.length, pace);
 
   /** Rows promising less than the advert did. Said out loud, never blocked. */
   const lowCount = useMemo(
@@ -454,9 +455,7 @@ export function useBulkOffer(
                     ))}
                   </select>
                 </label>
-                <p className="text-xs text-navy-500">
-                  About {minutes} minute{minutes === 1 ? "" : "s"} in all.
-                </p>
+                <p className="text-xs text-navy-500">About {duration} in all.</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -496,9 +495,9 @@ export function useBulkOffer(
         onConfirm={() => void send()}
         body={
           <p>
-            Each person gets their own terms, one email at a time, about {pace} seconds apart —
-            roughly {minutes} minute{minutes === 1 ? "" : "s"} in all. The sending happens on the
-            server, so you can close this tab. An offer cannot be unsent.
+            Each person gets their own terms, one email at a time, about {pace} seconds apart
+            — roughly {duration} in all. The sending happens on the server, so you can close this
+            tab. An offer cannot be unsent.
           </p>
         }
       />

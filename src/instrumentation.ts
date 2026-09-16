@@ -1,8 +1,8 @@
 /**
  * Runs once when the server starts.
  *
- * A paced batch of fifty emails at a minute apart is the best part of an hour,
- * and a deploy inside that window would otherwise leave half a batch on disk
+ * A paced batch of a hundred emails at a minute apart is the best part of two
+ * hours, and a deploy inside that window would otherwise leave half a batch on disk
  * that nothing was going to finish. Anything still marked running is picked up
  * here; each item was marked the moment its message was away, so a resumed
  * batch continues rather than starting again, and nobody is emailed twice.

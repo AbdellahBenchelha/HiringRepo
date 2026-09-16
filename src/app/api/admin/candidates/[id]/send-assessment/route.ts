@@ -12,7 +12,7 @@ import { sendAssessmentEmail } from "@/lib/candidateEmails";
  * It also covers a candidate who never received the automatic email.
  *
  * The sending itself lives in candidateEmails, shared with the paced batch, so
- * one button and fifty of them cannot drift into sending different things.
+ * one button and a hundred of them cannot drift into sending different things.
  */
 
 export const runtime = "nodejs";

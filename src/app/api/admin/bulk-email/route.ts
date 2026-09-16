@@ -81,7 +81,9 @@ export async function POST(req: NextRequest) {
     paceSeconds?: unknown;
     /** For an offer batch: this person's terms, by candidate id. */
     offers?: Record<string, unknown>;
-  }>(req, 64 * 1024);
+    // Room for MAX_BATCH sets of terms with the position typed out in full,
+    // several times over. Still a limit, because this reads a request body.
+  }>(req, 128 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
 
   const action = parsed.data.action as BulkAction;

@@ -14,7 +14,7 @@ import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
  * SERVER-ONLY. Sends one candidate's email, waits, sends the next.
  *
  * A timer in the server process rather than a loop in the recruiter's browser.
- * A batch of fifty a minute apart is the best part of an hour, and the whole
+ * A batch of a hundred a minute apart is the best part of two hours, and the whole
  * reason for the feature is that they can start it and go and do something
  * else — a loop in a page dies the moment the laptop sleeps, halfway through,
  * with nothing to show for it.
