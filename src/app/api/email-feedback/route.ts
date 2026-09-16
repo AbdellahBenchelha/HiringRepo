@@ -82,7 +82,12 @@ export function classify(payload: unknown): Feedback {
   const hay = stringsIn(payload)
     .map((s) => s.toLowerCase().replace(/[\s-]+/g, "_"))
     .join(" ");
-  if (/spam|complain|abuse/.test(hay)) return "complaint";
+  // "feedback_loop" is ZeptoMail's name for a spam report, and it need not
+  // carry any of the words above. Matched as the whole phrase rather than on
+  // "feedback" alone, because this route's own path normalises to
+  // "email_feedback" and would otherwise mark every delivery a complaint if
+  // the payload ever echoed the URL back.
+  if (/spam|complain|abuse|feedback_loop/.test(hay)) return "complaint";
   if (/bounce|hardbounce|softbounce|undeliver|invalid_recipient|rejected/.test(hay)) return "bounce";
   return null;
 }
