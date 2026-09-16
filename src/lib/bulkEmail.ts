@@ -240,6 +240,24 @@ export interface BatchState {
   /** When the worker intends to send the next one. */
   nextAt?: string;
   finishedAt?: string;
+  /**
+   * The operator was shown the warm-up warning and chose to send anyway.
+   *
+   * Decided once, when the batch is started, rather than per message: a
+   * question answered by a person at the point of starting is a decision, and
+   * the same question answered by a worker ninety times is a loophole.
+   */
+  override?: boolean;
+  /**
+   * Waiting for tomorrow's allowance, as an instant.
+   *
+   * The batch is still "running" — it has not failed and nothing needs doing.
+   * A batch of fifty at a minute apart runs for the best part of an hour and
+   * can quite normally outlast the day's remaining cap, so this is an expected
+   * state rather than an error, and the queue picks itself up when the day
+   * rolls over in London.
+   */
+  heldUntil?: string;
 }
 
 export function counts(batch: BatchState) {

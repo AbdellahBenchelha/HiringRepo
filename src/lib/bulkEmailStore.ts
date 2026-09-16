@@ -119,6 +119,22 @@ export function setNextAt(batchId: string, nextAt: string | undefined): Promise<
   });
 }
 
+/**
+ * Park the batch until the daily allowance resets, or release it.
+ *
+ * Kept apart from setStatus because this is not a pause: nobody asked for it,
+ * nothing is wrong, and the queue resumes itself. A batch that showed as
+ * "paused" here would invite someone to press resume and undo the only thing
+ * protecting the sending domain.
+ */
+export function setHeldUntil(batchId: string, heldUntil: string | undefined): Promise<BatchState | null> {
+  return withBatch((current) => {
+    if (!current || current.id !== batchId) return { batch: current, result: current };
+    const next: BatchState = { ...current, heldUntil, nextAt: heldUntil ? undefined : current.nextAt };
+    return { batch: next, result: next };
+  });
+}
+
 export function setStatus(status: BatchState["status"]): Promise<BatchState | null> {
   return withBatch((current) => {
     if (!current) return { batch: current, result: null };

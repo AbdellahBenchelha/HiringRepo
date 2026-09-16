@@ -18,6 +18,7 @@ import {
   type BulkAction,
 } from "@/lib/bulkEmail";
 import type { CandidateView } from "@/lib/candidateView";
+import type { Allowance } from "@/lib/warmup";
 
 /**
  * Emailing a group of candidates, one at a time.
@@ -82,6 +83,13 @@ export function useBulkEmail(
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [skipped, setSkipped] = useState<Skipped[]>([]);
+  /** Today's warm-up allowance, so the bar can say what is left before it is spent. */
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
+  /**
+   * The server refused the batch for being over the cap, and is waiting to be
+   * told whether to do it anyway.
+   */
+  const [overAsk, setOverAsk] = useState<{ wouldSend: number; allowance: Allowance } | null>(null);
   const started = useRef(false);
 
   const byId = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
@@ -90,8 +98,15 @@ export function useBulkEmail(
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/bulk-email");
-      const data = (await res.json()) as { ok?: boolean; batch?: BatchState | null };
-      if (data.ok) setBatch(data.batch ?? null);
+      const data = (await res.json()) as {
+        ok?: boolean;
+        batch?: BatchState | null;
+        allowance?: Allowance;
+      };
+      if (data.ok) {
+        setBatch(data.batch ?? null);
+        if (data.allowance) setAllowance(data.allowance);
+      }
     } catch {
       /* the next poll will do */
     }
@@ -141,7 +156,7 @@ export function useBulkEmail(
     return { include, skip, warn };
   }, [asking, selected, byId]);
 
-  async function start() {
+  async function start(override = false) {
     if (!asking || busy) return;
     setBusy(true);
     setError("");
@@ -150,19 +165,29 @@ export function useBulkEmail(
         action: asking,
         ids: plan.include.map((c) => c.id),
         paceSeconds: pace,
+        override,
       });
       const data = (await res.json()) as {
         ok?: boolean;
         error?: string;
         batch?: BatchState;
         skipped?: Skipped[];
+        allowance?: Allowance;
+        wouldSend?: number;
       };
       if (data.ok && data.batch) {
         setBatch(data.batch);
         setSkipped(data.skipped ?? []);
         setAsking(null);
+        setOverAsk(null);
         clearSelection();
         started.current = true;
+      } else if (data.error === "warmup_limit" && data.allowance) {
+        // Not an error to report — a question to put. The server has done the
+        // eligibility pass, so the number it sends back is how many messages
+        // would really leave, which is the only number worth warning about.
+        setAllowance(data.allowance);
+        setOverAsk({ wouldSend: data.wouldSend ?? plan.include.length, allowance: data.allowance });
       } else if (data.error === "busy") {
         setError("A batch is already running. Wait for it to finish, or stop it first.");
         if (data.batch) setBatch(data.batch);
@@ -244,9 +269,54 @@ export function useBulkEmail(
 
   const panel = batch ? <BatchPanel batch={batch} skipped={skipped} onControl={control} onDismiss={dismiss} /> : null;
 
+  /**
+   * The warm-up question, asked only when the answer changes something.
+   *
+   * Deliberately not a blocker. A hard stop would eventually hold back an
+   * offer that expires today, and somebody would work around it by sending by
+   * hand — which spends the same reputation with none of it recorded. Going
+   * ahead is one press, and it is written down.
+   */
+  const overDialog = (
+    <ConfirmDialog
+      open={!!overAsk}
+      icon="mail"
+      tone="danger"
+      title="More than today's warm-up allowance"
+      confirmLabel={busy ? "Sending…" : "Send them all anyway"}
+      busy={busy}
+      onCancel={() => setOverAsk(null)}
+      onConfirm={() => void start(true)}
+      body={
+        overAsk ? (
+          <div className="space-y-3">
+            <p>
+              This batch is <strong className="text-navy-900">{overAsk.wouldSend}</strong> messages
+              and only <strong className="text-navy-900">{overAsk.allowance.remaining}</strong>{" "}
+              of today&rsquo;s {overAsk.allowance.cap} are left.
+            </p>
+            <p className="rounded-lg border border-navy-100 bg-cream-50 px-3 py-2 text-xs text-navy-600">
+              <strong className="text-navy-800">Cancel</strong> and the batch is not started. Send a
+              smaller selection now, or start this one tomorrow.
+              <br />
+              <strong className="text-navy-800">Send anyway</strong> and all{" "}
+              {overAsk.wouldSend} go out today, past the cap. It is recorded on the Warm-up tab so
+              the figures there stay honest.
+            </p>
+            <p className="text-xs text-navy-500">
+              The cap exists because workroute.co.uk has no sending history yet. A sudden jump in
+              volume is the single thing most likely to put this mail in spam folders — and once it
+              lands there, it keeps landing there.
+            </p>
+          </div>
+        ) : null
+      }
+    />
+  );
+
   const dialog = (
     <ConfirmDialog
-      open={!!asking}
+      open={!!asking && !overAsk}
       icon="mail"
       size="lg"
       title={asking ? `${ACTION_LABEL[asking]} to ${plan.include.length}?` : ""}
@@ -329,6 +399,28 @@ export function useBulkEmail(
             server — you can close this tab.
           </p>
 
+          {/* Said before the button is pressed, not only after being refused.
+              A limit you meet by surprise feels like a fault; the same limit
+              seen in advance is just a number you plan around. */}
+          {allowance ? (
+            <p
+              className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+                plan.include.length > allowance.remaining
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-navy-100 bg-cream-50 text-navy-600"
+              }`}
+            >
+              Warm-up: <strong>{allowance.remaining}</strong> of {allowance.cap} left today.
+              {plan.include.length > allowance.remaining ? (
+                <>
+                  {" "}
+                  This batch is {plan.include.length - allowance.remaining} over — the rest would go
+                  out tomorrow.
+                </>
+              ) : null}
+            </p>
+          ) : null}
+
           {error ? (
             <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
               {error}
@@ -339,7 +431,17 @@ export function useBulkEmail(
     />
   );
 
-  return { bar, panel, dialog, refresh };
+  return {
+    bar,
+    panel,
+    dialog: (
+      <>
+        {dialog}
+        {overDialog}
+      </>
+    ),
+    refresh,
+  };
 }
 
 function BatchPanel({
@@ -368,7 +470,16 @@ function BatchPanel({
             {c.failed ? <span className="text-red-700"> · {c.failed} failed</span> : null}
           </p>
           <p className="mt-0.5 text-xs text-navy-500">
-            {batch.status === "running" && next ? (
+            {/* Held is not paused: nobody stopped it and nothing is wrong, so
+                it is said in its own words rather than borrowing the wording
+                for a batch somebody halted. */}
+            {batch.status === "running" && batch.heldUntil ? (
+              <span className="font-semibold text-amber-700">
+                Today&rsquo;s warm-up allowance is spent — holding until{" "}
+                {fmtTime(batch.heldUntil)}, then carrying on by itself.
+                {next ? ` ${next.name} is next.` : ""}
+              </span>
+            ) : batch.status === "running" && next ? (
               <>
                 Next: <span className="font-semibold text-navy-700">{next.name}</span>
                 {batch.nextAt ? ` at about ${fmtTime(batch.nextAt)}` : ""} · one every{" "}

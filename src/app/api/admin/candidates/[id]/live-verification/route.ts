@@ -147,6 +147,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     html: liveVerificationHtml(invite),
     text: liveVerificationText(invite),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
   });
 
   if (!result.ok) {

@@ -15,6 +15,8 @@
  * form keeps working — an email failure must never cost us a candidate.
  */
 import { siteConfig } from "@/config/site";
+import type { EmailKind } from "@/lib/warmup";
+import { currentAllowance, recordOverride, recordSend } from "@/lib/warmupStore";
 
 export type EmailResult =
   | { ok: true }
@@ -48,6 +50,15 @@ function normaliseToken(raw: string): { token: string; hadPrefix: boolean } {
   return { token, hadPrefix };
 }
 
+/**
+ * The one place every message leaves from — so the one place to count them.
+ *
+ * `kind` is required rather than defaulted on purpose. A new send site has to
+ * say which it is, and the compiler asks; a default would mean the next person
+ * to add an email silently picks whichever answer happened to be written here,
+ * and a counter that misses sends is worse than no counter, because it reads
+ * as reassurance.
+ */
 export async function sendEmail(opts: {
   to: string;
   toName?: string;
@@ -55,6 +66,13 @@ export async function sendEmail(opts: {
   html: string;
   text: string;
   replyTo?: string;
+  /**
+   * "campaign" is held back once the day's warm-up allowance is gone.
+   * "reactive" never is — see the note on EmailKind.
+   */
+  kind: EmailKind;
+  /** Send past the cap anyway, recording that it happened. */
+  override?: boolean;
 }): Promise<EmailResult> {
   const rawToken = process.env.ZEPTOMAIL_TOKEN;
   const from = process.env.ZEPTOMAIL_FROM_ADDRESS?.trim();
@@ -62,6 +80,17 @@ export async function sendEmail(opts: {
   if (!rawToken || !from) return { ok: false, skipped: "not_configured" };
   const { token, hadPrefix } = normaliseToken(rawToken);
   if (!opts.to || !opts.to.includes("@")) return { ok: false, error: "invalid_recipient" };
+
+  // Checked after the cheap rejections above, so a malformed address never
+  // spends part of the day's allowance, and before the network call, so a
+  // blocked message is never actually delivered.
+  if (opts.kind === "campaign") {
+    const allowance = await currentAllowance();
+    if (allowance.remaining <= 0) {
+      if (!opts.override) return { ok: false, error: "warmup_limit" };
+      await recordOverride().catch(() => {});
+    }
+  }
 
   try {
     const res = await fetch(endpoint(), {
@@ -106,6 +135,10 @@ export async function sendEmail(opts: {
       }
       return { ok: false, error: `http_${res.status}` };
     }
+    // Only a message ZeptoMail accepted counts. A rejected one never reached a
+    // mailbox provider, so it cannot have cost any reputation, and counting it
+    // would spend an allowance on nothing.
+    await recordSend(opts.kind).catch(() => {});
     return { ok: true };
   } catch (err) {
     // eslint-disable-next-line no-console

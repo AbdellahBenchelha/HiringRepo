@@ -15,6 +15,8 @@ import {
 import { clearBatch, readBatch, startBatch } from "@/lib/bulkEmailStore";
 import { offerProblems, ENGAGEMENT_TYPES, type Offer } from "@/lib/offer";
 import { ensureWorker } from "@/lib/bulkEmailWorker";
+import { checkAgainstCap } from "@/lib/warmup";
+import { currentAllowance } from "@/lib/warmupStore";
 
 /**
  * Start a paced batch, or read how the current one is doing.
@@ -67,7 +69,10 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
   const batch = await readBatch();
-  return NextResponse.json({ ok: true, batch });
+  // The allowance rides along with the poll the panel already makes, so the
+  // selection bar can say what is left before anyone presses send rather than
+  // only after being refused.
+  return NextResponse.json({ ok: true, batch, allowance: await currentAllowance() });
 }
 
 export async function POST(req: NextRequest) {
@@ -81,6 +86,8 @@ export async function POST(req: NextRequest) {
     paceSeconds?: unknown;
     /** For an offer batch: this person's terms, by candidate id. */
     offers?: Record<string, unknown>;
+    /** The warm-up warning was shown and the operator chose to send anyway. */
+    override?: unknown;
     // Room for MAX_BATCH sets of terms with the position typed out in full,
     // several times over. Still a limit, because this reads a request body.
   }>(req, 128 * 1024);
@@ -153,6 +160,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "nobody_eligible", skipped }, { status: 400 });
   }
 
+  // Checked here, against the eligible list rather than the selected one: the
+  // number that matters is how many messages would actually leave, and telling
+  // someone a batch is over the limit when half of it was going to be skipped
+  // anyway would train them to press through the warning.
+  const override = parsed.data.override === true;
+  const allowance = await currentAllowance();
+  const cap = checkAgainstCap(items.length, allowance);
+  if (cap.wouldExceed && !override) {
+    return NextResponse.json(
+      { ok: false, error: "warmup_limit", allowance, wouldSend: items.length, skipped },
+      { status: 409 },
+    );
+  }
+
   const session = await getAdminSession();
   const batch: BatchState = {
     id: `b${Date.now().toString(36)}`,
@@ -162,6 +183,9 @@ export async function POST(req: NextRequest) {
     startedBy: session?.u,
     status: "running",
     items,
+    // Only recorded when it changes what happens. A batch that fits inside
+    // today's allowance carries no override, whatever the browser sent.
+    override: override && cap.wouldExceed ? true : undefined,
   };
 
   const started = await startBatch(batch);

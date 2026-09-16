@@ -21,6 +21,7 @@ import {
 } from "@/lib/offer";
 import { MAX_HOURS_PER_WEEK } from "@/lib/availability";
 import type { CandidateView } from "@/lib/candidateView";
+import type { Allowance } from "@/lib/warmup";
 
 /**
  * Writing a group of offers at once.
@@ -126,6 +127,8 @@ export function useBulkOffer(
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /** The batch is over today's warm-up allowance and needs a decision. */
+  const [overAsk, setOverAsk] = useState<{ wouldSend: number; allowance: Allowance } | null>(null);
 
   const byId = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
 
@@ -186,7 +189,7 @@ export function useBulkOffer(
     [plan.include, drafts, problems],
   );
 
-  async function send() {
+  async function send(override = false) {
     if (busy || !ready) return;
     setBusy(true);
     setError("");
@@ -198,13 +201,24 @@ export function useBulkOffer(
         ids: plan.include.map((c) => c.id),
         offers,
         paceSeconds: pace,
+        override,
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; batch?: BatchState };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        batch?: BatchState;
+        allowance?: Allowance;
+        wouldSend?: number;
+      };
       if (data.ok) {
         setConfirming(false);
+        setOverAsk(null);
         setOpen(false);
         clearSelection();
         onStarted();
+      } else if (data.error === "warmup_limit" && data.allowance) {
+        setConfirming(false);
+        setOverAsk({ wouldSend: data.wouldSend ?? plan.include.length, allowance: data.allowance });
       } else if (data.error === "busy") {
         setError("A batch is already running. Wait for it to finish, or stop it first.");
         setConfirming(false);
@@ -499,6 +513,36 @@ export function useBulkOffer(
             — roughly {duration} in all. The sending happens on the server, so you can close this
             tab. An offer cannot be unsent.
           </p>
+        }
+      />
+
+      {/* Offers are the one batch where waiting has a cost to somebody other
+          than the sender, so the choice is put plainly rather than defaulting
+          either way. */}
+      <ConfirmDialog
+        open={!!overAsk}
+        icon="handshake"
+        tone="danger"
+        title="More than today's warm-up allowance"
+        confirmLabel={busy ? "Sending…" : "Send them all anyway"}
+        busy={busy}
+        onCancel={() => setOverAsk(null)}
+        onConfirm={() => void send(true)}
+        body={
+          overAsk ? (
+            <div className="space-y-3">
+              <p>
+                That is <strong className="text-navy-900">{overAsk.wouldSend}</strong> offers and
+                only <strong className="text-navy-900">{overAsk.allowance.remaining}</strong>{" "}
+                of today&rsquo;s {overAsk.allowance.cap} are left.
+              </p>
+              <p className="rounded-lg border border-navy-100 bg-cream-50 px-3 py-2 text-xs text-navy-600">
+                Sending anyway puts all {overAsk.wouldSend} out today, past the cap, and records it
+                on the Warm-up tab. Cancelling starts nothing — the terms you have typed stay on
+                screen, so a smaller selection can go now and the rest tomorrow.
+              </p>
+            </div>
+          ) : null
         }
       />
     </>

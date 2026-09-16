@@ -146,6 +146,15 @@ export async function POST(req: NextRequest) {
         html: interviewInviteHtml(invite),
         text: interviewInviteText(invite),
         replyTo: siteConfig.contact.recruitmentEmail,
+        // The one send the warm-up cap never holds back. Somebody has just
+        // applied and is waiting for this; withholding it to protect a daily
+        // number would cost a candidate outright. It is also the send most
+        // likely to be opened within the minute, which is exactly the
+        // behaviour that earns a new domain its place in the inbox — so
+        // throttling it would be self-defeating as well as rude. It is still
+        // counted, because the statistics have to describe all the mail that
+        // left, not just the part that was throttled.
+        kind: "reactive",
       });
 
       if (result.ok) {

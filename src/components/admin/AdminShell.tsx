@@ -13,6 +13,11 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/waiting", label: "Waiting", icon: "clock" },
   { href: "/admin/offers", label: "Offers", icon: "handshake" },
   { href: "/admin/accepted", label: "Accepted", icon: "checkCircle" },
+  // Not a stage of anyone's application — it is about the sending domain
+  // rather than the people — but it sits with the tabs rather than under
+  // Settings because it holds a number that changes every day and has to be
+  // looked at before a batch, not once a month.
+  { href: "/admin/warmup", label: "Warm-up", icon: "mail" },
   // One entry, three sections behind it. As three items they sat among the
   // tabs where candidates are actually worked, making rules you change once a
   // month look like part of the daily round.

@@ -72,6 +72,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       url: `${baseUrl(req)}/company?t=${encodeURIComponent(token)}`,
     }),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
   });
 
   if (!result.ok) {

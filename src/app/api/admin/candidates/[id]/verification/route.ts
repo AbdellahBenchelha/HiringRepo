@@ -129,6 +129,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         html: verificationRequestHtml(invite),
         text: verificationRequestText(invite),
         replyTo: siteConfig.contact.recruitmentEmail,
+        kind: "campaign",
       });
       emailed = result.ok;
       if (!result.ok) {
@@ -180,6 +181,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         html: identityReuploadHtml(payload),
         text: identityReuploadText(payload),
         replyTo: siteConfig.contact.recruitmentEmail,
+        kind: "campaign",
       });
       emailed = result.ok;
       if (!result.ok) {

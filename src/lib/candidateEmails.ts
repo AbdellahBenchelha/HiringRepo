@@ -67,6 +67,18 @@ export type SendOutcome =
   /** Refused before anything was sent. */
   | { ok: false; reason: string };
 
+/** Extra instructions every sender here understands. */
+export interface SendOpts {
+  /**
+   * Send although the day's warm-up allowance is spent.
+   *
+   * Set only by a batch whose operator saw the warning and chose to go on, so
+   * that the decision is made once, by a person, rather than taken again by a
+   * worker for every message in the queue.
+   */
+  override?: boolean;
+}
+
 /**
  * Asking for a recording has an outcome the others do not: the request can be
  * on the record while the email is not away. The row button reports both, so
@@ -104,7 +116,7 @@ function interviewUrl(baseUrl: string, id: string, source: "invite-email" | "rem
  * resumed queue all lose the race rather than sending a second copy. It is
  * handed back if the email itself fails, so a genuine failure can be retried.
  */
-export async function sendAssessmentEmail(id: string, baseUrl: string): Promise<SendOutcome> {
+export async function sendAssessmentEmail(id: string, baseUrl: string, opts: SendOpts = {}): Promise<SendOutcome> {
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
 
@@ -130,6 +142,8 @@ export async function sendAssessmentEmail(id: string, baseUrl: string): Promise<
       position,
     }),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
   });
 
   if (!result.ok) {
@@ -149,7 +163,7 @@ export async function sendAssessmentEmail(id: string, baseUrl: string): Promise<
  * is the message that makes a company look as though it is not paying
  * attention. Counted only when the message is actually away.
  */
-export async function sendReminderEmail(id: string, baseUrl: string): Promise<SendOutcome> {
+export async function sendReminderEmail(id: string, baseUrl: string, opts: SendOpts = {}): Promise<SendOutcome> {
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
   if (candidate.interview) return { ok: false, reason: "already_completed" };
@@ -171,6 +185,8 @@ export async function sendReminderEmail(id: string, baseUrl: string): Promise<Se
     html: reminderHtml(invite),
     text: reminderText(invite),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
   });
 
   if (!result.ok) {
@@ -201,6 +217,7 @@ export async function sendOfferEmail(
   id: string,
   offer: Offer,
   baseUrl: string,
+  opts: SendOpts = {},
 ): Promise<SendOutcome> {
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
@@ -243,6 +260,8 @@ export async function sendOfferEmail(
     html: offerHtml(payload),
     text: offerText(payload),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
   });
 
   if (!result.ok) {
@@ -268,6 +287,7 @@ export async function sendOfferEmail(
 export async function sendOfferReminderEmail(
   id: string,
   baseUrl: string,
+  opts: SendOpts = {},
 ): Promise<OfferReminderOutcome> {
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
@@ -300,6 +320,8 @@ export async function sendOfferReminderEmail(
     html: offerReminderHtml(invite),
     text: offerReminderText(invite),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
   });
 
   if (!result.ok) {
@@ -328,7 +350,7 @@ export async function sendOfferReminderEmail(
  * "Under Review" — so the status and the last thing the candidate was told can
  * never disagree.
  */
-export async function sendVoiceAckEmail(id: string): Promise<SendOutcome> {
+export async function sendVoiceAckEmail(id: string, opts: SendOpts = {}): Promise<SendOutcome> {
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
 
@@ -352,6 +374,8 @@ export async function sendVoiceAckEmail(id: string): Promise<SendOutcome> {
     html: voiceAckHtml(invite),
     text: voiceAckText(invite),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
   });
 
   if (!result.ok) {
@@ -379,6 +403,7 @@ export async function sendVoiceAckEmail(id: string): Promise<SendOutcome> {
 export async function sendVoiceAssessmentEmail(
   id: string,
   baseUrl: string,
+  opts: SendOpts = {},
 ): Promise<VoiceRequestOutcome> {
   const updated = await recordVoiceRequest(id);
   if (!updated) return { ok: false, found: false, reason: "not_found" };
@@ -408,6 +433,8 @@ export async function sendVoiceAssessmentEmail(
     html: voiceAssessmentHtml(invite),
     text: voiceAssessmentText(invite),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
   });
 
   if (!result.ok) {
@@ -430,6 +457,7 @@ export async function sendVoiceAssessmentEmail(
 export async function sendVoiceReminderEmail(
   id: string,
   baseUrl: string,
+  opts: SendOpts = {},
 ): Promise<VoiceReminderOutcome> {
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
@@ -455,6 +483,8 @@ export async function sendVoiceReminderEmail(
     html: voiceReminderHtml(invite),
     text: voiceReminderText(invite),
     replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
   });
 
   if (!result.ok) {

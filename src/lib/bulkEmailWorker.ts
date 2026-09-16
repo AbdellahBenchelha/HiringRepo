@@ -7,8 +7,9 @@ import {
   sendOfferReminderEmail,
   sendOfferEmail,
 } from "@/lib/candidateEmails";
-import { markItem, readBatch, setNextAt } from "@/lib/bulkEmailStore";
+import { markItem, readBatch, setHeldUntil, setNextAt } from "@/lib/bulkEmailStore";
 import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
+import { currentAllowance } from "@/lib/warmupStore";
 
 /**
  * SERVER-ONLY. Sends one candidate's email, waits, sends the next.
@@ -38,28 +39,48 @@ function baseUrl(): string {
 }
 
 async function sendOne(batch: BatchState, id: string) {
+  // Whatever the operator decided when they started the batch, applied to
+  // every message in it.
+  const opts = { override: batch.override };
   switch (batch.action) {
     case "assessment":
-      return sendAssessmentEmail(id, baseUrl());
+      return sendAssessmentEmail(id, baseUrl(), opts);
     case "reminder":
-      return sendReminderEmail(id, baseUrl());
+      return sendReminderEmail(id, baseUrl(), opts);
     case "voice":
-      return sendVoiceAssessmentEmail(id, baseUrl());
+      return sendVoiceAssessmentEmail(id, baseUrl(), opts);
     case "voiceReminder":
-      return sendVoiceReminderEmail(id, baseUrl());
+      return sendVoiceReminderEmail(id, baseUrl(), opts);
     case "voiceAck":
       // No link in this email, so no base URL to build one from.
-      return sendVoiceAckEmail(id);
+      return sendVoiceAckEmail(id, opts);
     case "offerReminder":
-      return sendOfferReminderEmail(id, baseUrl());
+      return sendOfferReminderEmail(id, baseUrl(), opts);
     case "offer": {
       // The terms ride on the item, so a batch resumed after a restart still
       // sends what was agreed rather than a default.
       const item = batch.items.find((i) => i.id === id);
       if (!item?.offer) return { ok: false as const, reason: "no_terms" };
-      return sendOfferEmail(id, item.offer, baseUrl());
+      return sendOfferEmail(id, item.offer, baseUrl(), opts);
     }
   }
+}
+
+/**
+ * Wait until the allowance resets, without touching the item that was next.
+ *
+ * Nothing is marked and nothing fails: the person at the front of the queue is
+ * left pending and gets their email first thing tomorrow. Marking them failed
+ * would be a lie about what happened and would take them out of the batch for
+ * good, which is the opposite of what a daily limit is for.
+ */
+async function holdUntilReset(batch: BatchState, until: string): Promise<void> {
+  await setHeldUntil(batch.id, until);
+  clear();
+  const wait = Math.max(60_000, new Date(until).getTime() - Date.now());
+  // eslint-disable-next-line no-console
+  console.log(`[bulk] batch ${batch.id} has spent today's warm-up allowance; holding until ${until}`);
+  timer = setTimeout(() => void tick(), wait);
 }
 
 function clear() {
@@ -90,6 +111,18 @@ async function tick(): Promise<void> {
       return;
     }
 
+    // Asked fresh each time rather than once for the batch: a per-row send or
+    // a second batch may have spent the allowance while this one was waiting
+    // out its gap, and the count that matters is the one at this moment.
+    if (!batch.override) {
+      const allowance = await currentAllowance();
+      if (allowance.remaining <= 0) {
+        await holdUntilReset(batch, allowance.resetsAt);
+        return;
+      }
+    }
+    if (batch.heldUntil) await setHeldUntil(batch.id, undefined);
+
     let outcome: { ok: true } | { ok: false; reason: string };
     try {
       outcome = await sendOne(batch, next.id);
@@ -97,6 +130,15 @@ async function tick(): Promise<void> {
       // A thrown error is still an answer about this candidate; the batch must
       // carry on to the rest rather than stopping on one bad address.
       outcome = { ok: false, reason: err instanceof Error ? err.message.slice(0, 120) : "failed" };
+    }
+
+    // The cap was checked a moment ago, but another sender can spend the last
+    // of it in between. Treated as a hold rather than a failure, because this
+    // person has not been written off — nothing was sent to them at all.
+    if (!outcome.ok && outcome.reason === "warmup_limit") {
+      const allowance = await currentAllowance();
+      await holdUntilReset(batch, allowance.resetsAt);
+      return;
     }
 
     const after = await markItem(
@@ -138,6 +180,18 @@ export async function ensureWorker(): Promise<void> {
   clear();
   if (!batch || batch.status !== "running") return;
   if (!batch.items.some((i) => i.state === "pending")) return;
+
+  // A batch that ran out of allowance before the restart is still out of it
+  // afterwards — the counter is on disk, not in the process that died. Waiting
+  // for the reset rather than calling tick() immediately keeps a deploy from
+  // turning into a retry every time the container recycles.
+  if (batch.heldUntil && new Date(batch.heldUntil).getTime() > Date.now()) {
+    const wait = new Date(batch.heldUntil).getTime() - Date.now();
+    timer = setTimeout(() => void tick(), wait);
+    // eslint-disable-next-line no-console
+    console.log(`[bulk] batch ${batch.id} still holding for the warm-up allowance until ${batch.heldUntil}`);
+    return;
+  }
 
   // A resumed batch waits out whatever is left of its gap rather than firing
   // immediately: a restart in the middle of an hour-long run should not
