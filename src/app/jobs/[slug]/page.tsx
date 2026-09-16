@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { jobs, getJobBySlug, salaryParts } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
+import { countryCode } from "@/config/countryCodes";
 import { buildMetadata } from "@/lib/seo";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Icon } from "@/components/Icon";
@@ -76,10 +77,14 @@ function jobPostingJsonLd(slug: string) {
       sameAs: siteConfig.url,
       logo: `${siteConfig.url}/logo-mark.svg`,
     },
-    applicantLocationRequirements: siteConfig.hiringCountries.map((name) => ({
-      "@type": "Country",
-      name,
-    })),
+    // ISO 3166-1 alpha-2, not the country's name. Google reads this field as a
+    // code and answers "Invalid country code" for anything else — which
+    // invalidates the whole listing, not just the one entry. A country with no
+    // code on file is left out rather than sent as prose.
+    applicantLocationRequirements: siteConfig.hiringCountries
+      .map((name) => countryCode(name))
+      .filter((code): code is string => !!code)
+      .map((code) => ({ "@type": "Country", name: code })),
     jobLocationType: "TELECOMMUTE",
     directApply: true,
     ...(job.salary
