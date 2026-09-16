@@ -74,6 +74,40 @@ export function buildInterviewResultMessage(
   return lines.join("\n");
 }
 
+/**
+ * Somebody has just been handed over to the identity provider.
+ *
+ * The one moment in the live check that happens on the candidate's side and
+ * nowhere else: from here on the flow is the provider's, and whatever comes of
+ * it appears in the provider's dashboard rather than in this system. So the
+ * message names the provider — knowing somebody started is only useful if you
+ * know where to go and look at the result.
+ *
+ * Sent once per link. A re-sent check clears the mark, so a second link
+ * genuinely being started does say so again.
+ */
+export function buildLiveCheckStartedMessage(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+  provider: string | null,
+): string {
+  const lines = [
+    "🪪 <b>Live ID check started</b>",
+    "",
+    `<b>Name:</b> ${escapeHtml(name || "Unnamed candidate")}`,
+  ];
+  if (email) lines.push(`<b>Email:</b> ${escapeHtml(email)}`);
+  if (country) lines.push(`<b>Country:</b> ${escapeHtml(country)}`);
+  lines.push(
+    "",
+    provider
+      ? `They have gone through to ${escapeHtml(provider)}. The result will be in its dashboard.`
+      : "They have gone through to the provider. The result will be in its dashboard.",
+  );
+  return lines.join("\n");
+}
+
 /** Build the "Personal information" message (sent after the first step). */
 export function buildPersonalMessage(fields: Record<string, unknown>): string | null {
   const lines = PERSONAL_FIELDS.flatMap(({ key, label }) => {
@@ -102,6 +136,9 @@ export function buildContactMessage(fields: Record<string, unknown>): string {
     get("message", 2000),
   ].join("\n");
 }
+
+/** However slow Telegram is being, it is not worth more than this. */
+const TIMEOUT_MS = 8000;
 
 export type TelegramSendResult =
   | { ok: true }
@@ -136,6 +173,11 @@ export async function sendTelegramMessage(text: string): Promise<TelegramSendRes
         parse_mode: "HTML",
         disable_web_page_preview: true,
       }),
+      // A notification must never be the slowest thing in a request. Without
+      // this a Telegram that accepts the connection and then says nothing
+      // holds the socket open indefinitely, and the callers that wait on it
+      // are ones a candidate is sitting in front of.
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");

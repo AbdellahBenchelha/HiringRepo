@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readLiveVerifyToken } from "@/lib/token";
-import { recordLiveVerificationOpened, recordLiveVerificationStarted } from "@/lib/store";
+import {
+  getCandidate,
+  recordLiveVerificationOpened,
+  recordLiveVerificationStarted,
+} from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
+import { buildLiveCheckStartedMessage, sendTelegramMessage } from "@/lib/telegram";
+import { providerFor } from "@/lib/liveVerification";
 
 /**
  * Records that a candidate opened their live-check page, or pressed through to
@@ -25,6 +31,35 @@ export const runtime = "nodejs";
 const MAX_REQUESTS = 30;
 const WINDOW_MS = 10 * 60 * 1000;
 
+/**
+ * Tell the recruiter somebody has just gone through to the provider.
+ *
+ * Deliberately not awaited by the handler. The browser waits for this request
+ * before it sends the candidate on to the provider, so anything slow in here
+ * is a candidate watching a button say "Opening…" — and a notification is
+ * never worth standing between somebody and the check we asked them to do.
+ *
+ * The quiet-hours setting does not apply: it silences the messages that come
+ * before the assessment, and nobody is sent a live check until long after it.
+ */
+async function announceStart(id: string): Promise<void> {
+  try {
+    const c = await getCandidate(id);
+    if (!c) return;
+    const name = c.fullName || [c.firstName, c.lastName].filter(Boolean).join(" ");
+    await sendTelegramMessage(
+      buildLiveCheckStartedMessage(
+        name,
+        c.email,
+        c.country,
+        c.liveVerificationUrl ? providerFor(c.liveVerificationUrl) : null,
+      ),
+    );
+  } catch {
+    /* a notification must never become an error the candidate can see */
+  }
+}
+
 export async function POST(req: NextRequest) {
   const limit = rateLimit(`live-verify:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
   if (!limit.ok) return tooManyRequests(limit.retryAfter, "verify/live");
@@ -44,6 +79,10 @@ export async function POST(req: NextRequest) {
     if (first) {
       // eslint-disable-next-line no-console
       console.log(`[live-verify] ${token.link.id} ${phase} their check`);
+      // Only the handover, and only the first time — which is what `first`
+      // already means here. A re-sent check clears the mark, so a second link
+      // genuinely being started does say so again.
+      if (phase === "started") void announceStart(token.link.id);
     }
   } catch {
     /* bookkeeping only */
