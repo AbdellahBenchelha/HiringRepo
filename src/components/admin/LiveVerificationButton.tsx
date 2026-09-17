@@ -6,7 +6,13 @@ import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
   HOLD_TOO_LONG_MINUTES,
+  LIVE_REASONS,
+  LIVE_REASON_LABEL,
+  LIVE_REASON_SUBJECT,
   LIVE_STAGE_LABEL,
+  defaultLiveReason,
+  liveReasonOf,
+  type LiveVerificationReason,
   checkVerificationLink,
   isHeld,
   waitingFor,
@@ -51,12 +57,22 @@ export function LiveVerificationButton({
   fullName,
   email,
   initial,
+  offerAcceptedAt,
   onChange,
 }: {
   id: string;
   fullName?: string;
   email?: string;
   initial: LiveVerificationState;
+  /**
+   * Whether they have actually accepted an offer.
+   *
+   * Only used to question the "before the agreement" wording. Nothing here
+   * requires an offer — a recruiter may well want this check earlier — but
+   * telling somebody at interview stage that their agreement is coming is a
+   * promise nobody made.
+   */
+  offerAcceptedAt?: string;
   onChange?: (state: LiveVerificationState) => void;
 }) {
   const [state, setState] = useState(initial);
@@ -81,6 +97,16 @@ export function LiveVerificationButton({
    * box and the same button lets them through again.
    */
   const [expired, setExpired] = useState(false);
+  /**
+   * Which of the two stories the email tells.
+   *
+   * The same two-minute check either way — what differs is what the candidate
+   * is told happened before it. Opened on the one that fits where they are:
+   * nothing sent yet means this is the ordinary pre-agreement check, and once
+   * one has gone out the reason for another is that the first did not settle
+   * it.
+   */
+  const [reason, setReason] = useState<LiveVerificationReason>(defaultLiveReason(initial));
 
   // Recognised on sight, or not. Either way the link can be sent — this only
   // decides whether the dialog nods at it or raises an eyebrow.
@@ -179,6 +205,10 @@ export function LiveVerificationButton({
       const res = await adminPost(`/api/admin/candidates/${id}/live-verification`, {
         url: link.url,
         action: replacing ? "replace" : "send",
+        // Only meaningful on a send. A replacement leaves the email that is
+        // already in their inbox exactly as it was, so the story it told
+        // stands and the server keeps the stored reason untouched.
+        ...(replacing ? {} : { reason }),
       });
       const data = (await res.json()) as LiveVerificationState & {
         ok?: boolean;
@@ -236,6 +266,7 @@ export function LiveVerificationButton({
           // Replacing is the common case once one is out; a second email has
           // to be asked for.
           setMode(count ? "replace" : "send");
+          setReason(defaultLiveReason(state));
           setExpired(!!state.liveVerificationHeldAt);
           setAsking(true);
         }}
@@ -260,7 +291,11 @@ export function LiveVerificationButton({
       {count ? (
         <p className="w-full text-xs text-navy-500">
           <span className="font-semibold text-navy-700">Live check:</span>{" "}
-          {LIVE_STAGE_LABEL[stage]} · sent {fmtShort(state.liveVerificationSentAt)}
+          {LIVE_STAGE_LABEL[stage]}
+          {/* Which story they were told, because it decides what to send next
+              and there is no way to tell from the stage alone. */}
+          {` · ${LIVE_REASON_LABEL[liveReasonOf(state)].toLowerCase()}`} · sent{" "}
+          {fmtShort(state.liveVerificationSentAt)}
           {count > 1 ? ` · ${count}×` : ""}
           {changes
             ? ` · link replaced ${changes > 1 ? `${changes}× ` : ""}${fmtShort(
@@ -385,6 +420,62 @@ export function LiveVerificationButton({
                     {label}
                   </button>
                 ))}
+              </div>
+            ) : null}
+
+            {/* Which story the email tells. Shown only when one is actually
+                being sent: a replacement changes nothing in anybody's inbox,
+                and offering the choice there would suggest otherwise. */}
+            {!replacing && !holding ? (
+              <div className="mb-4">
+                <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-navy-500">
+                  What the email says
+                </p>
+                <div className="flex gap-2">
+                  {LIVE_REASONS.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setReason(value)}
+                      className={`flex-1 rounded-xl border px-3 py-2 text-left transition ${
+                        reason === value
+                          ? "border-brand-400 bg-brand-50"
+                          : "border-navy-200 bg-white hover:bg-navy-50"
+                      }`}
+                    >
+                      <span
+                        className={`block text-xs font-bold ${
+                          reason === value ? "text-brand-900" : "text-navy-700"
+                        }`}
+                      >
+                        {LIVE_REASON_LABEL[value]}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-navy-500">
+                        {value === "agreement"
+                          ? "Nothing has gone wrong — the check before an agreement."
+                          : "They tried, and it did not settle the question."}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {/* The exact words that will land, so nobody has to remember
+                    which option writes which subject line. */}
+                <p className="mt-2 text-xs text-navy-500">
+                  Subject:{" "}
+                  <span className="font-medium text-navy-800">
+                    &ldquo;{LIVE_REASON_SUBJECT[reason]}&rdquo;
+                  </span>
+                </p>
+                {/* Not blocked, because a recruiter may have good reason to
+                    ask early — but "your agreement" said to somebody who has
+                    not been offered anything is a promise nobody made. */}
+                {reason === "agreement" && !offerAcceptedAt ? (
+                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <strong className="font-semibold">They have not accepted an offer.</strong> This
+                    email tells them an agreement is coming. Send it anyway if that is where they
+                    are heading, or choose the other wording.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 

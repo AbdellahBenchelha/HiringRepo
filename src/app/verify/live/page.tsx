@@ -9,7 +9,7 @@ import { Icon } from "@/components/Icon";
 import { LiveVerifyStart } from "@/components/verify/LiveVerifyStart";
 import { LiveVerifyWaiting } from "@/components/verify/LiveVerifyWaiting";
 import { RecordOpen } from "@/components/verify/RecordOpen";
-import { isHeld, waitingFor } from "@/lib/liveVerification";
+import { isHeld, liveReasonOf, waitingFor } from "@/lib/liveVerification";
 
 /**
  * Where a candidate starts their live identity check.
@@ -129,6 +129,29 @@ export default async function LiveVerifyPage({
   const name = candidate.firstName || "";
   const mobile = looksMobile((await headers()).get("user-agent") ?? "");
 
+  /**
+   * The page has to tell the same story as the email that sent them here.
+   *
+   * Somebody who was told this is the last step before their agreement, and
+   * who then lands on a page saying their photographs were not clear enough,
+   * has been given two different accounts of where they stand — and the one
+   * that frightens them is the one they will believe.
+   */
+  const reason = liveReasonOf(candidate);
+  const headline = mobile
+    ? name
+      ? `${name}, this takes about two minutes`
+      : "This takes about two minutes"
+    : "Continue on your phone";
+  const intro =
+    reason === "agreement"
+      ? mobile
+        ? "Before we can send your agreement to sign, we need to confirm your identity. It is a standard check and everyone we contract with completes it — you will be guided step by step, and there is nothing to install and nothing to fill in."
+        : "Before we can send your agreement to sign, we need to confirm your identity. It is a standard check and everyone we contract with completes it. The quickest way uses your phone camera, so scan this code and it will carry on there."
+      : mobile
+        ? "The photographs you sent were not clear enough to complete your identity check. This way is quicker — you will be guided step by step, and there is nothing to install and nothing to fill in."
+        : "The photographs you sent were not clear enough to complete your identity check. The quickest way to finish it uses your phone camera, so scan this code and it will carry on there.";
+
   return (
     <Shell>
       <RecordOpen token={token ?? ""} />
@@ -136,18 +159,8 @@ export default async function LiveVerifyPage({
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
           Identity check
         </p>
-        <h1 className="mt-2 text-2xl font-bold text-navy-900">
-          {mobile
-            ? name
-              ? `${name}, this takes about two minutes`
-              : "This takes about two minutes"
-            : "Continue on your phone"}
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-navy-600">
-          {mobile
-            ? "The photographs you sent were not clear enough to complete your identity check. This way is quicker — you will be guided step by step, and there is nothing to install and nothing to fill in."
-            : "The photographs you sent were not clear enough to complete your identity check. The quickest way to finish it uses your phone camera, so scan this code and it will carry on there."}
-        </p>
+        <h1 className="mt-2 text-2xl font-bold text-navy-900">{headline}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-navy-600">{intro}</p>
 
         {/* The one control that works on this device, and only that one. On a
             computer there is no button at all: pressing one would lead to a

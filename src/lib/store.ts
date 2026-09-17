@@ -10,6 +10,7 @@
  * deployments — use a host with a persistent disk for production.
  */
 import { promises as fs } from "node:fs";
+import type { LiveVerificationReason } from "@/lib/liveVerification";
 import path from "node:path";
 import { writeFileAtomic } from "@/lib/atomicWrite";
 import {
@@ -261,6 +262,8 @@ export interface Candidate {
    * out — by a replacement link, a fresh email, or the hold being lifted.
    */
   liveVerificationWaitingSince?: string;
+  /** Which of the two live-check emails this candidate was sent. */
+  liveVerificationReason?: LiveVerificationReason;
   /**
    * Whether the candidate has actually opened the voice-assessment page, and
    * how often.
@@ -569,11 +572,20 @@ export function recordIdentityReminder(id: string): Promise<Candidate | null> {
  * whom. Sending again replaces the link, because the newest one is the one
  * their email now points at.
  */
-export function recordLiveVerificationSent(id: string, url: string): Promise<Candidate | null> {
+export function recordLiveVerificationSent(
+  id: string,
+  url: string,
+  reason: LiveVerificationReason = "retry",
+): Promise<Candidate | null> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
     c.liveVerificationUrl = url;
+    // Kept so the page they land on tells the same story as the email that
+    // sent them there. A candidate reading "one last step before your
+    // agreement" and arriving at "your photographs were not clear enough" has
+    // been given two different accounts of where they stand.
+    c.liveVerificationReason = reason;
     c.liveVerificationSentAt = new Date().toISOString();
     c.liveVerificationCount = (c.liveVerificationCount ?? 0) + 1;
     // A fresh request, so what happened to the last one is history. Leaving

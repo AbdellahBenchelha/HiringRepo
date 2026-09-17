@@ -11,6 +11,10 @@
  * require and which raises deliverability.
  */
 import { siteConfig } from "@/config/site";
+import {
+  LIVE_REASON_SUBJECT,
+  type LiveVerificationReason,
+} from "@/lib/liveVerification";
 import { OFFER_LINK_TTL_DAYS } from "@/lib/token";
 
 const NAVY = "#0f1035";
@@ -1053,6 +1057,12 @@ export interface LiveVerificationEmail {
   fullName: string;
   /** Our own page, which records the open and then hands over to the provider. */
   startUrl: string;
+  /**
+   * Which story to tell. Defaults to "retry" for the same reason the record
+   * does: it is the only one that existed before, so anything that does not
+   * say otherwise means the check that follows failed photographs.
+   */
+  reason?: LiveVerificationReason;
 }
 
 /**
@@ -1070,8 +1080,35 @@ export interface LiveVerificationEmail {
  * to a domain they have never heard of, is indistinguishable from the scam it
  * is not.
  */
-export function liveVerificationSubject(): string {
-  return `We were unable to verify your identity — one quick step to finish it`;
+export function liveVerificationSubject(reason: LiveVerificationReason = "retry"): string {
+  return LIVE_REASON_SUBJECT[reason];
+}
+
+/**
+ * The opening, which is the only part that differs between the two.
+ *
+ * Everything after it — the phone instruction, the button, what happens, the
+ * warning about payments — is the same check described the same way, and
+ * forking the whole template to change two paragraphs is how the copy in one
+ * of them quietly stops matching the other.
+ */
+function liveOpeningText(reason: LiveVerificationReason): string[] {
+  if (reason === "agreement") {
+    return [
+      `Good news — your application is at its final stage.`,
+      ``,
+      `Before we can send your agreement to sign, we need to confirm your identity.`,
+      `This is a standard check and everyone we contract with completes it. It takes`,
+      `about two minutes.`,
+    ];
+  }
+  return [
+    `Thank you for sending your identity documents. Unfortunately we were not able`,
+    `to complete the check from the photographs, so we cannot verify your identity`,
+    `that way.`,
+    ``,
+    `There is a quicker way to finish it, and it takes about two minutes.`,
+  ];
 }
 
 export function liveVerificationText(invite: LiveVerificationEmail): string {
@@ -1079,11 +1116,7 @@ export function liveVerificationText(invite: LiveVerificationEmail): string {
   return [
     `Dear ${name},`,
     ``,
-    `Thank you for sending your identity documents. Unfortunately we were not able`,
-    `to complete the check from the photographs, so we cannot verify your identity`,
-    `that way.`,
-    ``,
-    `There is a quicker way to finish it, and it takes about two minutes.`,
+    ...liveOpeningText(invite.reason ?? "retry"),
     ``,
     `OPEN THIS ON YOUR PHONE`,
     ``,
@@ -1124,6 +1157,45 @@ export function liveVerificationHtml(invite: LiveVerificationEmail): string {
   const name = esc(firstNameOf(invite.fullName));
   const company = esc(siteConfig.company.name);
   const url = esc(invite.startUrl);
+  const reason: LiveVerificationReason = invite.reason ?? "retry";
+
+  // The headline, the opening, and the line in the preview pane. Chosen
+  // together because a subject about an agreement above a heading about failed
+  // photographs is the contradiction this whole change exists to remove.
+  const heading =
+    reason === "agreement"
+      ? "One last step before your agreement"
+      : "One quick step to finish your identity check";
+
+  const preheader =
+    reason === "agreement"
+      ? "Two minutes on your phone and your agreement is on its way."
+      : "Two minutes on your phone finishes your identity check.";
+
+  const opening =
+    reason === "agreement"
+      ? `
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Dear ${name}, good news &mdash; your application is at its final stage.
+        </p>
+
+        <p style="margin:0 0 8px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Before we can send your agreement to sign, we need to
+          <strong style="color:${NAVY};">confirm your identity</strong>. This is a standard check
+          that everyone we contract with completes, and it takes about
+          <strong style="color:${NAVY};">two minutes</strong>.
+        </p>`
+      : `
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Dear ${name}, thank you for sending your identity documents. Unfortunately we were not
+          able to complete the check from the photographs, so
+          <strong style="color:${NAVY};">we were unable to verify your identity</strong> that way.
+        </p>
+
+        <p style="margin:0 0 8px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          There is a quicker way to finish it, and it takes about
+          <strong style="color:${NAVY};">two minutes</strong>.
+        </p>`;
 
   const bullet = (text: string) => `
     <tr>
@@ -1137,11 +1209,11 @@ export function liveVerificationHtml(invite: LiveVerificationEmail): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(liveVerificationSubject())}</title>
+<title>${esc(liveVerificationSubject(reason))}</title>
 </head>
 <body style="margin:0;padding:0;background:${CREAM};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-  Two minutes on your phone finishes your identity check.
+  ${esc(preheader)}
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
@@ -1161,19 +1233,9 @@ export function liveVerificationHtml(invite: LiveVerificationEmail): string {
       <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
 
         <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
-          One quick step to finish your identity check
+          ${esc(heading)}
         </h1>
-
-        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Dear ${name}, thank you for sending your identity documents. Unfortunately we were not
-          able to complete the check from the photographs, so
-          <strong style="color:${NAVY};">we were unable to verify your identity</strong> that way.
-        </p>
-
-        <p style="margin:0 0 8px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          There is a quicker way to finish it, and it takes about
-          <strong style="color:${NAVY};">two minutes</strong>.
-        </p>
+${opening}
 
         <!-- Said immediately above the button, not in the small print. The
              whole thing needs a phone camera, and somebody who starts it on a

@@ -12,7 +12,11 @@ import {
   liveVerificationSubject,
   liveVerificationText,
 } from "@/lib/emailTemplates";
-import { checkVerificationLink } from "@/lib/liveVerification";
+import {
+  checkVerificationLink,
+  isLiveReason,
+  type LiveVerificationReason,
+} from "@/lib/liveVerification";
 import { createLiveVerifyToken } from "@/lib/token";
 import { campaignBlocked } from "@/lib/warmupStore";
 import { siteConfig } from "@/config/site";
@@ -55,9 +59,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const { id } = await ctx.params;
-  let body: { url?: unknown; action?: unknown };
+  let body: { url?: unknown; action?: unknown; reason?: unknown };
   try {
-    body = (await req.json()) as { url?: unknown; action?: unknown };
+    body = (await req.json()) as { url?: unknown; action?: unknown; reason?: unknown };
   } catch {
     return NextResponse.json({ ok: false, error: "bad_body" }, { status: 400 });
   }
@@ -86,6 +90,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       liveVerificationLinkChangeCount: held.liveVerificationLinkChangeCount,
       liveVerificationHeldAt: held.liveVerificationHeldAt,
       liveVerificationWaitingSince: held.liveVerificationWaitingSince,
+      liveVerificationReason: held.liveVerificationReason,
     });
   }
 
@@ -122,6 +127,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       liveVerificationLinkChangeCount: saved.liveVerificationLinkChangeCount,
       liveVerificationHeldAt: saved.liveVerificationHeldAt,
       liveVerificationWaitingSince: saved.liveVerificationWaitingSince,
+      liveVerificationReason: saved.liveVerificationReason,
     });
   }
 
@@ -138,23 +144,29 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
   }
 
+  // Decided here rather than taken on trust, and defaulted rather than
+  // refused: an unrecognised value from a browser must not be able to put a
+  // half-written story in somebody's inbox.
+  const reason: LiveVerificationReason = isLiveReason(body.reason) ? body.reason : "retry";
+
   // Stored before the email goes, because the page the email points at reads
-  // the link from the record. Sending first would race a candidate who opens
-  // it immediately against a write that has not landed.
+  // the link — and now the reason — from the record. Sending first would race
+  // a candidate who opens it immediately against a write that has not landed.
   const sentAt = new Date().toISOString();
-  const saved = await recordLiveVerificationSent(id, link.url);
+  const saved = await recordLiveVerificationSent(id, link.url, reason);
   if (!saved) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
   const token = createLiveVerifyToken({ id, sentAt: saved.liveVerificationSentAt ?? sentAt });
   const invite = {
     fullName: candidate.fullName || "Candidate",
     startUrl: `${baseUrl(req)}/verify/live?t=${encodeURIComponent(token)}`,
+    reason,
   };
 
   const result = await sendEmail({
     to: email,
     toName: candidate.fullName || undefined,
-    subject: liveVerificationSubject(),
+    subject: liveVerificationSubject(reason),
     html: liveVerificationHtml(invite),
     text: liveVerificationText(invite),
     replyTo: siteConfig.contact.recruitmentEmail,

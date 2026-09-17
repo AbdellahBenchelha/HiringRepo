@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import { InterviewBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { DocumentList } from "@/components/admin/DocumentChips";
@@ -19,7 +19,7 @@ import { countryMatch } from "@/lib/countryCheck";
 import { OfferPanel } from "@/components/admin/OfferPanel";
 import { OfferReplyPanel } from "@/components/admin/OfferReplyPanel";
 import { canOffer } from "@/lib/offer";
-import { liveStateOf } from "@/lib/liveVerification";
+import { holdOverdue, liveStateOf } from "@/lib/liveVerification";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
@@ -29,6 +29,43 @@ import { IdentityReminderButton } from "@/components/admin/IdentityReminderButto
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
 import { SsnField } from "@/components/admin/SsnField";
 import { ssnExpected } from "@/lib/ssn";
+
+/**
+ * The groups the profile is divided into, in the order the hiring actually
+ * happens: who they are, how they did, whether they are who they say, the
+ * offer, the company it is with, and what we have written down.
+ *
+ * Every panel stays mounted whichever group is showing, hidden rather than
+ * unmounted. A half-typed note, a pasted verification link and a part-filled
+ * offer are all state living inside those panels, and throwing them away
+ * because somebody looked at another group would be a worse fault than the
+ * scrolling this replaces.
+ */
+const TABS = [
+  { id: "profile", label: "Profile", icon: "users" },
+  { id: "assessment", label: "Assessment", icon: "microphone" },
+  { id: "id", label: "ID check", icon: "shield" },
+  { id: "offer", label: "Offer", icon: "handshake" },
+  { id: "company", label: "Company", icon: "briefcase" },
+  { id: "notes", label: "Notes", icon: "document" },
+] as const satisfies readonly { id: string; label: string; icon: IconName }[];
+
+type TabId = (typeof TABS)[number]["id"];
+
+/**
+ * The group last looked at, remembered between candidates.
+ *
+ * Module scope rather than component state, because callers key this dialog by
+ * candidate id — deliberately, so the panels inside cannot describe the person
+ * you just navigated away from. That remount takes any state with it, and
+ * somebody working through a morning of identity checks wants the next
+ * person's identity check rather than their address again.
+ *
+ * Not persisted beyond the page: a fresh visit starts on the profile, which is
+ * the right place to start when you do not already know what you are looking
+ * for.
+ */
+let lastTab: TabId = "profile";
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -151,6 +188,19 @@ export function CandidateProfileModal({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  /** Which group is on screen. Seeded from, and written back to, lastTab. */
+  const [tab, setTabState] = useState<TabId>(lastTab);
+  function setTab(next: TabId) {
+    lastTab = next;
+    setTabState(next);
+  }
+
+  // Two things in here are somebody else's time: a candidate sitting in front
+  // of a holding message, and photographs nobody has looked at. Marked on the
+  // tab, because a tab is a place things get missed behind.
+  const idNeedsAttention =
+    holdOverdue(candidate) || candidate.verificationStatus === "provided";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4"
@@ -236,6 +286,45 @@ export function CandidateProfileModal({
           </p>
         ) : null}
 
+        {/* Sticky, because the panels below are long and the way back to
+            another group should not be a scroll to the top. */}
+        <div
+          role="tablist"
+          aria-label="Candidate sections"
+          className="sticky top-0 z-10 -mx-6 mt-4 flex gap-1 overflow-x-auto border-b border-navy-100 bg-white px-6 pb-0"
+        >
+          {TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.id)}
+                className={`relative flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-xs font-bold transition ${
+                  active
+                    ? "border-brand-500 text-navy-900"
+                    : "border-transparent text-navy-400 hover:border-navy-200 hover:text-navy-700"
+                }`}
+              >
+                <Icon name={t.icon} className="h-4 w-4 shrink-0" />
+                {t.label}
+                {t.id === "id" && idNeedsAttention ? (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500"
+                    title="Something here is waiting on you"
+                  />
+                ) : null}
+                {t.id === "notes" && candidate.notes ? (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-navy-300" title="Has notes" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div hidden={tab !== "profile"}>
         <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <Field label="Email" value={candidate.email} />
           <Field
@@ -316,6 +405,43 @@ export function CandidateProfileModal({
           />
         </div>
 
+        {onSendWhatsApp ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onSendWhatsApp(candidate)}
+              disabled={!candidate.phone}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              <Icon name="chat" className="h-4 w-4" /> Send interview link via WhatsApp
+            </button>
+          </div>
+        ) : null}
+        </div>
+
+        <div hidden={tab !== "assessment"}>
+        <div className="mt-5 rounded-xl border border-navy-100 bg-navy-50/50 p-4">
+          <p className="text-sm font-semibold text-navy-800">Interview</p>
+          {candidate.interviewCompleted ? (
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-sm text-navy-600">
+                Score:{" "}
+                <strong>
+                  {candidate.score}/{candidate.total}
+                </strong>
+              </p>
+              <Link
+                href={`/admin/interviews/${candidate.id}`}
+                className="text-sm font-medium text-brand-700 hover:text-brand-800"
+              >
+                View full results →
+              </Link>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-navy-500">Not completed yet.</p>
+          )}
+        </div>
+
         <div className="mt-5">
           <VoicePanel
             id={candidate.id}
@@ -346,7 +472,9 @@ export function CandidateProfileModal({
             onSent={(patch) => onChange(patch)}
           />
         </div>
+        </div>
 
+        <div hidden={tab !== "id"}>
         <div className="mt-5">
           <VerificationPanel
             id={candidate.id}
@@ -355,6 +483,7 @@ export function CandidateProfileModal({
             documents={candidate.documents}
             initial={verification}
             live={liveStateOf(candidate)}
+            offerAcceptedAt={candidate.offerAcceptedAt}
             onLiveChange={(live) => onChange(live)}
             onChange={(v) =>
               onChange(verificationPatch(v))
@@ -369,7 +498,9 @@ export function CandidateProfileModal({
             onSent={(patch) => onChange(patch)}
           />
         </div>
+        </div>
 
+        <div hidden={tab !== "offer"}>
         {/* The live interview happens off-system, once the recording is in;
             this is where its outcome lands. */}
         {showOffer && canOffer(candidate.voiceStatus, candidate) ? (
@@ -403,11 +534,16 @@ export function CandidateProfileModal({
 
         {/* What they stated when accepting, and what they corrected. Sits
             directly under the offer, which is what prompted it. */}
+        </div>
+
+        <div hidden={tab !== "company"}>
+        {/* What they stated when accepting, kept directly above the company
+            answer rather than with the offer. The two are read against each
+            other — a claim about who they are, and then evidence about who the
+            agreement is actually with — and separating them would mean looking
+            in two places to notice they disagree. */}
         <ConfirmedDetailsPanel candidate={candidate} />
 
-        {/* Right after what they confirmed about themselves, because it is the
-            same question about the other party: who is this agreement actually
-            with. */}
         <CompanyDetailsPanel
           candidate={candidate}
           onOpenDocument={onOpenDocument}
@@ -421,7 +557,9 @@ export function CandidateProfileModal({
           initial={candidate.companyCheck}
           hasDob={!!(candidate.dob || candidate.confirmedDetails?.dob)}
         />
+        </div>
 
+        <div hidden={tab !== "notes"}>
         <NotesEditor
           id={candidate.id}
           initial={candidate.notes ?? ""}
@@ -433,41 +571,7 @@ export function CandidateProfileModal({
             if (!dirty) setConfirmLeave(null);
           }}
         />
-
-        <div className="mt-5 rounded-xl border border-navy-100 bg-navy-50/50 p-4">
-          <p className="text-sm font-semibold text-navy-800">Interview</p>
-          {candidate.interviewCompleted ? (
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-sm text-navy-600">
-                Score:{" "}
-                <strong>
-                  {candidate.score}/{candidate.total}
-                </strong>
-              </p>
-              <Link
-                href={`/admin/interviews/${candidate.id}`}
-                className="text-sm font-medium text-brand-700 hover:text-brand-800"
-              >
-                View full results →
-              </Link>
-            </div>
-          ) : (
-            <p className="mt-1 text-sm text-navy-500">Not completed yet.</p>
-          )}
         </div>
-
-        {onSendWhatsApp ? (
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => onSendWhatsApp(candidate)}
-              disabled={!candidate.phone}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-            >
-              <Icon name="chat" className="h-4 w-4" /> Send interview link via WhatsApp
-            </button>
-          </div>
-        ) : null}
       </div>
     </div>
   );

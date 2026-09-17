@@ -231,6 +231,7 @@ export function VerificationPanel({
   documents,
   initial,
   live,
+  offerAcceptedAt,
   onLiveChange,
   onChange,
 }: {
@@ -242,6 +243,9 @@ export function VerificationPanel({
   initial: VerificationState;
   /** What has happened with the live identity check, if one was ever sent. */
   live?: LiveVerificationState;
+  /** Passed through to the live check, which questions "before the agreement"
+      wording for somebody who has not been offered anything. */
+  offerAcceptedAt?: string;
   onLiveChange?: (state: LiveVerificationState) => void;
   /**
    * Report the new state upward. Without this the row behind the profile keeps
@@ -622,6 +626,7 @@ export function VerificationPanel({
             fullName={fullName}
             email={email}
             initial={live ?? {}}
+            offerAcceptedAt={offerAcceptedAt}
             onChange={(next) => onLiveChange?.(next)}
           />
 

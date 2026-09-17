@@ -134,6 +134,8 @@ export interface LiveVerificationState {
    * opens being throttled to a longer interval than the wait itself.
    */
   liveVerificationWaitingSince?: string;
+  /** Which of the two stories their email told. See LIVE_REASONS. */
+  liveVerificationReason?: string;
 }
 
 /**
@@ -158,6 +160,7 @@ export function liveStateOf(c: LiveVerificationState): LiveVerificationState {
     liveVerificationLinkChangeCount: c.liveVerificationLinkChangeCount,
     liveVerificationHeldAt: c.liveVerificationHeldAt,
     liveVerificationWaitingSince: c.liveVerificationWaitingSince,
+    liveVerificationReason: c.liveVerificationReason,
   };
 }
 
@@ -231,3 +234,54 @@ export const LIVE_STAGE_LABEL: Record<
   opened: "Opened — not started",
   started: "Started with the provider",
 };
+
+/**
+ * Why this candidate is being asked to do a live check.
+ *
+ * The same two-minute check either way; what differs is what happened before
+ * it, and telling somebody the wrong story is worse than telling them nothing.
+ *
+ *   agreement  Nothing has gone wrong. It is the identity check that has to
+ *              happen before an agreement can be issued, and for most people
+ *              this is the only one they will ever see.
+ *   retry      They have already tried and it did not settle the question.
+ */
+export const LIVE_REASONS = ["agreement", "retry"] as const;
+export type LiveVerificationReason = (typeof LIVE_REASONS)[number];
+
+export function isLiveReason(v: unknown): v is LiveVerificationReason {
+  return typeof v === "string" && (LIVE_REASONS as readonly string[]).includes(v);
+}
+
+export const LIVE_REASON_LABEL: Record<LiveVerificationReason, string> = {
+  agreement: "Before the agreement",
+  retry: "We could not verify their ID",
+};
+
+/** What the candidate will actually see in their inbox. */
+export const LIVE_REASON_SUBJECT: Record<LiveVerificationReason, string> = {
+  agreement: "One last step before we can send your agreement",
+  retry: "We were unable to verify your identity — one quick step to finish it",
+};
+
+/**
+ * The reason a candidate's check was sent for.
+ *
+ * Defaults to "retry" because that is the only email that existed before this
+ * field did. Every check already in somebody's inbox says the photographs
+ * could not be read, and the page they land on has to agree with it.
+ */
+export function liveReasonOf(c: LiveVerificationState): LiveVerificationReason {
+  return isLiveReason(c.liveVerificationReason) ? c.liveVerificationReason : "retry";
+}
+
+/**
+ * Which reason to offer first.
+ *
+ * Nothing sent yet means this is the ordinary pre-agreement check. Once one
+ * has gone out, the reason to be sending another is that the first did not
+ * settle it — so the default flips rather than making the same choice twice.
+ */
+export function defaultLiveReason(c: LiveVerificationState): LiveVerificationReason {
+  return c.liveVerificationSentAt ? "retry" : "agreement";
+}

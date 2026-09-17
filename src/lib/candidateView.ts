@@ -100,6 +100,7 @@ export interface CandidateView {
   /** Set while their session is dead and they are held on a waiting page. */
   liveVerificationHeldAt?: string;
   liveVerificationWaitingSince?: string;
+  liveVerificationReason?: string;
   /**
    * Derived, not stored: a request for new photographs that has not been
    * answered yet. Computed here so the tables and the panel cannot disagree
@@ -272,6 +273,7 @@ export function toCandidateView(
     liveVerificationLinkChangeCount: c.liveVerificationLinkChangeCount,
     liveVerificationHeldAt: c.liveVerificationHeldAt,
     liveVerificationWaitingSince: c.liveVerificationWaitingSince,
+    liveVerificationReason: c.liveVerificationReason,
     identityReuploadPending: identityReuploadPending(c),
     voiceStatus: c.voiceStatus,
     voiceOpenedAt: c.voiceOpenedAt,
