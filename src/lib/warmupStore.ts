@@ -165,6 +165,24 @@ export async function currentAllowance(): Promise<Allowance> {
   return allowanceOf(data.config.dailyCap, today?.sent ?? 0);
 }
 
+/**
+ * Would a campaign send be refused right now?
+ *
+ * For the callers that write to the candidate's record *before* sending —
+ * because the page the email points at has to be able to read the link back
+ * out, and a candidate who opens it immediately must not beat the write. That
+ * ordering is right, but it means a refused send leaves a row saying the thing
+ * was sent when nothing left, which is worse than either outcome on its own:
+ * nobody goes looking for an email the panel says already arrived.
+ *
+ * Asking first costs one small file read and keeps the record honest. It is
+ * advisory — sendEmail still decides — so the worst a race can do is let one
+ * message through, never write a false timestamp.
+ */
+export async function campaignBlocked(): Promise<boolean> {
+  return (await currentAllowance()).remaining <= 0;
+}
+
 /** Change the cap by hand, leaving the stage where it is. */
 export function setDailyCap(cap: number): Promise<WarmupConfig> {
   return withWarmup((data) => {

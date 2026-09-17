@@ -47,6 +47,7 @@ import { sampleAgreement } from "@/lib/sampleAgreement";
 import { createOfferToken } from "@/lib/token";
 import { siteConfig } from "@/config/site";
 import { withSource } from "@/lib/followUp";
+import { campaignBlocked } from "@/lib/warmupStore";
 
 /**
  * The two emails a recruiter sends to somebody who has not sat the assessment.
@@ -405,6 +406,16 @@ export async function sendVoiceAssessmentEmail(
   baseUrl: string,
   opts: SendOpts = {},
 ): Promise<VoiceRequestOutcome> {
+  // The exception to the paragraph above. Keeping the timestamp is right when
+  // a mail server was briefly unreachable — the recruiter decided the step is
+  // open and a transient fault should not close it. The warm-up cap is not a
+  // fault: nothing was attempted, the answer will be the same until tomorrow,
+  // and opening the step now would show the candidate a request nobody has
+  // told them about.
+  if (!opts.override && (await campaignBlocked())) {
+    return { ok: false, found: false, reason: "warmup_limit" };
+  }
+
   const updated = await recordVoiceRequest(id);
   if (!updated) return { ok: false, found: false, reason: "not_found" };
 

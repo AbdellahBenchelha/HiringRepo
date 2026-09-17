@@ -14,6 +14,7 @@ import {
 } from "@/lib/emailTemplates";
 import { checkVerificationLink } from "@/lib/liveVerification";
 import { createLiveVerifyToken } from "@/lib/token";
+import { campaignBlocked } from "@/lib/warmupStore";
 import { siteConfig } from "@/config/site";
 
 /**
@@ -125,6 +126,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const email = (candidate.email || "").trim();
   if (!email.includes("@")) {
     return NextResponse.json({ ok: false, error: "no_email" }, { status: 400 });
+  }
+
+  // Asked before anything is written. The record goes first (see below), so a
+  // send refused for the day's warm-up allowance would otherwise leave a row
+  // saying the check was sent while the candidate got nothing — and nobody
+  // chases an email the panel says already arrived.
+  if (await campaignBlocked()) {
+    return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
   }
 
   // Stored before the email goes, because the page the email points at reads

@@ -19,6 +19,7 @@ import {
 } from "@/lib/emailTemplates";
 import { reuploadMessage } from "@/lib/verification";
 import { createOfferToken } from "@/lib/token";
+import { campaignBlocked } from "@/lib/warmupStore";
 import { siteConfig } from "@/config/site";
 
 /**
@@ -105,6 +106,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   if (body.action === "request") {
+    // Before the write, so a send held back by the warm-up cap cannot leave
+    // this candidate marked as asked when nothing reached them.
+    if (await campaignBlocked()) {
+      return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
+    }
     const updated = await requestVerification(id);
     if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
     // eslint-disable-next-line no-console
@@ -155,6 +161,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const message = reuploadMessage(body.reason ?? "", body.customReason);
     if (!message) {
       return NextResponse.json({ ok: false, error: "reason_required" }, { status: 400 });
+    }
+
+    // Same reason as the request branch: the re-upload step is reopened by the
+    // write, and reopening it without telling the candidate asks them for a
+    // photograph in a room with nobody in it.
+    if (await campaignBlocked()) {
+      return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
     }
 
     const updated = await requestIdentityReupload(id, message);

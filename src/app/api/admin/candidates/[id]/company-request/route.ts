@@ -9,6 +9,7 @@ import {
 } from "@/lib/emailTemplates";
 import { acceptedAsCompany } from "@/lib/companyDetails";
 import { createCompanyToken } from "@/lib/token";
+import { campaignBlocked } from "@/lib/warmupStore";
 import { siteConfig } from "@/config/site";
 
 /**
@@ -44,6 +45,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const email = (candidate.email || "").trim();
   if (!email.includes("@")) {
     return NextResponse.json({ ok: false, error: "no_email" }, { status: 400 });
+  }
+
+  // Asked before anything is written, for the reason the comment below gives:
+  // the record goes first, so a refused send would leave a row claiming this
+  // was asked for when the candidate never heard.
+  if (await campaignBlocked()) {
+    return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
   }
 
   // Recorded before the email goes: the page reads the request timestamp back
