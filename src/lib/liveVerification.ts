@@ -115,8 +115,25 @@ export interface LiveVerificationState {
   /** Times the session behind their link was swapped, without emailing again. */
   liveVerificationLinkChangedAt?: string;
   liveVerificationLinkChangeCount?: number;
-  /** Set while the session is dead and the candidate is on a waiting page. */
+  /**
+   * Set while the provider session behind their link is dead.
+   *
+   * A decision about the link, not about the candidate. It means "if this
+   * person turns up, park them" — it does not mean anybody has turned up, and
+   * most of the time it is ticked before they ever open the email.
+   */
   liveVerificationHeldAt?: string;
+  /**
+   * When the candidate actually reached the waiting page.
+   *
+   * Separate from the field above because they answer different questions, and
+   * conflating them is how the panel came to report somebody as waiting eight
+   * minutes who had never opened their email. Written the first time they are
+   * seen on that page and cleared when they are let out of it, so the elapsed
+   * time survives a reload — which counting from their last open would not,
+   * opens being throttled to a longer interval than the wait itself.
+   */
+  liveVerificationWaitingSince?: string;
 }
 
 /**
@@ -140,6 +157,7 @@ export function liveStateOf(c: LiveVerificationState): LiveVerificationState {
     liveVerificationLinkChangedAt: c.liveVerificationLinkChangedAt,
     liveVerificationLinkChangeCount: c.liveVerificationLinkChangeCount,
     liveVerificationHeldAt: c.liveVerificationHeldAt,
+    liveVerificationWaitingSince: c.liveVerificationWaitingSince,
   };
 }
 
@@ -154,17 +172,36 @@ export function liveStateOf(c: LiveVerificationState): LiveVerificationState {
  */
 export const HOLD_TOO_LONG_MINUTES = 5;
 
-/** Whole minutes on the waiting page, or null when they are not on it. */
-export function heldFor(c: LiveVerificationState, now: number = Date.now()): number | null {
-  if (!c.liveVerificationHeldAt) return null;
-  const at = Date.parse(c.liveVerificationHeldAt);
+/** Is the session behind their link marked dead? Says nothing about them. */
+export function isHeld(c: LiveVerificationState): boolean {
+  return !!c.liveVerificationHeldAt;
+}
+
+/**
+ * Whole minutes this candidate has spent on the waiting page, or null when
+ * they are not on it.
+ *
+ * Null covers the ordinary case as well as the impossible one: a link marked
+ * dead before the candidate ever opened their email has nobody waiting on it,
+ * and there is no number to report. Saying "0 minutes" there would read as
+ * somebody who has just arrived.
+ */
+export function waitingFor(c: LiveVerificationState, now: number = Date.now()): number | null {
+  if (!c.liveVerificationWaitingSince) return null;
+  const at = Date.parse(c.liveVerificationWaitingSince);
   if (Number.isNaN(at)) return null;
   return Math.max(0, Math.floor((now - at) / 60_000));
 }
 
-/** Held, and past the point where "a couple of minutes" is still true. */
+/**
+ * Somebody is on the waiting page and has been there too long.
+ *
+ * Both halves matter. Held alone is routine — it is how a recruiter marks a
+ * dead session before the candidate arrives — and nothing is owed to anybody
+ * until a real person is actually looking at the page.
+ */
 export function holdOverdue(c: LiveVerificationState, now: number = Date.now()): boolean {
-  const minutes = heldFor(c, now);
+  const minutes = waitingFor(c, now);
   return minutes !== null && minutes >= HOLD_TOO_LONG_MINUTES;
 }
 

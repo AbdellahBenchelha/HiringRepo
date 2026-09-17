@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readLiveVerifyToken } from "@/lib/token";
-import { getCandidate } from "@/lib/store";
+import { getCandidate, markLiveVerificationWaiting } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 /**
@@ -47,6 +47,13 @@ export async function GET(req: NextRequest) {
     // Reloading is still the right move: the page will explain that.
     if (candidate.liveVerificationSentAt !== token.link.sentAt) {
       return NextResponse.json({ ok: true, held: false, stale: true });
+    }
+    // The poll is also the proof that somebody is still on the page, which
+    // covers the case the open beacon cannot: a candidate already sitting here
+    // when the recruiter ticks the box. Their next poll is a few seconds away,
+    // so the wait starts then rather than whenever they first loaded.
+    if (candidate.liveVerificationHeldAt) {
+      await markLiveVerificationWaiting(token.link.id).catch(() => null);
     }
     return NextResponse.json({ ok: true, held: !!candidate.liveVerificationHeldAt });
   } catch {

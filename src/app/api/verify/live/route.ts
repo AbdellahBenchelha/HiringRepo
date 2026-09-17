@@ -5,6 +5,7 @@ import {
   recordLiveVerificationOpened,
   recordLiveVerificationStarted,
   type Candidate,
+  markLiveVerificationWaiting,
 } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
@@ -79,6 +80,13 @@ export async function POST(req: NextRequest) {
 
   if (phase === "opened") {
     try {
+      // If they are held, this open is them arriving on the waiting page, and
+      // the wait starts here. Kept apart from the open bookkeeping below
+      // because that is throttled to ten minutes — longer than the wait itself
+      // — so a candidate who reloads would otherwise never be recorded as
+      // having arrived at all.
+      await markLiveVerificationWaiting(token.link.id).catch(() => null);
+
       const { recorded, firstOpen } = await recordLiveVerificationOpened(token.link.id);
       if (recorded) {
         // eslint-disable-next-line no-console

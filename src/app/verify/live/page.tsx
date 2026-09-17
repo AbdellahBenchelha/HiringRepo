@@ -9,7 +9,7 @@ import { Icon } from "@/components/Icon";
 import { LiveVerifyStart } from "@/components/verify/LiveVerifyStart";
 import { LiveVerifyWaiting } from "@/components/verify/LiveVerifyWaiting";
 import { RecordOpen } from "@/components/verify/RecordOpen";
-import { heldFor } from "@/lib/liveVerification";
+import { isHeld, waitingFor } from "@/lib/liveVerification";
 
 /**
  * Where a candidate starts their live identity check.
@@ -103,12 +103,15 @@ export default async function LiveVerifyPage({
    * and none of it reaches their browser. They wait on our page instead, and
    * it lets itself out when the replacement lands.
    */
-  const held = heldFor(candidate);
-  if (held !== null) {
+  // Whether to show the waiting page is a question about the link, so it is
+  // asked of the hold. How long they have been looking at it is a question
+  // about them, and on this first render the answer is usually "they have just
+  // arrived" — the beacon below is what records it.
+  if (isHeld(candidate)) {
     return (
       <Shell>
         <RecordOpen token={token ?? ""} />
-        <LiveVerifyWaiting token={token ?? ""} heldMinutes={held} />
+        <LiveVerifyWaiting token={token ?? ""} heldMinutes={waitingFor(candidate) ?? 0} />
       </Shell>
     );
   }

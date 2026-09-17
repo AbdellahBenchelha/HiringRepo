@@ -8,7 +8,8 @@ import {
   HOLD_TOO_LONG_MINUTES,
   LIVE_STAGE_LABEL,
   checkVerificationLink,
-  heldFor,
+  isHeld,
+  waitingFor,
   liveVerificationStage,
   providerFor,
   type LiveVerificationState,
@@ -105,7 +106,13 @@ export function LiveVerificationButton({
     const t = setInterval(() => retick((n) => n + 1), 30_000);
     return () => clearInterval(t);
   }, [state.liveVerificationHeldAt]);
-  const waiting = heldFor(state);
+  // Two separate facts. `held` is a decision about the link and is usually
+  // taken before the candidate has opened anything; `waiting` is null until a
+  // real person is looking at the page. Reading the first and describing the
+  // second is what told a recruiter somebody had waited eight minutes who had
+  // never opened their email.
+  const held = isHeld(state);
+  const waiting = waitingFor(state);
   const waitingTooLong = waiting !== null && waiting >= HOLD_TOO_LONG_MINUTES;
   /** Marking it dead is the whole action; pasting a link is the other one. */
   const holding = replacing && expired;
@@ -128,7 +135,15 @@ export function LiveVerificationButton({
           error?: string;
         };
         if (data.ok) {
-          const next = { ...state, liveVerificationHeldAt: data.liveVerificationHeldAt };
+          const next = {
+            ...state,
+            liveVerificationHeldAt: data.liveVerificationHeldAt,
+            // Normally undefined: holding a link is not the same as somebody
+            // arriving at it. It is taken from the answer rather than assumed,
+            // because a candidate can already be on the page when this is
+            // ticked, and their next poll would have set it.
+            liveVerificationWaitingSince: data.liveVerificationWaitingSince,
+          };
           setState(next);
           setSent(
             "Marked as expired. Anyone opening their link now waits on our page until you paste a new one.",
@@ -187,6 +202,7 @@ export function LiveVerificationButton({
           // Both paths end the wait: a replacement is what the waiting page
           // was waiting for, and a fresh email is a fresh link.
           liveVerificationHeldAt: undefined,
+          liveVerificationWaitingSince: undefined,
         };
         setState(next);
         setSent(
@@ -272,20 +288,33 @@ export function LiveVerificationButton({
           is a line of its own rather than a word in the status above — and
           once the page has stopped promising them a couple of minutes, it says
           what has to happen next. */}
-      {waiting !== null ? (
+      {held ? (
         <p
           className={`flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
             waitingTooLong
               ? "border-red-200 bg-red-50 font-medium text-red-800"
-              : "border-amber-200 bg-amber-50 text-amber-900"
+              : waiting !== null
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : "border-navy-200 bg-navy-50 text-navy-600"
           }`}
         >
           <Icon name="clock" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            {waitingTooLong ? (
+            {waiting === null ? (
+              /* Held, and nobody has turned up. The ordinary case, and the one
+                 that used to be described as an emergency: the session is
+                 marked dead before the candidate opens their email far more
+                 often than after. Nothing is owed to anybody yet. */
+              <>
+                <strong>Held — nobody is waiting yet.</strong> They have not opened their link. When
+                they do, they will see the page that says we are preparing it, and the wait starts
+                from then.
+              </>
+            ) : waitingTooLong ? (
               <>
                 <strong>
-                  Waiting {waiting} minutes on the page that says we are preparing it.
+                  Waiting {waiting} minute{waiting === 1 ? "" : "s"} on the page that says we are
+                  preparing it.
                 </strong>{" "}
                 They have been told it is taking longer than expected and that we will email them.
                 Send them a new link.
@@ -293,7 +322,8 @@ export function LiveVerificationButton({
             ) : (
               <>
                 <strong>
-                  Held on the waiting page{waiting > 0 ? ` — ${waiting} minute${waiting === 1 ? "" : "s"}` : " just now"}.
+                  On the waiting page
+                  {waiting > 0 ? ` — ${waiting} minute${waiting === 1 ? "" : "s"}` : " just now"}.
                 </strong>{" "}
                 Paste a working link to let them through.
               </>

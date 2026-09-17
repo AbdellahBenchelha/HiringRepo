@@ -253,6 +253,15 @@ export interface Candidate {
    */
   liveVerificationHeldAt?: string;
   /**
+   * When this candidate was first seen on the waiting page, while held.
+   *
+   * The field above is a decision about the link; this one is a fact about the
+   * person, and only this one can answer "how long have they been staring at
+   * it". Written by the waiting page itself, cleared the moment they are let
+   * out — by a replacement link, a fresh email, or the hold being lifted.
+   */
+  liveVerificationWaitingSince?: string;
+  /**
    * Whether the candidate has actually opened the voice-assessment page, and
    * how often.
    *
@@ -579,6 +588,7 @@ export function recordLiveVerificationSent(id: string, url: string): Promise<Can
     c.liveVerificationLinkChangedAt = undefined;
     c.liveVerificationLinkChangeCount = undefined;
     c.liveVerificationHeldAt = undefined;
+    c.liveVerificationWaitingSince = undefined;
     return { list, result: c };
   });
 }
@@ -612,6 +622,7 @@ export function replaceLiveVerificationLink(id: string, url: string): Promise<Ca
     c.liveVerificationStartedAt = undefined;
     // A working session is exactly what the waiting page was waiting for.
     c.liveVerificationHeldAt = undefined;
+    c.liveVerificationWaitingSince = undefined;
     return { list, result: c };
   });
 }
@@ -638,8 +649,35 @@ export function setLiveVerificationHold(
     // restarting the clock would quietly tell somebody who has waited twenty
     // minutes that they have waited one.
     if (held) c.liveVerificationHeldAt = c.liveVerificationHeldAt ?? new Date().toISOString();
-    else c.liveVerificationHeldAt = undefined;
+    else {
+      c.liveVerificationHeldAt = undefined;
+      // Letting them out ends the wait. Leaving this set would keep a cleared
+      // candidate showing on the panel as somebody still sitting on the page.
+      c.liveVerificationWaitingSince = undefined;
+    }
     return { list, result: c };
+  });
+}
+
+/**
+ * This candidate is on the waiting page, as of now.
+ *
+ * Only the first sighting is kept, so the clock measures how long they have
+ * been there rather than how recently they were last seen. The waiting page
+ * reports itself on load and on every poll, and a reload after a long wait
+ * must not restart the count at zero — that was the whole reason for not
+ * reusing the open timestamps, which are throttled to a longer interval than
+ * the wait this is measuring.
+ *
+ * Does nothing unless the candidate is actually held: a page that is not
+ * showing the waiting message has nobody waiting on it.
+ */
+export function markLiveVerificationWaiting(id: string): Promise<string | null> {
+  return withWrite<string | null>((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || !c.liveVerificationHeldAt) return { list, result: null };
+    c.liveVerificationWaitingSince = c.liveVerificationWaitingSince ?? new Date().toISOString();
+    return { list, result: c.liveVerificationWaitingSince };
   });
 }
 

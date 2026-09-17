@@ -85,6 +85,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       liveVerificationLinkChangedAt: held.liveVerificationLinkChangedAt,
       liveVerificationLinkChangeCount: held.liveVerificationLinkChangeCount,
       liveVerificationHeldAt: held.liveVerificationHeldAt,
+      liveVerificationWaitingSince: held.liveVerificationWaitingSince,
     });
   }
 
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       liveVerificationLinkChangedAt: saved.liveVerificationLinkChangedAt,
       liveVerificationLinkChangeCount: saved.liveVerificationLinkChangeCount,
       liveVerificationHeldAt: saved.liveVerificationHeldAt,
+      liveVerificationWaitingSince: saved.liveVerificationWaitingSince,
     });
   }
 
