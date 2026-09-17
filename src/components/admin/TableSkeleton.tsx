@@ -14,6 +14,58 @@ import { AdminShell } from "@/components/admin/AdminShell";
  * layout, and only the rows are pending, which tells somebody they are in the
  * right place while they wait.
  */
+/**
+ * The dashboard's own shape, which is tiles and charts rather than rows.
+ *
+ * Kept beside the table one because they exist for the same reason and should
+ * change together — a skeleton that stops matching the page it stands in for
+ * is worse than none, since it promises a layout that never arrives.
+ */
+export function DashboardSkeleton() {
+  return (
+    <AdminShell>
+      <header className="mb-5">
+        <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">Dashboard</h1>
+        <div className="mt-2 h-4 w-64 max-w-full animate-pulse rounded bg-navy-100" />
+      </header>
+
+      <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-navy-100 bg-white p-5">
+            <div className="h-3 w-24 animate-pulse rounded bg-navy-100" />
+            <div className="mt-3 h-8 w-20 animate-pulse rounded bg-navy-100" />
+            <div className="mt-3 h-8 w-full animate-pulse rounded bg-navy-50" />
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-5 grid gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border border-navy-100 bg-white p-5 lg:col-span-2">
+          <div className="h-3 w-32 animate-pulse rounded bg-navy-100" />
+          <div className="mt-4 h-56 w-full animate-pulse rounded-xl bg-navy-50" />
+        </div>
+        <div className="rounded-2xl border border-navy-100 bg-white p-5">
+          <div className="h-3 w-28 animate-pulse rounded bg-navy-100" />
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-4 w-full animate-pulse rounded bg-navy-50" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-navy-100 bg-white p-5">
+        <div className="h-3 w-24 animate-pulse rounded bg-navy-100" />
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="h-5 w-full animate-pulse rounded bg-navy-50" />
+          ))}
+        </div>
+      </div>
+    </AdminShell>
+  );
+}
+
 export function TableSkeleton({
   title,
   rows = 8,

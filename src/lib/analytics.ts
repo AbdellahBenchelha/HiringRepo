@@ -63,24 +63,48 @@ export function emptyDay(day: string): DayStats {
  * en-CA formats as "YYYY-MM-DD", which is the key format, so this is one
  * formatter rather than three parts glued together.
  */
+/**
+ * Formatters, kept rather than rebuilt.
+ *
+ * Constructing an Intl.DateTimeFormat loads a locale and a timezone out of
+ * ICU, which costs far more than using one does. These two are called once per
+ * candidate per question the dashboard asks — about ten times each, per person
+ * — so building them inside the function meant ten thousand formatters for a
+ * thousand candidates, and most of the dashboard's time went into making
+ * objects it threw away.
+ *
+ * Keyed by timezone because the parameter exists; in practice there is one.
+ */
+const dayFormats = new Map<string, Intl.DateTimeFormat>();
+const hourFormats = new Map<string, Intl.DateTimeFormat>();
+
+function dayFormat(timeZone: string): Intl.DateTimeFormat {
+  let f = dayFormats.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    dayFormats.set(timeZone, f);
+  }
+  return f;
+}
+
 export function dayKey(at: Date, timeZone: string = TZ): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(at);
+  return dayFormat(timeZone).format(at);
 }
 
 /** The local hour (0–23) an instant falls in. */
 export function hourOf(at: Date, timeZone: string = TZ): number {
-  const h = new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    hour: "2-digit",
-    hour12: false,
-  }).format(at);
+  let f = hourFormats.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hour12: false });
+    hourFormats.set(timeZone, f);
+  }
   // "24" appears in some locales for midnight; fold it back to 0.
-  return Number(h) % 24;
+  return Number(f.format(at)) % 24;
 }
 
 /**
