@@ -129,6 +129,42 @@ const STEPS: { id: string; label: string; title: string; description?: string; i
 ];
 
 /**
+ * Save the application, and say whether it actually saved.
+ *
+ * Retried, because the two ways this realistically fails are both temporary: a
+ * phone that loses signal between two screens, and the per-address request
+ * limit, which several candidates behind one mobile carrier can reach between
+ * them. Neither is the candidate's fault and neither is worth losing an
+ * application over.
+ *
+ * A 4xx that is not 429 is the server saying no for a reason that will not
+ * change in six seconds, so that one is not retried — it is reported, and the
+ * candidate is asked to try again rather than told it worked.
+ */
+async function postApplication(payload: unknown, attempts = 3): Promise<boolean> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        // Kept: the tab can be closed the moment the button is pressed, and
+        // this request has to outlive the page either way.
+        keepalive: true,
+      });
+      if (res.ok) return true;
+      if (res.status !== 429 && res.status < 500) return false;
+    } catch {
+      /* a dropped connection is exactly what the next attempt is for */
+    }
+    if (attempt < attempts - 1) {
+      await new Promise((r) => setTimeout(r, 800 * 2 ** attempt));
+    }
+  }
+  return false;
+}
+
+/**
  * Send the attached documents to storage.
  *
  * Runs before the success screen, not after: the browser uploads straight to
@@ -148,6 +184,7 @@ const STEPS: { id: string; label: string; title: string; description?: string; i
  * thing that failed. Without it a blocked upload is indistinguishable from a
  * candidate who simply attached nothing.
  */
+
 async function report(id: string, kind: DocumentKind, filename: string, reason: string) {
   try {
     await fetch("/api/applications/documents/failed", {
@@ -329,7 +366,7 @@ export function ApplicationForm({
 
   // ---- Form meta ----
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "failed">("idle");
   // True once the duplicate check finds this phone on an earlier application.
   // The applicant is never told; the assessment email is held for review.
   const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
@@ -551,32 +588,45 @@ export function ApplicationForm({
     // recruiter judge.
     const suspectedBot = !!honeypotRef.current?.value.trim();
 
-    // Save the full application for the Admin Panel (best-effort; does not block
-    // or change the Telegram notifications below).
     setStatus("submitting");
 
-    const saved = fetch("/api/applications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: candidateIdRef.current,
-        application: {
-          firstName, lastName, dob, email, phone, country, city, address, ssn: ssn || undefined, linkedin,
-          position, employmentType, startDate, schedule, evenings, weekends, rotating,
-          languages, hasExperience, yearsExperience, supportTypes, crmTools,
-          experienceDetails, experiences, educationLevel, institution, fieldOfStudy,
-          graduationYear, certifications, ...answers, phoneComfort, targetsComfort,
-          referralSource, anythingElse,
-        },
-      }),
-      keepalive: true,
-    }).catch(() => {});
+    /**
+     * The application itself. Not best-effort any more.
+     *
+     * It used to be fired and forgotten — the result never read, every failure
+     * swallowed, and "Application Submitted Successfully" shown regardless. A
+     * refused save is not a cosmetic loss: without the record the candidate is
+     * missing from the panel, and their interview is refused too, because that
+     * route looks them up by id and answers invalid_token when there is
+     * nothing to find. So the person is told they have applied, hears nothing,
+     * and cannot do the assessment either.
+     */
+    const saved = await postApplication({
+      id: candidateIdRef.current,
+      application: {
+        firstName, lastName, dob, email, phone, country, city, address, ssn: ssn || undefined, linkedin,
+        position, employmentType, startDate, schedule, evenings, weekends, rotating,
+        languages, hasExperience, yearsExperience, supportTypes, crmTools,
+        experienceDetails, experiences, educationLevel, institution, fieldOfStudy,
+        graduationYear, certifications, ...answers, phoneComfort, targetsComfort,
+        referralSource, anythingElse,
+      },
+    });
+
+    if (!saved) {
+      // Everything below needs the record: an upload asks for a signed URL
+      // against it, and the interview finds the candidate by id. Better to
+      // stop and ask them to press again than to send them away believing it
+      // worked.
+      setStatus("failed");
+      scrollToTop();
+      return;
+    }
 
     // Sequential, not parallel. Issuing an upload URL requires the candidate
     // record to exist, and while step one normally creates it, that request is
     // a beacon whose delivery is not guaranteed. Racing the two meant the
     // upload could ask about a record that was still being written.
-    await saved;
     await uploadDocuments(candidateIdRef.current, [
       { kind: "cv", file: cv },
       { kind: "cover", file: coverLetter },
@@ -596,6 +646,45 @@ export function ApplicationForm({
     setStatus("success");
     onSubmitted?.();
     scrollToTop();
+  }
+
+  /**
+   * The save did not happen, after three attempts.
+   *
+   * Everything they typed is still in this component, so pressing again sends
+   * the same application — nothing has to be filled in twice. Said plainly,
+   * because the alternative is what this replaces: a thank-you page for an
+   * application that does not exist.
+   */
+  if (status === "failed") {
+    return (
+      <div className="mx-auto max-w-xl py-8 text-center" role="alert" aria-live="assertive">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+          <Icon name="shield" className="h-9 w-9 text-amber-700" />
+        </div>
+        <h3 className="mt-6 text-2xl font-bold text-navy-900 sm:text-3xl">
+          Your application did not go through
+        </h3>
+        <p className="mt-4 leading-relaxed text-navy-600">
+          Nothing has been lost — everything you filled in is still here. This is usually a
+          connection that dropped for a moment. Please press the button below to send it again.
+        </p>
+        <button
+          type="button"
+          onClick={() => setStatus("idle")}
+          className="btn-primary mt-6 sm:px-10"
+        >
+          Back to my application
+        </button>
+        <p className="mt-4 text-sm text-navy-500">
+          If it keeps failing, email us at{" "}
+          <a href={`mailto:${siteConfig.contact.recruitmentEmail}`} className="font-semibold text-brand-700 underline">
+            {siteConfig.contact.recruitmentEmail}
+          </a>{" "}
+          and we will take your application by email.
+        </p>
+      </div>
+    );
   }
 
   if (status === "success") {

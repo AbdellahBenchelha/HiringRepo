@@ -46,8 +46,21 @@ function baseUrl(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
-  const limit = rateLimit(`applications:${clientIp(req)}`, MAX_REQUESTS, WINDOW_MS);
-  if (!limit.ok) return tooManyRequests(limit.retryAfter, "applications");
+  const ip = clientIp(req);
+  const limit = rateLimit(`applications:${ip}`, MAX_REQUESTS, WINDOW_MS);
+  if (!limit.ok) {
+    // Logged loudly because the cost of it is invisible from the panel: the
+    // candidate simply never appears. Several people behind one mobile carrier
+    // share an address, and "unknown" — no x-forwarded-for at all — puts every
+    // applicant in the world in one bucket. If this line ever shows up in the
+    // logs, the limit is the thing to raise.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[applications] refused: ${MAX_REQUESTS} in ${WINDOW_MS / 60000} minutes reached for ` +
+        `${ip === "unknown" ? "an unidentifiable address (no x-forwarded-for)" : ip}`,
+    );
+    return tooManyRequests(limit.retryAfter, "applications");
+  }
 
   // This body carries the whole application, so it gets the largest cap.
   const parsed = await readJsonBody<{ id?: string; application?: Record<string, unknown> }>(req);
