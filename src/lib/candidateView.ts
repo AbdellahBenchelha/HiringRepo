@@ -212,7 +212,7 @@ export function toCandidateView(
   /** Countries whose assessment invitation is held for manual sending. */
   manualInvite: readonly string[] = [],
 ): CandidateView {
-  return {
+  return compact({
     id: c.id,
     fullName: c.fullName,
     firstName: c.firstName,
@@ -250,7 +250,7 @@ export function toCandidateView(
     lastOpenedAt: c.lastOpenedAt,
     openCount: c.openCount,
     lastOpenSource: c.lastOpenSource,
-    documents: c.documents,
+    documents: c.documents?.map(withoutHash),
     verificationStatus: verificationStatus(c, required),
     verifiedAt: c.verifiedAt,
     verifiedBy: c.verifiedBy,
@@ -317,5 +317,44 @@ export function toCandidateView(
       !!c.submittedAt &&
       !c.interviewEmailSentAt &&
       countryRuleApplies(c.country, c.phone, manualInvite),
-  };
+  });
+}
+
+/**
+ * Drop the keys that have no value.
+ *
+ * This object has seventy-odd fields and most of them are empty for most
+ * people — nobody has an offer, a company, a live check and a voice recording
+ * at once. An absent field still costs its key name in the payload, and the
+ * payload carries one of these per candidate, so at a thousand rows the field
+ * *names* alone are the larger part of what is sent.
+ *
+ * Every one of those fields is already optional, so an absent key and a key
+ * holding undefined mean exactly the same thing to every reader — they are the
+ * same object, minus the part nobody can use.
+ */
+/**
+ * A document, minus the digest of its contents.
+ *
+ * The hash answers "is this the same file as that one", which is a question
+ * only the server asks — it finds the same person applying twice under a new
+ * address. Nothing in the browser reads it, so every one sent is sixty-four
+ * characters of nothing, per document, per candidate, on every page load.
+ *
+ * It is also a fingerprint of somebody's passport photograph, and there is no
+ * reason for it to leave the server at all.
+ */
+function withoutHash(doc: CandidateDocument): CandidateDocument {
+  if (!doc.sha256) return doc;
+  const { sha256: _omitted, ...rest } = doc;
+  return rest;
+}
+
+function compact<T extends object>(view: T): T {
+  const out: Record<string, unknown> = {};
+  for (const key in view) {
+    const value = (view as Record<string, unknown>)[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out as T;
 }
