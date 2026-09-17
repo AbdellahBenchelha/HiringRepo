@@ -1,59 +1,36 @@
 /**
  * SERVER-ONLY: everything the warm-up tab shows, assembled in one place.
  *
- * Two sources, deliberately kept apart in what they claim:
+ * The tab answers two questions and no others: how much may still go out
+ * today, and whether tomorrow's allowance should be larger. Per-message
+ * reporting — who bounced, who opened what, the shape of the last month — is
+ * ZeptoMail's job, and it does it better than a second copy here would.
  *
- *   - Sends, bounces and complaints are *counted*. Every message increments a
- *     number as it leaves, and the webhook increments the other two. These are
- *     exact, and they are the ones the verdict turns on.
- *
- *   - Engagement is *estimated*. Opens are recorded against the candidate, not
- *     against the message that caused them, so the best available answer is
- *     "how many people opened something in this window, against how many
- *     messages went out in it". Opens lag their sends, so the figure is soft
- *     at the edges of a window and wrong on any single day. It is shown
- *     because the direction of it is genuinely informative, and labelled as
- *     approximate because the precision is not there.
- *
- * The one thing worth knowing about the engagement number is that it is better
- * than the industry equivalent, not worse: these are clicks on links, recorded
- * server-side when the page is fetched, not tracking pixels. Apple Mail
- * Privacy Protection and Gmail's image proxy fetch pixels on the recipient's
- * behalf and inflate an ordinary open rate with opens nobody performed. None
- * of that applies here — every one of these is a person who arrived.
+ * So the counts below exist to support the verdict, not to be read. They are
+ * still worth gathering: the verdict has to be computed from something, and
+ * sends, bounces and complaints are the something. Sends are counted as they
+ * leave and the other two arrive by webhook, so both are exact. Engagement is
+ * estimated — opens are recorded against the candidate rather than against the
+ * message that caused them, so the honest question is "how many people opened
+ * anything in this window, against how many messages went out in it", and the
+ * answer is soft at the edges.
  */
 import { listCandidates } from "@/lib/store";
 import { readWarmup, type WarmupConfig } from "@/lib/warmupStore";
 import {
   allowanceOf,
-  emptyDay,
   nextStage,
-  rate,
   recentDays,
   stageAt,
   verdictFor,
   warmupDay,
   type Allowance,
-  type DayCounts,
   type Verdict,
   type WarmupStage,
 } from "@/lib/warmup";
 
-/** How far back the tab draws. */
-export const CHART_DAYS = 30;
 /** The window the verdict is computed over. Long enough to have a sample. */
-export const VERDICT_DAYS = 14;
-
-export interface WindowTotals {
-  days: number;
-  sent: number;
-  reactive: number;
-  bounced: number;
-  complained: number;
-  overrides: number;
-  bounceRate: number | null;
-  complaintRate: number | null;
-}
+const VERDICT_DAYS = 14;
 
 export interface WarmupStats {
   config: WarmupConfig;
@@ -62,32 +39,9 @@ export interface WarmupStats {
   stageIndex: number;
   daysAtStage: number;
   allowance: Allowance;
-  /** Oldest first, one entry per day, gaps filled with zeroes. */
-  chart: DayCounts[];
-  window: WindowTotals;
-  /** Approximate — see the note at the top of this file. */
-  engagement: number | null;
-  engagementOpeners: number;
   verdict: Verdict;
-  /** Whether the bounce and complaint figures can be believed at all. */
+  /** Whether the bounce and complaint figures behind the verdict can be believed. */
   feedbackConfigured: boolean;
-}
-
-function totalsFor(days: DayCounts[]): WindowTotals {
-  const sum = (pick: (d: DayCounts) => number) => days.reduce((n, d) => n + pick(d), 0);
-  const sent = sum((d) => d.sent);
-  const bounced = sum((d) => d.bounced);
-  const complained = sum((d) => d.complained);
-  return {
-    days: days.length,
-    sent,
-    reactive: sum((d) => d.reactive),
-    bounced,
-    complained,
-    overrides: sum((d) => d.overrides),
-    bounceRate: rate(bounced, sent),
-    complaintRate: rate(complained, sent),
-  };
 }
 
 /** Whole days between two day keys, counting today as one. */
@@ -127,15 +81,16 @@ export async function buildWarmupStats(): Promise<WarmupStats> {
   const today = warmupDay();
   const byDay = new Map(data.days.map((d) => [d.day, d]));
 
-  const chart = recentDays(CHART_DAYS).map((day) => byDay.get(day) ?? emptyDay(day));
-  const windowDays = recentDays(VERDICT_DAYS).map((day) => byDay.get(day) ?? emptyDay(day));
-  const window = totalsFor(windowDays);
+  const days = recentDays(VERDICT_DAYS);
+  const sum = (pick: (day: string) => number) => days.reduce((n, d) => n + pick(d), 0);
+  const sent = sum((d) => byDay.get(d)?.sent ?? 0);
+  const bounced = sum((d) => byDay.get(d)?.bounced ?? 0);
+  const complained = sum((d) => byDay.get(d)?.complained ?? 0);
 
-  // Midnight UTC of the first day in the window. Compared against ISO
-  // timestamps as strings, which sorts correctly because both are ISO.
-  const since = `${windowDays[0]?.day ?? today}T00:00:00.000Z`;
-  const openers = await openersSince(since);
-  const engagement = window.sent > 0 ? Math.min(1, openers / window.sent) : null;
+  // Midnight UTC of the first day in the window, compared against ISO
+  // timestamps as strings — which sorts correctly because both are ISO.
+  const openers = await openersSince(`${days[0] ?? today}T00:00:00.000Z`);
+  const engagement = sent > 0 ? Math.min(1, openers / sent) : null;
 
   const daysAtStage = daysBetween(data.config.stageSince, today);
 
@@ -146,17 +101,7 @@ export async function buildWarmupStats(): Promise<WarmupStats> {
     stageIndex: data.config.stageIndex,
     daysAtStage,
     allowance: allowanceOf(data.config.dailyCap, byDay.get(today)?.sent ?? 0),
-    chart,
-    window,
-    engagement,
-    engagementOpeners: openers,
-    verdict: verdictFor({
-      sent: window.sent,
-      bounced: window.bounced,
-      complained: window.complained,
-      engagement,
-      daysAtStage,
-    }),
+    verdict: verdictFor({ sent, bounced, complained, engagement, daysAtStage }),
     feedbackConfigured: !!process.env.EMAIL_FEEDBACK_SECRET?.trim(),
   };
 }

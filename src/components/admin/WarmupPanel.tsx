@@ -4,10 +4,7 @@ import { useState } from "react";
 import { adminPost } from "@/lib/adminClient";
 import { Icon, type IconName } from "@/components/Icon";
 import {
-  BOUNCE_WARN,
-  COMPLAINT_WARN,
   MIN_DAYS_PER_STAGE,
-  percent,
   WARMUP_STAGES,
   WARMUP_TIME_ZONE,
   type VerdictLevel,
@@ -17,9 +14,10 @@ import type { WarmupStats } from "@/lib/warmupStats";
 /**
  * The warm-up tab.
  *
- * Built around one sentence — whether to send more tomorrow than today — with
- * the numbers underneath it as the reason. A page of statistics that leaves
- * the reader to work out what to do with them is a page nobody opens twice.
+ * Three things: what is left today, whether to send more tomorrow, and the cap
+ * itself. Per-message reporting is deliberately absent — ZeptoMail already
+ * keeps it, and a second copy here would be one more thing to keep honest for
+ * no gain. The numbers that remain are the ones a decision is made from.
  */
 
 const VERDICT_STYLE: Record<VerdictLevel, { box: string; icon: IconName; tint: string }> = {
@@ -48,11 +46,6 @@ function timeOf(iso: string): string {
   }
 }
 
-function dayLabel(day: string): string {
-  const d = new Date(`${day}T12:00:00Z`);
-  return Number.isNaN(d.getTime()) ? day : d.toLocaleDateString([], { day: "numeric", month: "short" });
-}
-
 export function WarmupPanel({ initial }: { initial: WarmupStats }) {
   const [stats, setStats] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -78,12 +71,10 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
     }
   }
 
-  const { allowance, window: win, verdict, stage, next } = stats;
-  const used = Math.min(allowance.used, allowance.cap);
+  const { allowance, verdict, stage, next } = stats;
   const pct = allowance.cap > 0 ? Math.min(100, (allowance.used / allowance.cap) * 100) : 0;
+  const overCap = Math.max(0, allowance.used - allowance.cap);
   const style = VERDICT_STYLE[verdict.level];
-  // The tallest bar in the chart sets the scale; a flat 0 would divide by zero.
-  const peak = Math.max(1, ...stats.chart.map((d) => Math.max(d.sent, d.bounced)));
 
   return (
     <div className="space-y-6">
@@ -115,9 +106,7 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">Stage</p>
             <p className="mt-1 text-lg font-semibold text-navy-900">{stage.label}</p>
-            <p className="text-sm text-navy-500">
-              day {stats.daysAtStage} at this volume
-            </p>
+            <p className="text-sm text-navy-500">day {stats.daysAtStage} at this volume</p>
           </div>
         </div>
 
@@ -130,9 +119,9 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
           />
         </div>
         <p className="mt-2 text-xs text-navy-400">{stage.note}</p>
-        {used !== allowance.used ? (
+        {overCap > 0 ? (
           <p className="mt-2 text-xs font-medium text-amber-700">
-            {allowance.used - allowance.cap} sent past the cap today by override.
+            {overCap} sent past the cap today by override.
           </p>
         ) : null}
       </section>
@@ -150,6 +139,27 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
                 <li key={i}>{r}</li>
               ))}
             </ul>
+
+            {/* Sits with the verdict because it is the verdict it undermines:
+                with nothing reporting bounces, the two figures this is decided
+                on are stuck at zero and every answer looks like good news. */}
+            {!stats.feedbackConfigured ? (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
+                <strong className="font-semibold">
+                  Bounces and complaints are not being reported.
+                </strong>{" "}
+                This verdict is being decided on figures that will stay at zero, so it will look
+                healthier than it is. Set{" "}
+                <code className="rounded bg-white/70 px-1 py-0.5 text-xs">
+                  EMAIL_FEEDBACK_SECRET
+                </code>{" "}
+                in the environment, then add a webhook in the ZeptoMail console pointing at{" "}
+                <code className="rounded bg-white/70 px-1 py-0.5 text-xs">
+                  /api/email-feedback?k=&lt;that secret&gt;
+                </code>
+                .
+              </div>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap gap-2">
               {verdict.level === "ramp" && next ? (
@@ -180,118 +190,6 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
             ) : null}
           </div>
         </div>
-      </section>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* Health                                                           */}
-      {/* ---------------------------------------------------------------- */}
-      <section className="rounded-2xl border border-navy-100 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-400">
-          Last {win.days} days
-        </h2>
-        <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div>
-            <dt className="text-xs text-navy-400">Messages sent</dt>
-            <dd className="text-2xl font-bold text-navy-900">{win.sent}</dd>
-            <p className="text-xs text-navy-400">{win.reactive} were replies to an application</p>
-          </div>
-          <div>
-            <dt className="text-xs text-navy-400">Bounced</dt>
-            <dd
-              className={`text-2xl font-bold ${
-                (win.bounceRate ?? 0) >= BOUNCE_WARN ? "text-red-700" : "text-navy-900"
-              }`}
-            >
-              {percent(win.bounceRate)}
-            </dd>
-            <p className="text-xs text-navy-400">{win.bounced} of {win.sent} · keep under 2%</p>
-          </div>
-          <div>
-            <dt className="text-xs text-navy-400">Marked as spam</dt>
-            <dd
-              className={`text-2xl font-bold ${
-                (win.complaintRate ?? 0) >= COMPLAINT_WARN ? "text-red-700" : "text-navy-900"
-              }`}
-            >
-              {percent(win.complaintRate, 2)}
-            </dd>
-            <p className="text-xs text-navy-400">{win.complained} of {win.sent} · keep under 0.1%</p>
-          </div>
-          <div>
-            <dt className="text-xs text-navy-400">Opened something</dt>
-            <dd className="text-2xl font-bold text-navy-900">{percent(stats.engagement)}</dd>
-            <p className="text-xs text-navy-400">{stats.engagementOpeners} people · approximate</p>
-          </div>
-        </dl>
-
-        {!stats.feedbackConfigured ? (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            <strong className="font-semibold">Bounces and complaints are not being reported.</strong>{" "}
-            Those two figures will stay at zero — and the verdict above will look healthier than it
-            is — until ZeptoMail is told where to send them. Set{" "}
-            <code className="rounded bg-white/70 px-1 py-0.5 text-xs">EMAIL_FEEDBACK_SECRET</code> in
-            the environment, then add a webhook in the ZeptoMail console pointing at{" "}
-            <code className="rounded bg-white/70 px-1 py-0.5 text-xs">
-              /api/email-feedback?k=&lt;that secret&gt;
-            </code>
-            .
-          </div>
-        ) : null}
-
-        <p className="mt-4 text-xs text-navy-400">
-          Sends, bounces and complaints are counted exactly. The open figure is approximate: opens
-          are recorded against the person rather than the message, so they lag the send that caused
-          them. It is still worth more than a typical open rate — these are real link clicks
-          recorded on the server, not tracking pixels, so Apple and Gmail&rsquo;s image proxies
-          cannot inflate it.
-        </p>
-      </section>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* The curve                                                        */}
-      {/* ---------------------------------------------------------------- */}
-      <section className="rounded-2xl border border-navy-100 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-400">
-          Last {stats.chart.length} days
-        </h2>
-        {/* An all-zero chart draws as an empty box, which reads as broken
-            rather than as "nothing has been sent". Said in words instead. */}
-        {stats.chart.every((d) => d.sent === 0) ? (
-          <p className="mt-4 rounded-xl border border-dashed border-navy-200 px-4 py-8 text-center text-sm text-navy-400">
-            Nothing sent in the last {stats.chart.length} days. The curve appears here once it has
-            something to draw.
-          </p>
-        ) : (
-        <>
-        <div className="mt-4 flex h-32 items-end gap-1">
-          {stats.chart.map((d) => (
-            <div key={d.day} className="group relative flex h-full flex-1 flex-col justify-end">
-              {d.bounced > 0 ? (
-                <div
-                  className="w-full rounded-t bg-red-400"
-                  style={{ height: `${(d.bounced / peak) * 100}%` }}
-                />
-              ) : null}
-              <div
-                className={`w-full ${d.bounced > 0 ? "" : "rounded-t"} ${
-                  d.overrides > 0 ? "bg-amber-400" : "bg-brand-400"
-                }`}
-                style={{ height: `${(d.sent / peak) * 100}%` }}
-              />
-              <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-navy-900 px-2 py-1 text-xs text-white group-hover:block">
-                {dayLabel(d.day)}: {d.sent} sent
-                {d.bounced ? `, ${d.bounced} bounced` : ""}
-                {d.overrides ? `, ${d.overrides} over the cap` : ""}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 flex justify-between text-xs text-navy-400">
-          <span>{dayLabel(stats.chart[0]?.day ?? "")}</span>
-          <span>today</span>
-        </div>
-        </>
-        )}
       </section>
 
       {/* ---------------------------------------------------------------- */}

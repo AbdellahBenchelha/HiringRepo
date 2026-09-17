@@ -57,7 +57,7 @@ export function recentDays(n: number, at: Date | number = Date.now()): string[] 
  * the day boundary in London is 00:00 or 01:00 UTC depending on the time of
  * year, and hard-coding either is wrong for half of it.
  */
-export function nextResetAt(at: Date | number = Date.now()): string {
+function nextResetAt(at: Date | number = Date.now()): string {
   const start = typeof at === "number" ? at : at.getTime();
   const today = warmupDay(start);
   for (let h = 1; h <= 30; h++) {
@@ -160,10 +160,10 @@ export function emptyDay(day: string): DayCounts {
  * percent because one person in a thousand pressing "spam" is already unusual
  * for mail somebody asked for.
  */
-export const BOUNCE_WARN = 0.02;
-export const BOUNCE_STOP = 0.05;
-export const COMPLAINT_WARN = 0.001;
-export const COMPLAINT_STOP = 0.003;
+const BOUNCE_WARN = 0.02;
+const BOUNCE_STOP = 0.05;
+const COMPLAINT_WARN = 0.001;
+const COMPLAINT_STOP = 0.003;
 
 /**
  * Engagement worth ramping on.
@@ -172,8 +172,8 @@ export const COMPLAINT_STOP = 0.003;
  * for a job and are waiting to hear back — if only a quarter of them open, the
  * mail is probably not reaching them rather than not interesting them.
  */
-export const ENGAGEMENT_GOOD = 0.3;
-export const ENGAGEMENT_POOR = 0.15;
+const ENGAGEMENT_GOOD = 0.3;
+const ENGAGEMENT_POOR = 0.15;
 
 /**
  * Below this many sends in the window, a rate is noise.
@@ -182,7 +182,7 @@ export const ENGAGEMENT_POOR = 0.15;
  * nothing at all. The tab says "not enough data yet" instead of rendering a
  * frightening number nobody should act on.
  */
-export const MIN_SAMPLE = 50;
+const MIN_SAMPLE = 50;
 
 export interface HealthInput {
   sent: number;
@@ -204,11 +204,11 @@ export interface Verdict {
   complaintRate: number | null;
 }
 
-export function rate(part: number, whole: number): number | null {
+function rate(part: number, whole: number): number | null {
   return whole > 0 ? part / whole : null;
 }
 
-export function percent(value: number | null, digits = 1): string {
+function percent(value: number | null, digits = 1): string {
   return value === null ? "—" : `${(value * 100).toFixed(digits)}%`;
 }
 
