@@ -23,6 +23,8 @@ import type { CandidateDocument } from "@/lib/documents";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
+import { SortHeader } from "@/components/admin/SortHeader";
+import { agoInWords, lastActivityAt } from "@/lib/activity";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { VOICE_FILTERS, matchesVoiceFilter, type VoiceFilter } from "@/lib/voice";
 import {
@@ -86,6 +88,8 @@ const OFFER_FILTERS: { value: "all" | OfferStatus; label: string }[] = [
   { value: "declined", label: "Offer declined" },
 ];
 
+type InterviewSortKey = "completed" | "activity" | "name" | "country" | "score";
+
 export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
@@ -107,6 +111,42 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  /**
+   * Most recently finished first.
+   *
+   * This table had no sort at all, so rows arrived in the order the store
+   * returns them — by when each person applied. On a tab whose whole purpose
+   * is acting on a finished assessment, that put the candidate who finished
+   * ten minutes ago wherever their application date happened to fall, often
+   * pages down, and the only way to reach them was to search for a name you
+   * had to know already.
+   */
+  const [sort, setSort] = useState<{ key: InterviewSortKey; dir: "asc" | "desc" }>({
+    key: "completed",
+    dir: "desc",
+  });
+
+  /**
+   * Same as the Candidates table, deliberately: a name reads A to Z and a date
+   * reads newest first, and two tables side by side must not answer the same
+   * press differently.
+   */
+  const FIRST_DIR: Record<InterviewSortKey, "asc" | "desc"> = {
+    name: "asc",
+    country: "asc",
+    completed: "desc",
+    activity: "desc",
+    score: "desc",
+  };
+
+  function toggleSort(k: InterviewSortKey) {
+    setSort((prev) =>
+      prev.key === k
+        ? { key: k, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key: k, dir: FIRST_DIR[k] },
+    );
+    setPage(1);
+  }
   const tableTop = useRef<HTMLDivElement>(null);
 
   /**
@@ -215,23 +255,66 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
     [live, hiddenCountries],
   );
 
+  /**
+   * Filter, then sort, then page — the order the comment at the top of this
+   * file insists on. Sorting after paging would order twenty-five arbitrary
+   * rows and call it a table.
+   */
+  const sorted = useMemo(() => {
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...shown].sort((x, y) => {
+      const a = x.view;
+      const b = y.view;
+      switch (sort.key) {
+        case "name":
+          return a.fullName.localeCompare(b.fullName) * dir;
+        case "country":
+          return (a.country || "").localeCompare(b.country || "") * dir;
+        case "score": {
+          // No interview on file is not a score of zero, so those sort last
+          // whichever way the arrow points.
+          const av = a.interviewCompleted ? (a.score ?? 0) : -1;
+          const bv = b.interviewCompleted ? (b.score ?? 0) : -1;
+          if (av === -1 && bv === -1) return 0;
+          if (av === -1) return 1;
+          if (bv === -1) return -1;
+          return (av - bv) * dir;
+        }
+        case "activity":
+          return lastActivityAt(a).localeCompare(lastActivityAt(b)) * dir;
+        default:
+          // An interview done by telephone has no completion date — somebody
+          // set the status by hand. Falling back to their last activity keeps
+          // them among their contemporaries instead of dumping every one of
+          // them at the bottom for ever.
+          return (
+            (a.interviewCompletedAt || lastActivityAt(a)).localeCompare(
+              b.interviewCompletedAt || lastActivityAt(b),
+            ) * dir
+          );
+      }
+    });
+  }, [shown, sort]);
+
   const filtering = shown.length !== rows.length;
 
   // Paged after filtering, never before, so a filter always searches everyone
   // rather than whichever twenty-five happen to be on screen.
-  const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
   // Derived, not corrected afterwards: narrowing to three rows while on page 5
   // must show those three straight away, not a blank table for a frame.
   const current = Math.min(page, pageCount);
   const visible = useMemo(
-    () => shown.slice((current - 1) * pageSize, current * pageSize),
-    [shown, current, pageSize],
+    () => sorted.slice((current - 1) * pageSize, current * pageSize),
+    [sorted, current, pageSize],
   );
 
   // The dialog steps through the filtered list, so it needs both as plain
   // candidates rather than as rows.
   const everyone = useMemo(() => live.map((r) => r.view), [live]);
-  const ordered = useMemo(() => shown.map((r) => r.view), [shown]);
+  // Follows the displayed order, so "select all" and the batch that follows
+  // take people in the order the recruiter is looking at them.
+  const ordered = useMemo(() => sorted.map((r) => r.view), [sorted]);
 
   /**
    * Who is ticked, for the paced batch.
@@ -541,10 +624,11 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                   className="h-4 w-4 rounded border-navy-300 text-brand-600"
                 />
               </th>
-              <th className="px-4 py-3 font-semibold">Candidate</th>
-              <th className="px-4 py-3 font-semibold">Country</th>
-              <th className="px-4 py-3 font-semibold">Completed</th>
-              <th className="px-4 py-3 font-semibold">Score</th>
+              <SortHeader label="Candidate" k="name" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Country" k="country" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Completed" k="completed" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Last activity" k="activity" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Score" k="score" sort={sort} onSort={toggleSort} />
               <th className="px-4 py-3 font-semibold">%</th>
               <th className="px-4 py-3 font-semibold">Status</th>
               <th className="px-4 py-3 font-semibold">ID check</th>
@@ -560,7 +644,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-navy-400">
+                <td colSpan={11} className="px-4 py-10 text-center text-navy-400">
                   {rows.length === 0
                     ? "No completed interviews yet."
                     : "No interviews match your filters."}
@@ -610,6 +694,12 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                       ) : (
                         <span className="text-navy-400">Marked by hand</span>
                       )}
+                    </td>
+                    {/* What the default order reads from for anyone with no
+                        completion date, and the quickest way to see who has
+                        moved since you last looked. */}
+                    <td className="whitespace-nowrap px-4 py-3 text-navy-500">
+                      {agoInWords(lastActivityAt(c))}
                     </td>
                     <td className="px-4 py-3 font-semibold text-navy-800">
                       {scored ? `${c.score}/${c.total}` : <span className="text-navy-400">—</span>}

@@ -40,6 +40,8 @@ import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { isCountryMismatch } from "@/lib/countryCheck";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
+import { agoInWords, lastActivityAt } from "@/lib/activity";
+import { SortHeader } from "@/components/admin/SortHeader";
 import {
   followUpState,
   withSource,
@@ -48,7 +50,7 @@ import {
   type FollowUpState,
 } from "@/lib/followUp";
 
-type SortKey = "applied" | "name" | "country" | "score" | "followup";
+type SortKey = "activity" | "applied" | "name" | "country" | "score" | "followup";
 
 // Re-exported so existing imports of the view type keep working.
 export type { CandidateView };
@@ -126,8 +128,21 @@ export function CandidatesTable({
   const tableTop = useRef<HTMLDivElement>(null);
   // Which document is open in the reader, and whose it is.
   const [viewing, setViewing] = useState<{ c: CandidateView; doc: CandidateDocument } | null>(null);
+  /**
+   * Newest activity first, not newest application first.
+   *
+   * Applying is the one date that never changes again, so ordering by it put
+   * somebody who applied in June and finished their assessment this morning
+   * where June left them — pages down, behind everyone who applied later and
+   * has done nothing since. Finding them meant searching for a name you had to
+   * know already.
+   *
+   * Nothing is lost by the change: a new application is itself the most recent
+   * thing on its record, so new applicants stay at the top. Applied is still a
+   * column, one press away.
+   */
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
-    key: "applied",
+    key: "activity",
     dir: "desc",
   });
 
@@ -201,6 +216,9 @@ export function CandidatesTable({
     const dir = sort.dir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       switch (sort.key) {
+        case "activity":
+          // Strings, because these are ISO-8601 in UTC and sort as instants do.
+          return lastActivityAt(a).localeCompare(lastActivityAt(b)) * dir;
         case "name":
           return a.fullName.localeCompare(b.fullName) * dir;
         case "country":
@@ -367,8 +385,31 @@ export function CandidatesTable({
     [rows, hiddenCountries],
   );
 
+  /**
+   * Which way a column reads when you first press it.
+   *
+   * A name wants A to Z; a date wants the newest first, and a score the
+   * highest. Starting every column ascending meant pressing "Applied" showed
+   * the oldest application in the system, which is nobody's first question.
+   * Follow-up is ranked by how much attention a row needs, so ascending is
+   * already "most urgent first".
+   */
+  const FIRST_DIR: Record<SortKey, "asc" | "desc"> = {
+    name: "asc",
+    country: "asc",
+    followup: "asc",
+    applied: "desc",
+    activity: "desc",
+    score: "desc",
+  };
+
   function toggleSort(key: SortKey) {
-    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: FIRST_DIR[key] },
+    );
+    setPage(1);
   }
 
   return (
@@ -546,6 +587,7 @@ export function CandidatesTable({
               <SortHeader label="Candidate" k="name" sort={sort} onSort={toggleSort} />
               <SortHeader label="Country" k="country" sort={sort} onSort={toggleSort} />
               <SortHeader label="Applied" k="applied" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Last activity" k="activity" sort={sort} onSort={toggleSort} />
               <SortHeader label="Interview" k="score" sort={sort} onSort={toggleSort} />
               <SortHeader label="Follow-up" k="followup" sort={sort} onSort={toggleSort} />
               <th className="px-4 py-3 font-semibold">Documents</th>
@@ -559,7 +601,7 @@ export function CandidatesTable({
           </thead>
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-10 text-center text-navy-400">No candidates match your filters.</td></tr>
             ) : (
               visible.map((c) => (
                 <tr
@@ -608,6 +650,12 @@ export function CandidatesTable({
                     />
                   </td>
                   <td className="px-4 py-3 text-navy-500">{fmt(c.submittedAt || c.createdAt)}</td>
+                  {/* What the default order is actually sorting on, so the
+                      order is readable rather than something to take on
+                      trust. */}
+                  <td className="whitespace-nowrap px-4 py-3 text-navy-500">
+                    {agoInWords(lastActivityAt(c))}
+                  </td>
                   <td className="px-4 py-3">
                     <InterviewBadge completed={c.interviewCompleted} opened={!!c.interviewOpenedAt} />
                     {c.interviewCompleted && c.total ? (
@@ -775,34 +823,4 @@ function FollowUpCell({ state }: { state: FollowUpState }) {
   );
 }
 
-function SortHeader({
-  label,
-  k,
-  sort,
-  onSort,
-}: {
-  label: string;
-  k: SortKey;
-  sort: { key: SortKey; dir: "asc" | "desc" };
-  onSort: (k: SortKey) => void;
-}) {
-  const active = sort.key === k;
-  return (
-    <th className="px-4 py-3 font-semibold">
-      <button
-        type="button"
-        onClick={() => onSort(k)}
-        aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-        className={`inline-flex items-center gap-1 transition hover:text-navy-900 ${
-          active ? "text-navy-900" : ""
-        }`}
-      >
-        {label}
-        <span aria-hidden="true" className={active ? "text-brand-600" : "text-navy-300"}>
-          {active ? (sort.dir === "asc" ? "\u2191" : "\u2193") : "\u2195"}
-        </span>
-      </button>
-    </th>
-  );
-}
 
