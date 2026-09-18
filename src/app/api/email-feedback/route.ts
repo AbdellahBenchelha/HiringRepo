@@ -29,6 +29,10 @@ import { recordFeedback } from "@/lib/warmupStore";
  * Unset secret means the route refuses everything. An open endpoint that
  * writes to the numbers the sending decisions are made from would be worse
  * than no endpoint at all.
+ *
+ * Subscribe Hard bounces and Feedback loop. Soft bounces may be subscribed
+ * too — they are now counted apart and kept out of the verdict — but Delivered
+ * is only noise here, since a send is already counted as it leaves.
  */
 
 export const runtime = "nodejs";
@@ -46,50 +50,99 @@ function secretOk(given: string | null): boolean {
 }
 
 /**
- * Every string in the payload, however deeply it is nested.
+ * Where the event names itself.
  *
- * ZeptoMail's event body is a nested envelope whose exact shape is a matter
- * for their documentation and has changed before. Rather than encode a
- * structure that may not match what actually arrives — and silently record
- * nothing when it does not — this looks for the event name wherever it sits.
- * The cost is a little imprecision; the benefit is that the feature works on
- * the first delivery rather than after a round of guessing.
+ * This list is the whole point of the rewrite below. The first version of this
+ * route flattened the entire payload — every value *and every key name* — into
+ * one string and searched it for the word "bounce". That is wrong in a way
+ * that is invisible until you see a real payload, because ZeptoMail puts
+ *
+ *     "bounce_address": "bounce@…"
+ *
+ * — the envelope return-path — inside *every* event it sends, delivered and
+ * opened and complained-about alike. So every event that was not caught as a
+ * complaint first was recorded as a bounce, and the warm-up tab reported a
+ * bounce rate of 8.2% against a ZeptoMail console showing none at all. The
+ * lesson is narrow and worth keeping: read the field that names the event,
+ * never the payload it came wrapped in.
  */
-function stringsIn(value: unknown, depth = 0): string[] {
-  if (depth > 6) return [];
+const EVENT_FIELDS = ["event_name", "eventname", "event", "event_type", "action", "actiontype"];
+
+/** Strings directly under a field: ZeptoMail sends `"event_name": ["softbounce"]`. */
+function valuesOf(value: unknown, depth = 0): string[] {
   if (typeof value === "string") return [value];
-  if (Array.isArray(value)) return value.flatMap((v) => stringsIn(v, depth + 1));
-  if (value && typeof value === "object") {
-    return Object.entries(value).flatMap(([k, v]) =>
-      // Keys matter too: some payloads name the event in the key rather than
-      // the value.
-      [k, ...stringsIn(v, depth + 1)],
-    );
-  }
-  return [];
+  if (depth > 3 || !Array.isArray(value)) return [];
+  return value.flatMap((v) => valuesOf(v, depth + 1));
 }
 
-export type Feedback = "bounce" | "complaint" | null;
+/** Every event name in the payload, wherever in the envelope it sits. */
+function eventNames(value: unknown, depth = 0): string[] {
+  if (depth > 6 || !value || typeof value !== "object") return [];
+  const found: string[] = [];
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (EVENT_FIELDS.includes(key.toLowerCase().replace(/[^a-z_]/g, ""))) {
+      found.push(...valuesOf(child));
+    }
+    found.push(...eventNames(child, depth + 1));
+  }
+  return found;
+}
+
+/**
+ * ZeptoMail's own event names, which carry no separators: the console's data
+ * preview shows `"event_name": ["softbounce"]`, not `soft_bounce`. Names are
+ * stripped to letters and digits before matching so either spelling works.
+ */
+const COMPLAINT = /feedbackloop|spam|complain|abuse/;
+const HARD_BOUNCE = /hardbounce|permanentfail|invalidrecipient|undeliver|rejected/;
+const SOFT_BOUNCE = /softbounce|temporaryfail|transientfail|deferred|mailboxfull/;
+
+export type Feedback = "bounce" | "softbounce" | "complaint" | null;
+
+/**
+ * The console's "Trigger test webhook" button posts a real request to the live
+ * URL, and its sample is addressed to Zoho's example domain with a giveaway
+ * subject. Counting those as real events means every press while setting the
+ * webhook up quietly becomes a bounce on the record.
+ */
+function isTestPayload(payload: unknown): boolean {
+  let json = "";
+  try {
+    json = JSON.stringify(payload ?? "").toLowerCase();
+  } catch {
+    return false;
+  }
+  return json.includes("zylker.com") || json.includes("webhook test email");
+}
 
 /**
  * What kind of bad news this is, if any.
  *
  * Complaints are checked first: a message can be both bounced and reported,
  * and a complaint is the more serious signal of the two, so it is the one
- * worth recording.
+ * worth recording. An unrecognised name records nothing — the previous
+ * behaviour of guessing from the surrounding payload is exactly what produced
+ * a number nobody could reconcile with ZeptoMail's own reporting.
  */
 export function classify(payload: unknown): Feedback {
-  const hay = stringsIn(payload)
-    .map((s) => s.toLowerCase().replace(/[\s-]+/g, "_"))
-    .join(" ");
-  // "feedback_loop" is ZeptoMail's name for a spam report, and it need not
-  // carry any of the words above. Matched as the whole phrase rather than on
-  // "feedback" alone, because this route's own path normalises to
-  // "email_feedback" and would otherwise mark every delivery a complaint if
-  // the payload ever echoed the URL back.
-  if (/spam|complain|abuse|feedback_loop/.test(hay)) return "complaint";
-  if (/bounce|hardbounce|softbounce|undeliver|invalid_recipient|rejected/.test(hay)) return "bounce";
+  if (isTestPayload(payload)) return null;
+  for (const raw of eventNames(payload)) {
+    const name = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (COMPLAINT.test(name)) return "complaint";
+    if (HARD_BOUNCE.test(name)) return "bounce";
+    if (SOFT_BOUNCE.test(name)) return "softbounce";
+    // An event named only "bounce", with nothing saying which kind, is treated
+    // as hard: the conservative reading, and the one that errs towards holding
+    // volume back rather than sending into a list that may be bad.
+    if (/bounce/.test(name)) return "bounce";
+  }
   return null;
+}
+
+/** For the log line, so an unrecognised event is identifiable rather than a mystery. */
+export function describeEvent(payload: unknown): string {
+  const names = eventNames(payload);
+  return names.length ? names.join(", ") : "no event_name field";
 }
 
 export async function POST(req: NextRequest) {
@@ -105,19 +158,23 @@ export async function POST(req: NextRequest) {
   const parsed = await readJsonBody<unknown>(req, 64 * 1024);
   if (!parsed.ok) return NextResponse.json({ ok: true, recorded: null });
 
+  // The event name goes in the log either way. When these figures and
+  // ZeptoMail's own reporting disagree again, this line is what settles it in
+  // one look instead of a round of guessing.
+  const event = describeEvent(parsed.data);
   const kind = classify(parsed.data);
+
   if (!kind) {
-    // Opens and clicks come through here too if they are switched on. Nothing
-    // to record — the tab reads engagement from the candidates' own timestamps
-    // — but worth logging once so an unrecognised event name is visible rather
-    // than silently dropped.
+    // Deliveries, opens and clicks come through here too if they are switched
+    // on, as do the console's test payloads. Nothing to record — the tab reads
+    // engagement from the candidates' own timestamps.
     // eslint-disable-next-line no-console
-    console.log(`[email-feedback] ignored an event that is neither a bounce nor a complaint`);
+    console.log(`[email-feedback] ignored "${event}" — not a bounce or a complaint`);
     return NextResponse.json({ ok: true, recorded: null });
   }
 
   await recordFeedback(kind);
   // eslint-disable-next-line no-console
-  console.log(`[email-feedback] recorded a ${kind}`);
+  console.log(`[email-feedback] recorded "${event}" as a ${kind}`);
   return NextResponse.json({ ok: true, recorded: kind });
 }

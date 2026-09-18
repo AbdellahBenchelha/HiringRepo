@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { buildWarmupStats } from "@/lib/warmupStats";
-import { setDailyCap, stepDownStage, stepUpStage } from "@/lib/warmupStore";
+import { clearFeedback, setDailyCap, stepDownStage, stepUpStage } from "@/lib/warmupStore";
 import { WARMUP_STAGES } from "@/lib/warmup";
 
 /**
@@ -45,6 +45,11 @@ export async function POST(req: NextRequest) {
       break;
     case "stepDown":
       await stepDownStage();
+      break;
+    // Sends are untouched: see clearFeedback. This only forgets what the
+    // webhook reported, which is the only part that can be wrong.
+    case "clearFeedback":
+      await clearFeedback();
       break;
     case "setCap": {
       const cap = parsed.data.cap;

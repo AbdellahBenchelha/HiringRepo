@@ -150,12 +150,37 @@ export function recordOverride(): Promise<DayCounts> {
 }
 
 /** Reported by ZeptoMail's webhook. Never inferred from a send failing. */
-export function recordFeedback(event: "bounce" | "complaint"): Promise<DayCounts> {
+export function recordFeedback(event: "bounce" | "softbounce" | "complaint"): Promise<DayCounts> {
   return withWarmup((data) => {
     const day = touchDay(data, warmupDay());
     if (event === "bounce") day.bounced += 1;
+    else if (event === "softbounce") day.softBounced += 1;
     else day.complained += 1;
     return { data, result: { ...day } };
+  });
+}
+
+/**
+ * Forget every bounce and complaint on the record, keeping the sends.
+ *
+ * Here because a miscounted bounce is not a number you can wait out: it sits
+ * in the fourteen-day window holding the verdict at "stop" and refusing every
+ * campaign send for a fortnight, over messages that never bounced. The first
+ * version of the webhook recorded exactly that, and without this the only
+ * remedy was to edit a JSON file on a container that gets replaced.
+ *
+ * Sends are deliberately left alone. They were counted as the messages
+ * actually left, they are the honest part of the record, and clearing them
+ * would hand back today's allowance as a side effect of fixing a statistic.
+ */
+export function clearFeedback(): Promise<{ cleared: number }> {
+  return withWarmup((data) => {
+    let cleared = 0;
+    const days = data.days.map((d) => {
+      cleared += d.bounced + d.softBounced + d.complained;
+      return { ...d, bounced: 0, softBounced: 0, complained: 0 };
+    });
+    return { data: { ...data, days }, result: { cleared } };
   });
 }
 

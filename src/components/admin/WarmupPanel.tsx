@@ -51,6 +51,7 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
   const [busy, setBusy] = useState(false);
   const [capDraft, setCapDraft] = useState(String(initial.config.dailyCap));
   const [error, setError] = useState("");
+  const [confirmClear, setConfirmClear] = useState(false);
 
   async function act(body: Record<string, unknown>) {
     setBusy(true);
@@ -64,6 +65,7 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
       }
       setStats(data.stats);
       setCapDraft(String(data.stats.config.dailyCap));
+      setConfirmClear(false);
     } catch {
       setError("Could not reach the server.");
     } finally {
@@ -71,7 +73,8 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
     }
   }
 
-  const { allowance, verdict, stage, next } = stats;
+  const { allowance, verdict, stage, next, recorded } = stats;
+  const feedbackCount = recorded.bounced + recorded.softBounced + recorded.complained;
   const pct = allowance.cap > 0 ? Math.min(100, (allowance.used / allowance.cap) * 100) : 0;
   const overCap = Math.max(0, allowance.used - allowance.cap);
   const style = VERDICT_STYLE[verdict.level];
@@ -191,6 +194,98 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
           </div>
         </div>
       </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* What the verdict was computed from                               */}
+      {/* ---------------------------------------------------------------- */}
+      {/* Shown only when there is something recorded, because its whole job
+          is to be reconcilable against ZeptoMail. A tab asserting a bounce
+          rate while giving no way to see the count behind it, or to correct
+          it, is a tab you cannot argue with — which matters, because the
+          first version of the webhook counted the return-path address in
+          every payload as a bounce and held the verdict at "stop" over
+          messages that never bounced. */}
+      {feedbackCount > 0 ? (
+        <section className="rounded-2xl border border-navy-100 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-400">
+            What the verdict was computed from
+          </h2>
+          <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+            <div>
+              <dt className="text-navy-400">Sent</dt>
+              <dd className="text-lg font-semibold tabular-nums text-navy-900">{recorded.sent}</dd>
+            </div>
+            <div>
+              <dt className="text-navy-400">Hard bounces</dt>
+              <dd className="text-lg font-semibold tabular-nums text-navy-900">
+                {recorded.bounced}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-navy-400">Soft bounces</dt>
+              <dd className="text-lg font-semibold tabular-nums text-navy-500">
+                {recorded.softBounced}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-navy-400">Complaints</dt>
+              <dd className="text-lg font-semibold tabular-nums text-navy-900">
+                {recorded.complained}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-xs text-navy-500">
+            Only hard bounces and complaints decide the verdict. Soft bounces — a full mailbox, a
+            receiving server having a bad afternoon — are counted here and left out of it, because
+            the 2% and 5% lines are hard-bounce lines.
+          </p>
+
+          <p className="mt-4 text-sm text-navy-600">
+            <strong className="font-semibold text-navy-800">
+              ZeptoMail&rsquo;s own reporting is the truth.
+            </strong>{" "}
+            If these do not match what the console shows for the last fortnight, clear them — the
+            verdict is being decided on numbers that are wrong, and they would otherwise sit in the
+            window for two weeks holding sending back.
+          </p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {confirmClear ? (
+              <>
+                <span className="text-sm text-navy-700">
+                  Forget all {feedbackCount} recorded {feedbackCount === 1 ? "event" : "events"}?
+                  Sends are kept.
+                </span>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => act({ action: "clearFeedback" })}
+                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  Yes, clear them
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setConfirmClear(false)}
+                  className="rounded-xl border border-navy-200 bg-white px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirmClear(true)}
+                className="rounded-xl border border-navy-200 bg-white px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-50"
+              >
+                Clear recorded bounces and complaints
+              </button>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       {/* ---------------------------------------------------------------- */}
       {/* The cap                                                          */}

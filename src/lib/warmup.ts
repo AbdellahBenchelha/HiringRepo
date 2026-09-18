@@ -138,13 +138,24 @@ export interface DayCounts {
   reactive: number;
   /** Times the cap was knowingly exceeded. Kept so the numbers stay honest. */
   overrides: number;
-  /** Reported back by the webhook, not guessed here. */
+  /** Reported back by the webhook, not guessed here. Hard bounces only. */
   bounced: number;
+  /**
+   * Soft bounces, counted apart and deliberately kept out of the verdict.
+   *
+   * A soft bounce is a full mailbox or a receiving server having a bad
+   * afternoon; a hard bounce is an address that does not exist. Only the
+   * second says anything about how the list was built, and the 2% and 5% lines
+   * below are hard-bounce lines. Adding the two together and reading the total
+   * against those thresholds turns an ordinary week into an emergency, so they
+   * are recorded separately and only the hard ones reach `verdictFor`.
+   */
+  softBounced: number;
   complained: number;
 }
 
 export function emptyDay(day: string): DayCounts {
-  return { day, sent: 0, reactive: 0, overrides: 0, bounced: 0, complained: 0 };
+  return { day, sent: 0, reactive: 0, overrides: 0, bounced: 0, softBounced: 0, complained: 0 };
 }
 
 /** ------------------------------------------------------------------------ */

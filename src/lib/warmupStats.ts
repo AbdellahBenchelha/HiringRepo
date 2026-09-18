@@ -42,6 +42,15 @@ export interface WarmupStats {
   verdict: Verdict;
   /** Whether the bounce and complaint figures behind the verdict can be believed. */
   feedbackConfigured: boolean;
+  /**
+   * The raw counts the verdict was computed from, over the same window.
+   *
+   * Not here to be read as reporting — ZeptoMail does that better. They are
+   * here so that when the tab and the console disagree, the tab can say by how
+   * much and offer to clear what it has, rather than asserting a rate with
+   * nothing behind it.
+   */
+  recorded: { sent: number; bounced: number; softBounced: number; complained: number };
 }
 
 /** Whole days between two day keys, counting today as one. */
@@ -85,6 +94,7 @@ export async function buildWarmupStats(): Promise<WarmupStats> {
   const sum = (pick: (day: string) => number) => days.reduce((n, d) => n + pick(d), 0);
   const sent = sum((d) => byDay.get(d)?.sent ?? 0);
   const bounced = sum((d) => byDay.get(d)?.bounced ?? 0);
+  const softBounced = sum((d) => byDay.get(d)?.softBounced ?? 0);
   const complained = sum((d) => byDay.get(d)?.complained ?? 0);
 
   // Midnight UTC of the first day in the window, compared against ISO
@@ -101,7 +111,11 @@ export async function buildWarmupStats(): Promise<WarmupStats> {
     stageIndex: data.config.stageIndex,
     daysAtStage,
     allowance: allowanceOf(data.config.dailyCap, byDay.get(today)?.sent ?? 0),
+    // Soft bounces are deliberately not passed: the thresholds the verdict
+    // reads against are hard-bounce thresholds, and a full mailbox is not
+    // evidence about how a list was built.
     verdict: verdictFor({ sent, bounced, complained, engagement, daysAtStage }),
     feedbackConfigured: !!process.env.EMAIL_FEEDBACK_SECRET?.trim(),
+    recorded: { sent, bounced, softBounced, complained },
   };
 }
