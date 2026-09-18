@@ -2,30 +2,16 @@
 
 import { useState } from "react";
 import { adminPost } from "@/lib/adminClient";
-import { Icon, type IconName } from "@/components/Icon";
-import {
-  MIN_DAYS_PER_STAGE,
-  WARMUP_STAGES,
-  WARMUP_TIME_ZONE,
-  type VerdictLevel,
-} from "@/lib/warmup";
+import { MIN_DAYS_PER_STAGE, WARMUP_STAGES, WARMUP_TIME_ZONE } from "@/lib/warmup";
 import type { WarmupStats } from "@/lib/warmupStats";
 
 /**
  * The warm-up tab.
  *
- * Three things: what is left today, whether to send more tomorrow, and the cap
- * itself. Per-message reporting is deliberately absent — ZeptoMail already
- * keeps it, and a second copy here would be one more thing to keep honest for
- * no gain. The numbers that remain are the ones a decision is made from.
+ * Two things: how much may still go out today, and how much has gone out
+ * lately. Nothing about bounces, complaints or opens — ZeptoMail reports all
+ * of that, and it did not need a second, shakier copy here.
  */
-
-const VERDICT_STYLE: Record<VerdictLevel, { box: string; icon: IconName; tint: string }> = {
-  ramp: { box: "border-green-200 bg-green-50", icon: "checkCircle", tint: "text-green-700" },
-  hold: { box: "border-amber-200 bg-amber-50", icon: "clock", tint: "text-amber-700" },
-  stop: { box: "border-red-200 bg-red-50", icon: "shield", tint: "text-red-700" },
-  unknown: { box: "border-navy-200 bg-navy-50", icon: "search", tint: "text-navy-600" },
-};
 
 /**
  * The reset time, in London, whatever the browser's own clock is set to.
@@ -46,12 +32,23 @@ function timeOf(iso: string): string {
   }
 }
 
+/** One figure, with the period it covers under it. */
+function Total({ label, value, quiet = false }: { label: string; value: number; quiet?: boolean }) {
+  return (
+    <div className="min-w-[5.5rem]">
+      <p className={`text-2xl font-bold tabular-nums ${quiet ? "text-navy-500" : "text-navy-900"}`}>
+        {value}
+      </p>
+      <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-navy-400">{label}</p>
+    </div>
+  );
+}
+
 export function WarmupPanel({ initial }: { initial: WarmupStats }) {
   const [stats, setStats] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [capDraft, setCapDraft] = useState(String(initial.config.dailyCap));
   const [error, setError] = useState("");
-  const [confirmClear, setConfirmClear] = useState(false);
 
   async function act(body: Record<string, unknown>) {
     setBusy(true);
@@ -60,12 +57,13 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
       const res = await adminPost("/api/admin/warmup", body);
       const data = (await res.json()) as { ok: boolean; stats?: WarmupStats; error?: string };
       if (!data.ok || !data.stats) {
-        setError(data.error === "bad_cap" ? "That is not a number this will accept." : "That did not save.");
+        setError(
+          data.error === "bad_cap" ? "That is not a number this will accept." : "That did not save.",
+        );
         return;
       }
       setStats(data.stats);
       setCapDraft(String(data.stats.config.dailyCap));
-      setConfirmClear(false);
     } catch {
       setError("Could not reach the server.");
     } finally {
@@ -73,11 +71,10 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
     }
   }
 
-  const { allowance, verdict, stage, next, recorded } = stats;
-  const feedbackCount = recorded.bounced + recorded.softBounced + recorded.complained;
+  const { allowance, stage, next, totals } = stats;
   const pct = allowance.cap > 0 ? Math.min(100, (allowance.used / allowance.cap) * 100) : 0;
   const overCap = Math.max(0, allowance.used - allowance.cap);
-  const style = VERDICT_STYLE[verdict.level];
+  const heldLongEnough = stats.daysAtStage >= MIN_DAYS_PER_STAGE;
 
   return (
     <div className="space-y-6">
@@ -130,162 +127,27 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
       </section>
 
       {/* ---------------------------------------------------------------- */}
-      {/* The verdict                                                      */}
+      {/* How much has gone out                                            */}
       {/* ---------------------------------------------------------------- */}
-      <section className={`rounded-2xl border p-5 ${style.box}`}>
-        <div className="flex items-start gap-3">
-          <Icon name={style.icon} className={`mt-0.5 h-6 w-6 shrink-0 ${style.tint}`} />
-          <div className="min-w-0 flex-1">
-            <h2 className={`text-lg font-bold ${style.tint}`}>{verdict.headline}</h2>
-            <ul className="mt-2 space-y-1 text-sm text-navy-700">
-              {verdict.reasons.map((r, i) => (
-                <li key={i}>{r}</li>
-              ))}
-            </ul>
-
-            {/* Sits with the verdict because it is the verdict it undermines:
-                with nothing reporting bounces, the two figures this is decided
-                on are stuck at zero and every answer looks like good news. */}
-            {!stats.feedbackConfigured ? (
-              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
-                <strong className="font-semibold">
-                  Bounces and complaints are not being reported.
-                </strong>{" "}
-                This verdict is being decided on figures that will stay at zero, so it will look
-                healthier than it is. Set{" "}
-                <code className="rounded bg-white/70 px-1 py-0.5 text-xs">
-                  EMAIL_FEEDBACK_SECRET
-                </code>{" "}
-                in the environment, then add a webhook in the ZeptoMail console pointing at{" "}
-                <code className="rounded bg-white/70 px-1 py-0.5 text-xs">
-                  /api/email-feedback?k=&lt;that secret&gt;
-                </code>
-                .
-              </div>
-            ) : null}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {verdict.level === "ramp" && next ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => act({ action: "stepUp" })}
-                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
-                >
-                  Step up to {next.label} — {next.cap}/day
-                </button>
-              ) : null}
-              {stats.stageIndex > 0 ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => act({ action: "stepDown" })}
-                  className="rounded-xl border border-navy-200 bg-white px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-50"
-                >
-                  Drop back a stage
-                </button>
-              ) : null}
-            </div>
-            {verdict.level === "ramp" && !next ? (
-              <p className="mt-3 text-sm text-navy-600">
-                Fully warmed — there is no higher stage. Keep an eye on bounces anyway.
-              </p>
-            ) : null}
-          </div>
+      <section className="rounded-2xl border border-navy-100 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-400">
+          Messages sent
+        </h2>
+        <div className="mt-4 flex flex-wrap gap-x-10 gap-y-5">
+          <Total label="Today" value={totals.today} />
+          <Total label="Yesterday" value={totals.yesterday} />
+          <Total label="Last 7 days" value={totals.last7} />
+          <Total label="This month" value={totals.thisMonth} />
+          <Total label="Last month" value={totals.lastMonth} quiet />
         </div>
+        {/* Said plainly, because a count of sends looks like a delivery figure
+            and is not one: this is what left, not what arrived. */}
+        <p className="mt-4 text-xs text-navy-400">
+          Everything accepted by ZeptoMail, campaign and automatic mail together. Counted by day in
+          London. What happened to those messages after they left — delivered, opened, bounced — is
+          in ZeptoMail&rsquo;s own reports.
+        </p>
       </section>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* What the verdict was computed from                               */}
-      {/* ---------------------------------------------------------------- */}
-      {/* Shown only when there is something recorded, because its whole job
-          is to be reconcilable against ZeptoMail. A tab asserting a bounce
-          rate while giving no way to see the count behind it, or to correct
-          it, is a tab you cannot argue with — which matters, because the
-          first version of the webhook counted the return-path address in
-          every payload as a bounce and held the verdict at "stop" over
-          messages that never bounced. */}
-      {feedbackCount > 0 ? (
-        <section className="rounded-2xl border border-navy-100 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-400">
-            What the verdict was computed from
-          </h2>
-          <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-            <div>
-              <dt className="text-navy-400">Sent</dt>
-              <dd className="text-lg font-semibold tabular-nums text-navy-900">{recorded.sent}</dd>
-            </div>
-            <div>
-              <dt className="text-navy-400">Hard bounces</dt>
-              <dd className="text-lg font-semibold tabular-nums text-navy-900">
-                {recorded.bounced}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-navy-400">Soft bounces</dt>
-              <dd className="text-lg font-semibold tabular-nums text-navy-500">
-                {recorded.softBounced}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-navy-400">Complaints</dt>
-              <dd className="text-lg font-semibold tabular-nums text-navy-900">
-                {recorded.complained}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-xs text-navy-500">
-            Only hard bounces and complaints decide the verdict. Soft bounces — a full mailbox, a
-            receiving server having a bad afternoon — are counted here and left out of it, because
-            the 2% and 5% lines are hard-bounce lines.
-          </p>
-
-          <p className="mt-4 text-sm text-navy-600">
-            <strong className="font-semibold text-navy-800">
-              ZeptoMail&rsquo;s own reporting is the truth.
-            </strong>{" "}
-            If these do not match what the console shows for the last fortnight, clear them — the
-            verdict is being decided on numbers that are wrong, and they would otherwise sit in the
-            window for two weeks holding sending back.
-          </p>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {confirmClear ? (
-              <>
-                <span className="text-sm text-navy-700">
-                  Forget all {feedbackCount} recorded {feedbackCount === 1 ? "event" : "events"}?
-                  Sends are kept.
-                </span>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => act({ action: "clearFeedback" })}
-                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
-                >
-                  Yes, clear them
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setConfirmClear(false)}
-                  className="rounded-xl border border-navy-200 bg-white px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setConfirmClear(true)}
-                className="rounded-xl border border-navy-200 bg-white px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-50"
-              >
-                Clear recorded bounces and complaints
-              </button>
-            )}
-          </div>
-        </section>
-      ) : null}
 
       {/* ---------------------------------------------------------------- */}
       {/* The cap                                                          */}
@@ -344,9 +206,49 @@ export function WarmupPanel({ initial }: { initial: WarmupStats }) {
             </li>
           ))}
         </ol>
+
+        {/* Moved here from the health box that used to gate it. The wait is
+            still the point — providers read consistency over days — so the
+            button appears on the day the stage has been held long enough,
+            and until then the row says how far off it is. */}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {next && heldLongEnough ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => act({ action: "stepUp" })}
+              className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
+            >
+              Step up to {next.label} — {next.cap}/day
+            </button>
+          ) : null}
+          {stats.stageIndex > 0 ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => act({ action: "stepDown" })}
+              className="rounded-xl border border-navy-200 bg-white px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-50"
+            >
+              Drop back a stage
+            </button>
+          ) : null}
+        </div>
+
         <p className="mt-3 text-xs text-navy-400">
-          A stage is held for at least {MIN_DAYS_PER_STAGE} days before the next is offered.
-          Providers read consistency over days, so the wait is doing the work.
+          {next && !heldLongEnough ? (
+            <>
+              Day {stats.daysAtStage} of {MIN_DAYS_PER_STAGE} at this volume. {next.label} is
+              offered once the stage has been held that long — providers read consistency over
+              days, so the wait is doing the work.
+            </>
+          ) : next ? (
+            <>
+              A stage is held for at least {MIN_DAYS_PER_STAGE} days before the next is offered.
+              Providers read consistency over days, so the wait is doing the work.
+            </>
+          ) : (
+            <>Fully warmed — there is no higher stage.</>
+          )}
         </p>
       </section>
     </div>

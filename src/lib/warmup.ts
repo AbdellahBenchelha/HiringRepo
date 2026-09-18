@@ -1,10 +1,13 @@
 /**
- * The sending warm-up: how much mail may leave today, and whether it is safe
- * to send more tomorrow.
+ * The sending warm-up: how much mail may leave today, and how much already has.
  *
  * Pure module — no filesystem, no node built-ins — so the send path, the
- * worker, the API routes and the tab all agree on one definition of "today"
- * and one definition of "healthy".
+ * worker, the API routes and the tab all agree on one definition of "today".
+ *
+ * It counts sends and nothing else. Bounces, complaints, opens and clicks are
+ * ZeptoMail's reporting and are read there; this exists to hold the volume
+ * down while a new domain earns its reputation, which is the one thing
+ * ZeptoMail cannot do from outside the application.
  *
  * Why this exists at all: workroute.co.uk is a new sending domain with no
  * history. Mailbox providers decide where a new domain's mail lands mostly by
@@ -100,7 +103,7 @@ export const WARMUP_STAGES: readonly WarmupStage[] = [
   { label: "Week 3", cap: 100, note: "Roughly one full bulk batch a day." },
   { label: "Week 4", cap: 200, note: "Normal working volume for a list this size." },
   { label: "Week 5", cap: 400, note: "Only if engagement has held the whole way up." },
-  { label: "Full volume", cap: 1000, note: "Warmed. Keep watching bounces anyway." },
+  { label: "Full volume", cap: 1000, note: "Warmed. Keep an eye on ZeptoMail's bounce report anyway." },
 ];
 
 /** How many days to hold a stage before the next is offered. */
@@ -131,6 +134,14 @@ export function nextStage(index: number): WarmupStage | null {
  */
 export type EmailKind = "campaign" | "reactive";
 
+/**
+ * What a day counted.
+ *
+ * Sends only. Bounces and complaints were recorded here once, and read back as
+ * a health verdict on the tab — a second, worse copy of reporting ZeptoMail
+ * already does properly. The counters are gone rather than merely hidden,
+ * because a number nobody reads is a number nobody notices going wrong.
+ */
 export interface DayCounts {
   day: string;
   /** Messages accepted by ZeptoMail. */
@@ -138,186 +149,34 @@ export interface DayCounts {
   reactive: number;
   /** Times the cap was knowingly exceeded. Kept so the numbers stay honest. */
   overrides: number;
-  /** Reported back by the webhook, not guessed here. Hard bounces only. */
-  bounced: number;
-  /**
-   * Soft bounces, counted apart and deliberately kept out of the verdict.
-   *
-   * A soft bounce is a full mailbox or a receiving server having a bad
-   * afternoon; a hard bounce is an address that does not exist. Only the
-   * second says anything about how the list was built, and the 2% and 5% lines
-   * below are hard-bounce lines. Adding the two together and reading the total
-   * against those thresholds turns an ordinary week into an emergency, so they
-   * are recorded separately and only the hard ones reach `verdictFor`.
-   */
-  softBounced: number;
-  complained: number;
 }
 
 export function emptyDay(day: string): DayCounts {
-  return { day, sent: 0, reactive: 0, overrides: 0, bounced: 0, softBounced: 0, complained: 0 };
+  return { day, sent: 0, reactive: 0, overrides: 0 };
 }
 
 /** ------------------------------------------------------------------------ */
-/** Health                                                                    */
+/** Totals                                                                    */
 /** ------------------------------------------------------------------------ */
 
 /**
- * The lines that matter.
+ * The month a day belongs to, as `YYYY-MM`.
  *
- * Bounces and complaints are the two numbers mailbox providers act on, and
- * both are unforgiving: a few percent of hard bounces reads as a list bought
- * or scraped rather than earned, and complaints are counted in tenths of a
- * percent because one person in a thousand pressing "spam" is already unusual
- * for mail somebody asked for.
+ * Sliced off the day key rather than computed from a Date, so the month
+ * boundary lands wherever the day boundary landed and the two can never
+ * disagree about which side of midnight in London something fell.
  */
-const BOUNCE_WARN = 0.02;
-const BOUNCE_STOP = 0.05;
-const COMPLAINT_WARN = 0.001;
-const COMPLAINT_STOP = 0.003;
-
-/**
- * Engagement worth ramping on.
- *
- * Higher than a marketing benchmark on purpose. These are people who applied
- * for a job and are waiting to hear back — if only a quarter of them open, the
- * mail is probably not reaching them rather than not interesting them.
- */
-const ENGAGEMENT_GOOD = 0.3;
-const ENGAGEMENT_POOR = 0.15;
-
-/**
- * Below this many sends in the window, a rate is noise.
- *
- * One bounce out of six is 17%, which would read as a catastrophe and mean
- * nothing at all. The tab says "not enough data yet" instead of rendering a
- * frightening number nobody should act on.
- */
-const MIN_SAMPLE = 50;
-
-export interface HealthInput {
-  sent: number;
-  bounced: number;
-  complained: number;
-  /** Approximate: opens lag the sends that caused them. See the tab's note. */
-  engagement: number | null;
-  daysAtStage: number;
+export function warmupMonth(day: string): string {
+  return day.slice(0, 7);
 }
 
-export type VerdictLevel = "ramp" | "hold" | "stop" | "unknown";
-
-export interface Verdict {
-  level: VerdictLevel;
-  headline: string;
-  /** Plain sentences, shown as a list. Always says why. */
-  reasons: string[];
-  bounceRate: number | null;
-  complaintRate: number | null;
-}
-
-function rate(part: number, whole: number): number | null {
-  return whole > 0 ? part / whole : null;
-}
-
-function percent(value: number | null, digits = 1): string {
-  return value === null ? "—" : `${(value * 100).toFixed(digits)}%`;
-}
-
-/**
- * Turn the numbers into the one thing a person actually needs: whether to send
- * more tomorrow than today.
- *
- * Deliberately conservative. "Stop" is reached on either of the two hard
- * signals alone, because a domain that has started bouncing does not get
- * better by sending more, and a reputation lost over a bad week takes months
- * to rebuild.
- */
-export function verdictFor(input: HealthInput): Verdict {
-  const bounceRate = rate(input.bounced, input.sent);
-  const complaintRate = rate(input.complained, input.sent);
-  const reasons: string[] = [];
-
-  if (input.sent < MIN_SAMPLE) {
-    return {
-      level: "unknown",
-      headline: "Not enough data yet",
-      reasons: [
-        `Only ${input.sent} ${input.sent === 1 ? "message has" : "messages have"} gone out in this window. ` +
-          `Rates start meaning something at about ${MIN_SAMPLE}.`,
-        "Keep to the current cap until there is something to read.",
-      ],
-      bounceRate,
-      complaintRate,
-    };
-  }
-
-  if (bounceRate !== null && bounceRate >= BOUNCE_STOP) {
-    reasons.push(
-      `${percent(bounceRate)} of messages bounced — at or above ${percent(BOUNCE_STOP, 0)}, providers ` +
-        `treat the list as unearned. Stop and clean it before sending again.`,
-    );
-  }
-  if (complaintRate !== null && complaintRate >= COMPLAINT_STOP) {
-    reasons.push(
-      `${percent(complaintRate, 2)} marked it as spam — ${percent(COMPLAINT_STOP, 1)} is the level at ` +
-        `which a sending domain starts being filtered outright.`,
-    );
-  }
-  if (reasons.length) {
-    return { level: "stop", headline: "Stop and investigate", reasons, bounceRate, complaintRate };
-  }
-
-  if (bounceRate !== null && bounceRate >= BOUNCE_WARN) {
-    reasons.push(
-      `${percent(bounceRate)} bounced, over the ${percent(BOUNCE_WARN, 0)} line. Old addresses on the ` +
-        `re-send list are the likely cause — verify them before going wider.`,
-    );
-  }
-  if (complaintRate !== null && complaintRate >= COMPLAINT_WARN) {
-    reasons.push(
-      `${percent(complaintRate, 2)} marked it as spam, over the ${percent(COMPLAINT_WARN, 1)} line.`,
-    );
-  }
-  if (input.engagement !== null && input.engagement < ENGAGEMENT_POOR) {
-    reasons.push(
-      `Only ${percent(input.engagement)} opened anything. For mail people are waiting for, that ` +
-        `usually means it is not reaching them.`,
-    );
-  }
-  if (reasons.length) {
-    return {
-      level: "hold",
-      headline: "Hold at this volume",
-      reasons,
-      bounceRate,
-      complaintRate,
-    };
-  }
-
-  if (input.daysAtStage < MIN_DAYS_PER_STAGE) {
-    return {
-      level: "hold",
-      headline: "Healthy — hold a little longer",
-      reasons: [
-        `Nothing wrong: ${percent(bounceRate)} bounced and ${percent(complaintRate, 2)} complained.`,
-        `${input.daysAtStage} of ${MIN_DAYS_PER_STAGE} days at this volume. Providers read consistency ` +
-          `over days, so the wait is the point.`,
-      ],
-      bounceRate,
-      complaintRate,
-    };
-  }
-
-  reasons.push(`${percent(bounceRate)} bounced and ${percent(complaintRate, 2)} complained — both well inside the lines.`);
-  if (input.engagement !== null) {
-    reasons.push(
-      input.engagement >= ENGAGEMENT_GOOD
-        ? `${percent(input.engagement)} opened something, which is what earns the inbox.`
-        : `${percent(input.engagement)} opened something — acceptable, but worth watching as volume rises.`,
-    );
-  }
-  reasons.push(`${input.daysAtStage} days held at this volume.`);
-  return { level: "ramp", headline: "Safe to step up", reasons, bounceRate, complaintRate };
+/** The month before a `YYYY-MM` key. String arithmetic, so no clock is involved. */
+export function previousMonth(month: string): string {
+  const year = Number(month.slice(0, 4));
+  const m = Number(month.slice(5, 7));
+  return m > 1
+    ? `${year}-${String(m - 1).padStart(2, "0")}`
+    : `${year - 1}-12`;
 }
 
 /** ------------------------------------------------------------------------ */

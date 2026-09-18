@@ -60,10 +60,19 @@ function normalise(raw: unknown): WarmupData {
   const data = (raw ?? {}) as Partial<WarmupData>;
   const cfg = (data.config ?? {}) as Partial<WarmupConfig>;
   const today = warmupDay();
+  // Built field by field rather than spread, so a row written by an older
+  // version — which carried bounce and complaint counters — is read as the
+  // fields that still exist and loses the rest on the next write, instead of
+  // carrying dead numbers forward forever.
   const days = Array.isArray(data.days)
     ? data.days
         .filter((d): d is DayCounts => !!d && typeof d.day === "string")
-        .map((d) => ({ ...emptyDay(d.day), ...d }))
+        .map((d) => ({
+          day: d.day,
+          sent: typeof d.sent === "number" ? d.sent : 0,
+          reactive: typeof d.reactive === "number" ? d.reactive : 0,
+          overrides: typeof d.overrides === "number" ? d.overrides : 0,
+        }))
     : [];
   return {
     config: {
@@ -128,8 +137,7 @@ function touchDay(data: WarmupData, day: string): DayCounts {
  * One message left. Counted whatever kind it was.
  *
  * Reactive mail is counted but never blocked, so the tab describes everything
- * that actually went out rather than only the part that was throttled — a
- * bounce rate computed over half your sending would be worse than none.
+ * that actually went out rather than only the part that was throttled.
  */
 export function recordSend(kind: EmailKind): Promise<DayCounts> {
   return withWarmup((data) => {
@@ -146,41 +154,6 @@ export function recordOverride(): Promise<DayCounts> {
     const day = touchDay(data, warmupDay());
     day.overrides += 1;
     return { data, result: { ...day } };
-  });
-}
-
-/** Reported by ZeptoMail's webhook. Never inferred from a send failing. */
-export function recordFeedback(event: "bounce" | "softbounce" | "complaint"): Promise<DayCounts> {
-  return withWarmup((data) => {
-    const day = touchDay(data, warmupDay());
-    if (event === "bounce") day.bounced += 1;
-    else if (event === "softbounce") day.softBounced += 1;
-    else day.complained += 1;
-    return { data, result: { ...day } };
-  });
-}
-
-/**
- * Forget every bounce and complaint on the record, keeping the sends.
- *
- * Here because a miscounted bounce is not a number you can wait out: it sits
- * in the fourteen-day window holding the verdict at "stop" and refusing every
- * campaign send for a fortnight, over messages that never bounced. The first
- * version of the webhook recorded exactly that, and without this the only
- * remedy was to edit a JSON file on a container that gets replaced.
- *
- * Sends are deliberately left alone. They were counted as the messages
- * actually left, they are the honest part of the record, and clearing them
- * would hand back today's allowance as a side effect of fixing a statistic.
- */
-export function clearFeedback(): Promise<{ cleared: number }> {
-  return withWarmup((data) => {
-    let cleared = 0;
-    const days = data.days.map((d) => {
-      cleared += d.bounced + d.softBounced + d.complained;
-      return { ...d, bounced: 0, softBounced: 0, complained: 0 };
-    });
-    return { data: { ...data, days }, result: { cleared } };
   });
 }
 
@@ -240,7 +213,7 @@ export function stepUpStage(): Promise<WarmupConfig> {
   });
 }
 
-/** Drop back a rung. Offered when the verdict says stop. */
+/** Drop back a rung, for a week that wants holding rather than climbing. */
 export function stepDownStage(): Promise<WarmupConfig> {
   return withWarmup((data) => {
     const index = Math.max(data.config.stageIndex - 1, 0);
