@@ -49,6 +49,8 @@ export default async function OfferPage({
   const params = await searchParams;
   const token = one(params.t);
   const declineFirst = one(params.a) === "decline";
+  // Which request brought them, when two are outstanding: ?step=residence
+  const wantsResidence = one(params.step) === "residence";
 
   const read = readOfferToken(token);
   if (!read.ok) {
@@ -113,21 +115,18 @@ export default async function OfferPage({
     // Coming back to the link with the identity step outstanding resumes it.
     // Without this, closing the browser between accepting and photographing a
     // passport would lock them out of finishing, with no way back in.
-    if (needsIdentity) {
-      return (
-        <Shell>
-          <IdentityStep
-            candidateId={candidate.id}
-            firstName={candidate.firstName}
-            notice={reuploadNotice}
-          />
-        </Shell>
-      );
-    }
-    // Then residence, for the same reason: this is where the two countries
+    // Residence too, for the same reason: this is where the two countries
     // first appeared side by side, so it is where the request almost always
-    // lands, and coming back to the link has to resume it.
-    if (residenceOwed(candidate)) {
+    // lands.
+    //
+    // Which of the two comes first is decided by the link they followed
+    // rather than by the order written here. A candidate can owe both, and an
+    // email headed "send your residence permit" that opens a form asking for
+    // a passport is a broken promise — that is exactly what happened before
+    // the marker existed.
+    const owesResidence = residenceOwed(candidate);
+
+    if (owesResidence && (wantsResidence || !needsIdentity)) {
       return (
         <Shell>
           <ResidenceStep
@@ -135,6 +134,19 @@ export default async function OfferPage({
             firstName={candidate.firstName}
             country={candidate.residenceCountry}
             reason={candidate.residenceReason}
+            alsoOwed={needsIdentity ? "your identity documents" : undefined}
+          />
+        </Shell>
+      );
+    }
+
+    if (needsIdentity) {
+      return (
+        <Shell>
+          <IdentityStep
+            candidateId={candidate.id}
+            firstName={candidate.firstName}
+            notice={reuploadNotice}
           />
         </Shell>
       );

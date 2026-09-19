@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { adminPost } from "@/lib/adminClient";
 import { Icon } from "@/components/Icon";
 import { DOCUMENT_LABEL, type CandidateDocument } from "@/lib/documents";
@@ -76,6 +76,35 @@ export function ResidencePanel({
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [emailed, setEmailed] = useState("");
+  /**
+   * Their words, fetched rather than passed in.
+   *
+   * Not on the candidate view for the same reason the SSN is not: that object
+   * is built for every row of a table. Fetched as this panel opens rather
+   * than behind a button, because it is the one thing a recruiter has to read
+   * and a panel that hid it would be a panel nobody read.
+   */
+  const [explanation, setExplanation] = useState("");
+
+  const explainedAt = state.residenceExplainedAt;
+  useEffect(() => {
+    if (!explainedAt) {
+      setExplanation("");
+      return;
+    }
+    let live = true;
+    fetch(`/api/admin/candidates/${id}/residence`)
+      .then((r) => r.json())
+      .then((d: { ok?: boolean; explanation?: string }) => {
+        if (live && d.ok) setExplanation(d.explanation ?? "");
+      })
+      .catch(() => {
+        /* the status still shows; the words are the only thing missing */
+      });
+    return () => {
+      live = false;
+    };
+  }, [id, explainedAt]);
 
   const status = residenceStatus({ ...state, documents });
   const style = STYLE[status];
@@ -177,15 +206,15 @@ export function ResidencePanel({
       {/* ------------------------------------------------------------------ */}
       {/* What came back                                                     */}
       {/* ------------------------------------------------------------------ */}
-      {state.residenceExplanation ? (
+      {explainedAt ? (
         <div className="mt-4 rounded-xl border-2 border-blue-200 bg-blue-50/60 p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-blue-800">
-            They have no permit — their explanation, {fmt(state.residenceExplainedAt)}
+            They have no permit — their explanation, {fmt(explainedAt)}
           </p>
           {/* Their own words, wrapped and whole. Truncating the one thing a
               recruiter has to judge would defeat the point of asking. */}
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-navy-800">
-            {state.residenceExplanation}
+            {explanation || "Loading…"}
           </p>
         </div>
       ) : null}

@@ -37,6 +37,8 @@ export default async function InterviewPage({
   const candidateId = one(params.c); // short link: /interview?c=<id>
   const tokenParam = one(params.id); // legacy signed-token link
   const sourceParam = one(params.s); // which message brought them: ?s=reminder-email
+  // Which request brought them, when two are outstanding: ?step=residence
+  const wantsResidence = one(params.step) === "residence";
 
   // Prefer the short candidate-id link (looked up in storage); fall back to the
   // legacy signed token so old links keep working.
@@ -88,11 +90,31 @@ export default async function InterviewPage({
     }
   }
 
-  // Verification outranks the completion notice. Someone whose phone died
-  // halfway through uploading has to be able to return and finish; showing them
-  // "you have already completed this" would strand their application with no
-  // way to move it forward.
-  if (identity?.id && alreadyCompleted && needsVerification) {
+  // Both document steps outrank the completion notice. Someone whose phone
+  // died halfway through uploading has to be able to return and finish;
+  // showing them "you have already completed this" would strand their
+  // application with no way to move it forward.
+  //
+  // Which of the two comes first is decided by the link they followed, not by
+  // the order these are written in. A candidate can owe both at once, and
+  // whichever this page picked for itself would be wrong half the time —
+  // opening an email headed "send your residence permit" and being shown a
+  // form asking for a passport is the version that actually happened.
+  const owesIdentity = alreadyCompleted && needsVerification;
+
+  if (identity?.id && residence && (wantsResidence || !owesIdentity)) {
+    return (
+      <ResidencePage
+        candidateId={identity.id}
+        firstName={identity.name?.split(" ")[0]}
+        country={residence.country}
+        reason={residence.reason}
+        alsoOwed={owesIdentity ? "new photos of your identity document" : undefined}
+      />
+    );
+  }
+
+  if (identity?.id && owesIdentity) {
     return (
       <IdentityVerification
         candidateId={identity.id}
@@ -102,21 +124,6 @@ export default async function InterviewPage({
     );
   }
 
-  // Residence sits between the two document steps and the recording. It is
-  // asked for the same reason identity is — something has to be true before an
-  // agreement can be drawn up — and putting it after the completion notice
-  // would tell somebody with an outstanding request that there is nothing left
-  // for them to do.
-  if (identity?.id && residence) {
-    return (
-      <ResidencePage
-        candidateId={identity.id}
-        firstName={identity.name?.split(" ")[0]}
-        country={residence.country}
-        reason={residence.reason}
-      />
-    );
-  }
 
   // The voice assessment comes after identity, which is a filter on whether
   // the application proceeds at all, and before the completion notice, which

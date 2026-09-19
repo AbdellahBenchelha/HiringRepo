@@ -24,11 +24,23 @@ export function ResidenceStep({
   firstName,
   country,
   reason,
+  alsoOwed,
 }: {
   candidateId: string;
   firstName?: string;
   country?: string;
   reason?: string;
+  /**
+   * What else is outstanding, named in the candidate's terms, when this is not
+   * the only thing we are waiting for.
+   *
+   * A candidate can owe two things at once — new identity photographs and a
+   * residence permit — and finishing one of them must not end with "you can
+   * close this page". Somebody who does as they are told and is then told
+   * they are finished will not come back for the other half, and the
+   * application stalls with nobody at fault.
+   */
+  alsoOwed?: string;
 }) {
   const [done, setDone] = useState(false);
 
@@ -43,7 +55,25 @@ export function ResidenceStep({
           {firstName ? `Thanks, ${firstName}. ` : ""}We have what you sent. A member of our team
           will look at it and come back to you about your agreement.
         </p>
-        <p className="mt-6 text-sm text-navy-400">You can close this page.</p>
+
+        {alsoOwed ? (
+          <>
+            <p className="mt-6 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+              There is one more thing outstanding: {alsoOwed}.
+            </p>
+            {/* A reload rather than a link, because the page works out which
+                step is next from the record — which has just changed. */}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn-primary mt-4 justify-center"
+            >
+              Continue to the next step
+            </button>
+          </>
+        ) : (
+          <p className="mt-6 text-sm text-navy-400">You can close this page.</p>
+        )}
       </div>
     );
   }
@@ -64,6 +94,7 @@ export function ResidencePage(props: {
   firstName?: string;
   country?: string;
   reason?: string;
+  alsoOwed?: string;
 }) {
   return (
     <div className="min-h-screen bg-cream-100 py-8 sm:py-12">

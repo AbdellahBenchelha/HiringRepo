@@ -87,17 +87,22 @@ export interface CandidateView {
   identityReuploadRequestedAt?: string;
   identityReuploadReason?: string;
   /**
-   * Proof of residence. The state, not the photographs — those are fetched
-   * through the documents route like every other image, one at a time.
+   * Proof of residence. The state only.
    *
-   * The candidate's explanation IS carried here: it is a paragraph they wrote
-   * for a recruiter to read, and a panel that made you click to see it would
-   * mean nobody read it.
+   * Not the photographs, which are fetched through the documents route like
+   * every other image — and deliberately not the candidate's written
+   * explanation either. That paragraph can name somebody's immigration
+   * status, and this view is built for every row of a table: carrying it here
+   * would send forty people's explanations to a browser that renders none of
+   * them. The panel fetches the one it is showing, the same way the SSN
+   * field does.
+   *
+   * `residenceExplainedAt` stays, because the status is derived from whether
+   * they answered, not from what they wrote.
    */
   residenceRequestedAt?: string;
   residenceCountry?: string;
   residenceReason?: string;
-  residenceExplanation?: string;
   residenceExplainedAt?: string;
   residenceVerifiedAt?: string;
   residenceRejectedAt?: string;
@@ -284,7 +289,6 @@ export function toCandidateView(
     residenceRequestedAt: c.residenceRequestedAt,
     residenceCountry: c.residenceCountry,
     residenceReason: c.residenceReason,
-    residenceExplanation: c.residenceExplanation,
     residenceExplainedAt: c.residenceExplainedAt,
     residenceVerifiedAt: c.residenceVerifiedAt,
     residenceRejectedAt: c.residenceRejectedAt,

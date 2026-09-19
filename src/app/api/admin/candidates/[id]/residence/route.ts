@@ -52,19 +52,52 @@ function baseUrl(req: NextRequest): string {
  * re-request uses, and for the same reason — this is usually asked after an
  * offer, since the acceptance form is where the two countries first appear
  * side by side.
+ *
+ * `step=residence` is the important part. Both of those pages show whichever
+ * step is outstanding, and a candidate can easily owe two at once — new
+ * identity photographs and a residence permit. Without the marker the page
+ * picks for itself, and somebody who opened an email headed "send your
+ * residence permit" is shown a form asking for a passport instead. The marker
+ * says which request brought them here, so the page can honour it.
  */
 function uploadUrlFor(c: Candidate, base: string): string {
   if (c.offerSentAt && c.offer) {
     const token = createOfferToken({ id: c.id, offerSentAt: c.offerSentAt });
-    return `${base}/offer?t=${encodeURIComponent(token)}`;
+    return `${base}/offer?t=${encodeURIComponent(token)}&step=residence`;
   }
-  return `${base}/interview?c=${c.id}`;
+  return `${base}/interview?c=${c.id}&step=residence`;
 }
 
 /** What country to name, when the recruiter did not say. */
 function countryFor(c: Candidate, given: unknown): string {
   if (typeof given === "string" && given.trim()) return given.trim().slice(0, 100);
   return (c.confirmedDetails?.country || c.country || "").trim();
+}
+
+/**
+ * One candidate's written explanation, handed over on request.
+ *
+ * Its own route rather than a field on the candidate view, for the reason the
+ * SSN has one: the view is built for every row of every table, and a
+ * paragraph in which somebody describes their immigration status is not
+ * something to send forty copies of to a browser that renders none of them.
+ *
+ * The panel fetches it as it opens, so a recruiter still simply sees it —
+ * making them press a button to read the one thing they have to judge would
+ * mean nobody read it.
+ */
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  if (!(await getAdminSession())) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+  const { id } = await ctx.params;
+  const candidate = await getCandidate(id);
+  if (!candidate) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+
+  return NextResponse.json(
+    { ok: true, explanation: candidate.residenceExplanation ?? "" },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } },
+  );
 }
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
