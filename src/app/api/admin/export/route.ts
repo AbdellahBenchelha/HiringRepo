@@ -4,6 +4,7 @@ import { listCandidates } from "@/lib/store";
 import { DOCUMENT_SHORT } from "@/lib/documents";
 import { requiredCountries } from "@/lib/verificationStore";
 import { verificationStatus, VERIFICATION_LABEL } from "@/lib/verification";
+import { residenceStatus, RESIDENCE_LABEL } from "@/lib/residence";
 import { countryMatch } from "@/lib/countryCheck";
 import { summariseCheck } from "@/lib/companyCheck";
 
@@ -50,6 +51,11 @@ export async function GET(_req: NextRequest) {
     "Country", "Sent from", "Country mismatch", "City", "Address", "LinkedIn", "Position", "Languages",
     "Status", "Applied", "Submitted", "Interview completed", "Score", "Total",
     "Assessment email sent", "Possible duplicate", "Duplicate of", "Documents", "ID verification", "Verified on",
+    // The state only, never the photographs and never the candidate's written
+    // explanation: an export is opened on laptops and mailed around, and a
+    // paragraph somebody wrote about their immigration status does not belong
+    // in a spreadsheet. It stays in the panel, where one person reads it.
+    "Residence proof",
     // Everything the candidate re-stated on accepting. This is the record an
     // agreement is written from, so a backup without it is not a backup.
     "Offer accepted", "Details confirmed", "Engaged as", "Company name", "Company number",
@@ -97,6 +103,7 @@ export async function GET(_req: NextRequest) {
         .join(" / "),
       VERIFICATION_LABEL[verificationStatus(c, required)],
       c.verifiedAt ?? c.rejectedAt ?? "",
+      RESIDENCE_LABEL[residenceStatus(c)],
       c.offerAcceptedAt ?? "",
       c.confirmedDetailsAt ?? "",
       c.confirmedDetails?.engagedAs ?? "",

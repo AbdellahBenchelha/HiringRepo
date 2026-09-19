@@ -12,6 +12,7 @@ import {
   verificationPatch,
   verificationStateOf,
 } from "@/components/admin/VerificationPanel";
+import { ResidencePanel } from "@/components/admin/ResidencePanel";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
@@ -505,6 +506,18 @@ export function CandidateProfileModal({
           <IdentityReminderButton
             candidate={candidate}
             onSent={(patch) => onChange(patch)}
+          />
+
+          {/* Under the identity check, because it is that question one step
+              on: the passport says which country issued it, this says which
+              country they are in, and the agreement carries the second. */}
+          <ResidencePanel
+            id={candidate.id}
+            documents={candidate.documents}
+            state={candidate}
+            defaultCountry={candidate.confirmedDetails?.country || candidate.country}
+            nationality={candidate.confirmedDetails?.nationality}
+            onChange={(patch) => onChange(patch)}
           />
         </div>
         </div>

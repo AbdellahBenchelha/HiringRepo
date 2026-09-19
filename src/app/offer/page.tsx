@@ -13,6 +13,8 @@ import { NextSteps } from "@/components/offer/NextSteps";
 import { siteConfig } from "@/config/site";
 import { IdentityStep } from "@/components/verify/IdentityStep";
 import { identityStillNeeded, identityReuploadPending } from "@/lib/verification";
+import { residenceOwed } from "@/lib/residence";
+import { ResidenceStep } from "@/components/verify/ResidenceStep";
 import { sampleAgreement } from "@/lib/sampleAgreement";
 import { Icon } from "@/components/Icon";
 import { OfferAcceptForm } from "@/components/offer/OfferAcceptForm";
@@ -118,6 +120,21 @@ export default async function OfferPage({
             candidateId={candidate.id}
             firstName={candidate.firstName}
             notice={reuploadNotice}
+          />
+        </Shell>
+      );
+    }
+    // Then residence, for the same reason: this is where the two countries
+    // first appeared side by side, so it is where the request almost always
+    // lands, and coming back to the link has to resume it.
+    if (residenceOwed(candidate)) {
+      return (
+        <Shell>
+          <ResidenceStep
+            candidateId={candidate.id}
+            firstName={candidate.firstName}
+            country={candidate.residenceCountry}
+            reason={candidate.residenceReason}
           />
         </Shell>
       );

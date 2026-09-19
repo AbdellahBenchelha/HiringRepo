@@ -86,6 +86,25 @@ export interface CandidateView {
   identityDocumentType?: IdDocumentType;
   identityReuploadRequestedAt?: string;
   identityReuploadReason?: string;
+  /**
+   * Proof of residence. The state, not the photographs — those are fetched
+   * through the documents route like every other image, one at a time.
+   *
+   * The candidate's explanation IS carried here: it is a paragraph they wrote
+   * for a recruiter to read, and a panel that made you click to see it would
+   * mean nobody read it.
+   */
+  residenceRequestedAt?: string;
+  residenceCountry?: string;
+  residenceReason?: string;
+  residenceExplanation?: string;
+  residenceExplainedAt?: string;
+  residenceVerifiedAt?: string;
+  residenceRejectedAt?: string;
+  residenceRejectionReason?: string;
+  residenceReuploadRequestedAt?: string;
+  residenceReuploadReason?: string;
+  residenceImagesDeletedAt?: string;
   /** The live identity check: what was sent, and how far they got with it. */
   liveVerificationUrl?: string;
   liveVerificationSentAt?: string;
@@ -262,6 +281,17 @@ export function toCandidateView(
     identityDocumentType: c.identityDocumentType,
     identityReuploadRequestedAt: c.identityReuploadRequestedAt,
     identityReuploadReason: c.identityReuploadReason,
+    residenceRequestedAt: c.residenceRequestedAt,
+    residenceCountry: c.residenceCountry,
+    residenceReason: c.residenceReason,
+    residenceExplanation: c.residenceExplanation,
+    residenceExplainedAt: c.residenceExplainedAt,
+    residenceVerifiedAt: c.residenceVerifiedAt,
+    residenceRejectedAt: c.residenceRejectedAt,
+    residenceRejectionReason: c.residenceRejectionReason,
+    residenceReuploadRequestedAt: c.residenceReuploadRequestedAt,
+    residenceReuploadReason: c.residenceReuploadReason,
+    residenceImagesDeletedAt: c.residenceImagesDeletedAt,
     liveVerificationUrl: c.liveVerificationUrl,
     liveVerificationSentAt: c.liveVerificationSentAt,
     liveVerificationCount: c.liveVerificationCount,

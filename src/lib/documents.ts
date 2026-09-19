@@ -25,6 +25,21 @@ export const DOCUMENT_KINDS = [
   "identityBack",
   "selfie",
   /**
+   * Where somebody lives, as opposed to which country issued their passport.
+   *
+   * The two are routinely different and the identity documents cannot tell
+   * them apart: an Indian passport is proof of nationality and says nothing
+   * about somebody living in China. The written agreement carries a residence
+   * address, so for those candidates the address is the thing that needs
+   * evidence, and a permit is the document that gives it.
+   *
+   * A pair, for the same reason the identity check is a pair: a photograph of
+   * a card proves a card exists, and a photograph of a person holding it
+   * proves it is theirs.
+   */
+  "residencePermit",
+  "residenceSelfie",
+  /**
    * The spoken assessment, read aloud by the candidate.
    *
    * Recorded in the browser or attached from a phone's own recorder — the two
@@ -60,6 +75,8 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   identity: "ID document",
   identityBack: "ID document — back",
   selfie: "Photo holding ID",
+  residencePermit: "Residence permit",
+  residenceSelfie: "Photo holding residence permit",
   voice: "Voice recording",
   w9: "Form W-9",
   formation: "Certificate of Formation",
@@ -74,6 +91,8 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   identity: "ID",
   identityBack: "ID back",
   selfie: "Photo",
+  residencePermit: "Permit",
+  residenceSelfie: "Permit photo",
   voice: "Voice",
   w9: "W-9",
   formation: "Formation",
@@ -140,7 +159,13 @@ export const AUDIO_MIME = [
 
 /** Which kinds are photographs rather than documents. */
 export function isImageKind(kind: DocumentKind): boolean {
-  return kind === "identity" || kind === "identityBack" || kind === "selfie";
+  return (
+    kind === "identity" ||
+    kind === "identityBack" ||
+    kind === "selfie" ||
+    kind === "residencePermit" ||
+    kind === "residenceSelfie"
+  );
 }
 
 /** Which kinds are audio. */

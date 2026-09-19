@@ -39,6 +39,11 @@ import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
 import { DetectedCountryFlag } from "@/components/admin/DetectedCountryFlag";
 import { isCountryMismatch } from "@/lib/countryCheck";
+import {
+  RESIDENCE_FILTERS,
+  matchesResidenceFilter,
+  type ResidenceFilter,
+} from "@/lib/residence";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { agoInWords, lastActivityAt } from "@/lib/activity";
 import { SortHeader } from "@/components/admin/SortHeader";
@@ -121,6 +126,7 @@ export function CandidatesTable({
       : "all",
   );
   const [mismatchOnly, setMismatchOnly] = useState(false);
+  const [residenceFilter, setResidenceFilter] = useState<ResidenceFilter>("all");
   const [formFilter, setFormFilter] = useState<"all" | "yes" | "no">("all");
   const [heldOnly, setHeldOnly] = useState(!!initialHeld);
   const [page, setPage] = useState(1);
@@ -203,6 +209,7 @@ export function CandidatesTable({
       if (formFilter === "yes" && !c.formCompleted) return false;
       if (formFilter === "no" && c.formCompleted) return false;
       if (mismatchOnly && !isCountryMismatch(c)) return false;
+      if (!matchesResidenceFilter(residenceFilter, c)) return false;
       if (heldOnly && !c.inviteHeld) return false;
       if (from) {
         const applied = new Date(c.submittedAt || c.createdAt).getTime();
@@ -210,7 +217,7 @@ export function CandidatesTable({
       }
       return true;
     });
-  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries, followUpFilter, followUps, verifyFilter, mismatchOnly, formFilter, heldOnly]);
+  }, [rows, search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries, followUpFilter, followUps, verifyFilter, mismatchOnly, residenceFilter, formFilter, heldOnly]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -310,7 +317,7 @@ export function CandidatesTable({
   // Any change to what is being listed sends you back to the front of it.
   useEffect(() => {
     setPage(1);
-  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries.hidden, followUpFilter, verifyFilter, mismatchOnly, formFilter, heldOnly, pageSize, sort]);
+  }, [search, interviewFilter, statusFilter, dateFrom, countryFilter, hiddenCountries.hidden, followUpFilter, verifyFilter, mismatchOnly, residenceFilter, formFilter, heldOnly, pageSize, sort]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -481,6 +488,20 @@ export function CandidatesTable({
           <label className="label" htmlFor="verification">ID verification</label>
           <select id="verification" className="select" value={verifyFilter} onChange={(e) => setVerifyFilter(e.target.value as VerificationFilter)}>
             {VERIFICATION_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </div>
+        {/* Its own select rather than a checkbox: unlike the mismatch flag
+            this has real states worth listing separately — waiting on them,
+            waiting on us, and answered in writing rather than with a card. */}
+        <div>
+          <label className="label" htmlFor="residence">Residence</label>
+          <select
+            id="residence"
+            className="select"
+            value={residenceFilter}
+            onChange={(e) => setResidenceFilter(e.target.value as ResidenceFilter)}
+          >
+            {RESIDENCE_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
         </div>
         <div>

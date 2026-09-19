@@ -9,6 +9,8 @@ import {
   verificationStatus,
 } from "@/lib/verification";
 import { IdentityVerification } from "@/components/interview/IdentityVerification";
+import { ResidencePage } from "@/components/verify/ResidenceStep";
+import { residenceOwed } from "@/lib/residence";
 import { VoiceStep } from "@/components/verify/VoiceStep";
 import { voiceRecordingNeeded, voiceScript } from "@/lib/voice";
 import { getCandidate } from "@/lib/store";
@@ -47,6 +49,8 @@ export default async function InterviewPage({
   let reuploadNotice: string | undefined;
   /** True while a voice recording has been asked for and none has arrived. */
   let needsVoice = false;
+  /** Set only while a recruiter's request for proof of residence is outstanding. */
+  let residence: { country?: string; reason?: string } | null = null;
   if (candidateId) {
     const cand = await getCandidate(candidateId);
     if (cand) {
@@ -57,6 +61,9 @@ export default async function InterviewPage({
       verificationSent = verificationStatus(cand, required) === "provided";
       if (identityReuploadPending(cand)) reuploadNotice = cand.identityReuploadReason;
       needsVoice = voiceRecordingNeeded(cand);
+      if (residenceOwed(cand)) {
+        residence = { country: cand.residenceCountry, reason: cand.residenceReason };
+      }
     }
   }
   if (!identity && tokenParam) {
@@ -73,6 +80,9 @@ export default async function InterviewPage({
           verificationSent = verificationStatus(cand, required) === "provided";
           if (identityReuploadPending(cand)) reuploadNotice = cand.identityReuploadReason;
           needsVoice = voiceRecordingNeeded(cand);
+          if (residenceOwed(cand)) {
+            residence = { country: cand.residenceCountry, reason: cand.residenceReason };
+          }
         }
       }
     }
@@ -88,6 +98,22 @@ export default async function InterviewPage({
         candidateId={identity.id}
         fullName={identity.name}
         notice={reuploadNotice}
+      />
+    );
+  }
+
+  // Residence sits between the two document steps and the recording. It is
+  // asked for the same reason identity is — something has to be true before an
+  // agreement can be drawn up — and putting it after the completion notice
+  // would tell somebody with an outstanding request that there is nothing left
+  // for them to do.
+  if (identity?.id && residence) {
+    return (
+      <ResidencePage
+        candidateId={identity.id}
+        firstName={identity.name?.split(" ")[0]}
+        country={residence.country}
+        reason={residence.reason}
       />
     );
   }

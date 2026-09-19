@@ -30,6 +30,7 @@ import {
 } from "@/lib/documents";
 import { needsBack, type IdDocumentType } from "@/lib/identityDocuments";
 import { isVerificationKind } from "@/lib/verification";
+import { isResidenceKind, MAX_EXPLANATION } from "@/lib/residence";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
@@ -229,6 +230,33 @@ export interface Candidate {
    */
   identityReuploadRequestedAt?: string;
   identityReuploadReason?: string;
+  /**
+   * Proof that they live where they say they live — see lib/residence.
+   *
+   * Separate from the identity check because it answers a different question.
+   * A passport proves nationality; the agreement carries a residence address,
+   * and for somebody whose nationality and address are different countries
+   * nothing on file connects them to that address. Asked by hand, never by a
+   * rule: the mismatch is common and almost always innocent.
+   *
+   * `residenceCountry` records which country they were asked to prove, so a
+   * later "verified" means something specific rather than "a document
+   * arrived". The explanation is for the candidate who has no permit — their
+   * own words about why they are in the country, which a recruiter reads and
+   * then accepts or does not.
+   */
+  residenceRequestedAt?: string;
+  residenceCountry?: string;
+  residenceReason?: string;
+  residenceExplanation?: string;
+  residenceExplainedAt?: string;
+  residenceVerifiedAt?: string;
+  residenceVerifiedBy?: string;
+  residenceRejectedAt?: string;
+  residenceRejectionReason?: string;
+  residenceReuploadRequestedAt?: string;
+  residenceReuploadReason?: string;
+  residenceImagesDeletedAt?: string;
   /**
    * The live identity check: a link created for this one candidate in Persona,
    * emailed to them by hand when photographs could not settle the question.
@@ -1145,6 +1173,119 @@ export function requestIdentityReupload(
     delete c.rejectedAt;
     delete c.rejectionReason;
     return { list, result: c };
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Proof of residence                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Ask a candidate to prove they live where they say they do.
+ *
+ * Any previous answer is cleared along with any previous decision: asking is
+ * reopening the question, and a stale "verified" or a stale explanation
+ * sitting under a fresh request would make the panel contradict itself. The
+ * photographs are deliberately left where they are — a recruiter asking again
+ * usually wants to compare what arrives against what came before.
+ */
+export function requestResidenceProof(
+  id: string,
+  country: string,
+  reason: string,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    const first = !c.residenceRequestedAt;
+    c.residenceRequestedAt = first ? now : c.residenceRequestedAt;
+    // Always moved forward, so "asked again" is what decides whether an older
+    // upload still counts as an answer.
+    c.residenceReuploadRequestedAt = first ? undefined : now;
+    c.residenceCountry = country.trim().slice(0, 100) || undefined;
+    c.residenceReason = reason.trim().slice(0, 400) || undefined;
+    if (!first) c.residenceReuploadReason = c.residenceReason;
+    delete c.residenceVerifiedAt;
+    delete c.residenceVerifiedBy;
+    delete c.residenceRejectedAt;
+    delete c.residenceRejectionReason;
+    delete c.residenceExplanation;
+    delete c.residenceExplainedAt;
+    return { list, result: c };
+  });
+}
+
+/** A recruiter's decision on what came back. */
+export function setResidenceDecision(
+  id: string,
+  decision: "verify" | "reject",
+  by?: string,
+  reason?: string,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    if (decision === "verify") {
+      c.residenceVerifiedAt = now;
+      c.residenceVerifiedBy = by;
+      delete c.residenceRejectedAt;
+      delete c.residenceRejectionReason;
+    } else {
+      c.residenceRejectedAt = now;
+      c.residenceRejectionReason = (reason ?? "").trim().slice(0, 400) || undefined;
+      delete c.residenceVerifiedAt;
+      delete c.residenceVerifiedBy;
+    }
+    return { list, result: c };
+  });
+}
+
+/**
+ * The candidate's own words, when they have no permit.
+ *
+ * Written only while the question is actually open. Someone returning to an
+ * old link after a decision has been made must not be able to reopen it by
+ * typing into a box, and a recruiter who has verified a permit should not
+ * find the verdict quietly replaced by a paragraph.
+ */
+export type ExplanationResult =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "not_asked" | "closed" };
+
+export function recordResidenceExplanation(
+  id: string,
+  text: string,
+): Promise<ExplanationResult> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: { ok: false, reason: "not_found" } as ExplanationResult };
+    if (!c.residenceRequestedAt) {
+      return { list, result: { ok: false, reason: "not_asked" } as ExplanationResult };
+    }
+    if (c.residenceVerifiedAt || c.residenceRejectedAt) {
+      return { list, result: { ok: false, reason: "closed" } as ExplanationResult };
+    }
+    c.residenceExplanation = text.trim().slice(0, MAX_EXPLANATION) || undefined;
+    c.residenceExplainedAt = new Date().toISOString();
+    return { list, result: { ok: true } as ExplanationResult };
+  });
+}
+
+/** Forget the permit photographs, keeping the decision made from them. */
+export function clearResidenceImages(id: string): Promise<string[]> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: [] as string[] };
+    const removed: string[] = [];
+    c.documents = (c.documents ?? []).filter((d) => {
+      if (!isResidenceKind(d.kind)) return true;
+      if (d.key) removed.push(d.key);
+      return false;
+    });
+    if (removed.length) c.residenceImagesDeletedAt = new Date().toISOString();
+    return { list, result: removed };
   });
 }
 

@@ -694,6 +694,207 @@ export function identityReuploadHtml({ fullName, url, reason }: IdentityReupload
 </html>`;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Proof of residence                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface ResidenceRequestEmail {
+  fullName: string;
+  /** Where the upload step is — their offer link, or their assessment link. */
+  url: string;
+  /** Why we are asking, in the recruiter's words. Shown verbatim. */
+  reason: string;
+  /** The country they are being asked to prove they live in. */
+  country?: string;
+}
+
+/**
+ * Asking somebody to prove they live where they say they live.
+ *
+ * The hardest email in the set to write, because the honest version of the
+ * subject is "we cannot tell whether you really live there" and nobody
+ * receiving that feels well treated. So it leads with the reason it is being
+ * asked — the agreement carries their address — which is true, is the actual
+ * motivation, and is a thing a person can agree is reasonable.
+ *
+ * It is careful to say the situation is normal. Someone with an Indian
+ * passport living in China has done nothing unusual and nothing wrong, and by
+ * this point they have been offered a job; an email that reads as an
+ * accusation at that moment loses people who would have been fine.
+ *
+ * And it says up front what to do if they have no permit, because the ones
+ * with no permit are exactly the ones who will otherwise go quiet.
+ */
+export function residenceRequestSubject(): string {
+  return `One more document before your agreement – ${siteConfig.company.name}`;
+}
+
+export function residenceRequestText({
+  fullName,
+  url,
+  reason,
+  country,
+}: ResidenceRequestEmail): string {
+  const name = firstNameOf(fullName);
+  const where = country ? ` in ${country}` : "";
+  return [
+    `Hi ${name},`,
+    ``,
+    `Before we can prepare your written agreement we need to confirm the`,
+    `address it will be issued to.`,
+    ``,
+    reason,
+    ``,
+    `What we need:`,
+    ``,
+    `  1. A photo of your residence permit${where ? ` for${where.replace(" in", "")}` : ""}`,
+    `  2. A photo of you holding that permit`,
+    ``,
+    `Please open your link and send them:`,
+    ``,
+    url,
+    ``,
+    `If you do not have a residence permit, that is not a problem — tick the`,
+    `box on that page that says you do not have one, and write a short`,
+    `explanation of why you are living${where}. A recruiter will read it.`,
+    ``,
+    `This is a normal step and nothing has gone wrong with your application.`,
+    `Your documents are stored privately, seen only by our recruitment team,`,
+    `and used only to confirm your address. We will never ask you for a`,
+    `payment, a bank card, or a password.`,
+    ``,
+    `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function residenceRequestHtml({
+  fullName,
+  url,
+  reason,
+  country,
+}: ResidenceRequestEmail): string {
+  const name = esc(firstNameOf(fullName));
+  const href = esc(url);
+  const company = esc(siteConfig.company.name);
+  const where = country ? ` in ${esc(country)}` : "";
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(residenceRequestSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Two photos from your phone, so your agreement carries the right address.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          One more document before your agreement
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 20px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Before we can prepare your written agreement we need to confirm the address it will
+          be issued to.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:18px 22px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+              ${esc(reason)}
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 8px 0;font:700 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+          What we need
+        </p>
+        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          1. A photo of your <strong style="color:${NAVY};">residence permit</strong><br>
+          2. A photo of <strong style="color:${NAVY};">you holding that permit</strong>
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${href}" style="display:inline-block;padding:15px 40px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Send my documents
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          <strong style="color:${NAVY};">No residence permit?</strong> That is not a problem.
+          Tick the box on that page that says you do not have one, and write a short explanation
+          of why you are living${where}. A recruiter will read it.
+        </p>
+
+        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          This is a normal step and nothing has gone wrong with your application.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+              Your documents are stored privately, seen only by our recruitment team, and used
+              only to confirm your address. We will <strong style="color:${NAVY};">never</strong>
+              ask you for a payment, a bank card, or a password.
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:20px 0 0 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${href}" style="color:#b06e0c;word-break:break-all;">${href}</a>
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 /**
  * Chasing a voice assessment that has been asked for and not sent.
  *
