@@ -107,7 +107,7 @@ export function Header() {
         {/* ---------------------------------------------------------------- */}
         {/* The mark                                                         */}
         {/* ---------------------------------------------------------------- */}
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center">
           <Link
             href="/#home"
             className="flex items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500"
@@ -123,23 +123,6 @@ export function Header() {
               </span>
             </span>
           </Link>
-
-          {/* The registered company, beside the name and set off by a rule.
-              Candidates for remote work are phished constantly, and a number
-              anybody can check on Companies House answers the first question
-              they are right to be asking. It is the real registration — this
-              is not a badge for decoration. */}
-          <span className="hidden items-center gap-3 lg:flex">
-            <span aria-hidden="true" className="h-8 w-px bg-cream-300" />
-            <span className="flex flex-col leading-none">
-              <span className="text-[8.5px] font-bold uppercase tracking-[0.13em] text-navy-400">
-                UK Registered
-              </span>
-              <span className="mt-1 text-[11px] font-semibold tabular-nums text-navy-600">
-                {siteConfig.legal.registrationNumber}
-              </span>
-            </span>
-          </span>
         </div>
 
         {/* ---------------------------------------------------------------- */}
@@ -261,10 +244,6 @@ export function Header() {
               <div onClick={() => setMobileOpen(false)}>
                 <ApplyButton label="Apply Now" className="w-full" />
               </div>
-            </li>
-            <li className="px-4 pt-4 text-[11px] text-navy-400">
-              {siteConfig.legal.registeredName} · Registered in Scotland no.{" "}
-              {siteConfig.legal.registrationNumber}
             </li>
           </ul>
         </div>
