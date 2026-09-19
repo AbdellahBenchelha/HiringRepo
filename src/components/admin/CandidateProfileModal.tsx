@@ -368,7 +368,16 @@ export function CandidateProfileModal({
           {ssnExpected(candidate.country) || candidate.hasSsn ? (
             <Field
               label="Social Security Number"
-              value={<SsnField candidateId={candidate.id} hasSsn={candidate.hasSsn} />}
+              value={
+                <SsnField
+                  candidateId={candidate.id}
+                  hasSsn={candidate.hasSsn}
+                  // Whether we have got as far as asking. Without this, every
+                  // US candidate who has not been offered anything yet reads
+                  // as one who was asked and did not answer.
+                  asked={!!candidate.offerAcceptedAt}
+                />
+              }
             />
           ) : null}
           <Field label="City" value={candidate.city} />

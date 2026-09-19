@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const candidate = await getCandidate(id);
   if (!candidate) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
-  const ssn = ssnOf(candidate.application);
+  const ssn = ssnOf(candidate);
   if (!ssn) return NextResponse.json({ ok: false, error: "no_ssn" }, { status: 404 });
 
   // eslint-disable-next-line no-console

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readOfferToken } from "@/lib/token";
 import { acceptOfferWithDetails, declineOfferByCandidate, type OfferAnswerResult } from "@/lib/store";
 import { validateConfirmed } from "@/lib/hiring";
+import { isValidSsn, ssnExpected } from "@/lib/ssn";
 import { formatAvailability, validateAvailability } from "@/lib/availability";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
     reason?: string;
     details?: Record<string, unknown>;
     availability?: unknown;
+    /** US only, and outside `details` on purpose — see acceptOfferWithDetails. */
+    ssn?: unknown;
   }>(req, 16 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const body = parsed.data;
@@ -85,15 +88,44 @@ export async function POST(req: NextRequest) {
   // Both sets of problems at once. Told about the name and then, on the next
   // attempt, about the days is how a form loses somebody halfway through.
   const when = validateAvailability(body.availability);
-  if (!check.ok || !when.ok) {
+
+  /**
+   * The SSN, asked of US candidates at this point and no earlier.
+   *
+   * Keyed off the country they are confirming right now rather than the one
+   * they applied with: this is the country the agreement is drawn up for, and
+   * someone who has moved should be asked on what is true today. Checked here
+   * as well as in the form, because a browser check is a courtesy and not a
+   * control.
+   */
+  const ssnRaw = typeof body.ssn === "string" ? body.ssn.trim() : "";
+  const ssnWanted = check.ok && ssnExpected(check.details.country);
+  const ssnProblems: string[] = [];
+  if (ssnWanted) {
+    if (!ssnRaw) ssnProblems.push("Social Security Number is required.");
+    else if (!isValidSsn(ssnRaw)) {
+      ssnProblems.push("Please enter a valid Social Security Number (e.g. 123-45-6789).");
+    }
+  }
+
+  if (!check.ok || !when.ok || ssnProblems.length) {
     const problems = [
       ...(check.ok ? [] : check.problems),
       ...(when.ok ? [] : when.problems),
+      ...ssnProblems,
     ];
     return NextResponse.json({ ok: false, error: "invalid", problems }, { status: 400 });
   }
 
-  const result = await acceptOfferWithDetails(id, offerSentAt, check.details, when.availability);
+  const result = await acceptOfferWithDetails(
+    id,
+    offerSentAt,
+    check.details,
+    when.availability,
+    // Stored only when it was the thing asked for. A number posted by a
+    // candidate outside the US is discarded rather than kept for no reason.
+    ssnWanted ? ssnRaw : undefined,
+  );
   if (!result.ok) {
     const { status, error } = REFUSAL[result.reason];
     return NextResponse.json({ ok: false, error }, { status });

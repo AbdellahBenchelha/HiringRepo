@@ -7,6 +7,7 @@ import { CountrySelect } from "@/components/forms/CountrySelect";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { DateSelect } from "@/components/forms/DateSelect";
 import { ENGAGED_AS, validateConfirmed, type EngagedAs } from "@/lib/hiring";
+import { isValidSsn, ssnExpected } from "@/lib/ssn";
 import { IdentityAsk } from "@/components/verify/IdentityStep";
 import {
   AvailabilityPicker,
@@ -80,6 +81,8 @@ export function OfferAcceptForm({
   const [city, setCity] = useState(initial.city);
   const [address, setAddress] = useState(initial.address);
   const [postcode, setPostcode] = useState("");
+  // Asked of US candidates only, and only here — never on the application.
+  const [ssn, setSsn] = useState("");
 
   // No days chosen to begin with. A pre-ticked Monday-to-Friday is a schedule
   // we picked and they agreed to by not noticing — and the whole point of
@@ -102,6 +105,16 @@ export function OfferAcceptForm({
   const [declining, setDeclining] = useState(!!declineFirst);
   const [declineReason, setDeclineReason] = useState("");
 
+  /**
+   * Whether to ask for an SSN, from the country being confirmed right now.
+   *
+   * Not the country they applied with: this is the country the agreement is
+   * drawn up for, so someone who has moved is asked on what is true today, and
+   * someone who corrects a wrong country here sees the question appear or
+   * disappear as they do it.
+   */
+  const ssnWanted = ssnExpected(country);
+
   function details() {
     return {
       engagedAs, companyName, companyNumber, companyVat,
@@ -119,6 +132,12 @@ export function OfferAcceptForm({
     const check = validateConfirmed(details());
     const when = validateAvailability(toAvailability(availability));
     const found = [...(check.ok ? [] : check.problems), ...(when.ok ? [] : when.problems)];
+    if (ssnWanted) {
+      if (!ssn.trim()) found.push("Social Security Number is required.");
+      else if (!isValidSsn(ssn)) {
+        found.push("Please enter a valid Social Security Number (e.g. 123-45-6789).");
+      }
+    }
     if (!agreed) found.push("Please tick the box to confirm you accept the offer.");
     setProblems(found);
     if (found.length) {
@@ -136,6 +155,9 @@ export function OfferAcceptForm({
           action: "accept",
           details: details(),
           availability: toAvailability(availability),
+          // Outside details on purpose: those are shown back in the Admin
+          // Panel and travel with the candidate view, and this must not.
+          ssn: ssnWanted ? ssn.trim() : undefined,
         }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; problems?: string[] };
@@ -415,6 +437,42 @@ export function OfferAcceptForm({
                   autoComplete="postal-code"
                 />
               </Field>
+
+              {/* The one field that is not a correction of something already
+                  on file. It is asked here rather than on the application
+                  because at this point there is a reason to hold one: an
+                  offer has been made and is being accepted. Said out loud on
+                  the form, because a form that asks for an SSN without
+                  explaining itself is a form people are right to distrust. */}
+              {ssnWanted ? (
+                <Field
+                  label="Social Security Number"
+                  htmlFor="ssn"
+                  required
+                  className="sm:col-span-2"
+                  hint="Needed for US tax and right-to-work paperwork once an offer is accepted. Format: 123-45-6789."
+                >
+                  <TextInput
+                    id="ssn"
+                    value={ssn}
+                    inputMode="numeric"
+                    placeholder="123-45-6789"
+                    autoComplete="off"
+                    onChange={(e) => {
+                      // Formatted as it is typed, so the dashes are never the
+                      // thing that fails the check.
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                      setSsn(
+                        digits.length > 5
+                          ? `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
+                          : digits.length > 3
+                            ? `${digits.slice(0, 3)}-${digits.slice(3)}`
+                            : digits,
+                      );
+                    }}
+                  />
+                </Field>
+              ) : null}
 
               <Field label="Full address" htmlFor="address" required className="sm:col-span-2">
                 <TextInput

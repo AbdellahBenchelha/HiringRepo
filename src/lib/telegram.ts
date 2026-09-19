@@ -20,7 +20,8 @@ const PERSONAL_FIELDS: { key: string; label: string }[] = [
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
   { key: "country", label: "Country" },
-  { key: "ssn", label: "SSN (US verification)" },
+  // No SSN. It is not on an application any more — it is asked once an offer
+  // has been accepted — and a Telegram chat is the last place it should go.
   { key: "city", label: "City" },
   { key: "address", label: "Address" },
   { key: "linkedin", label: "LinkedIn" },

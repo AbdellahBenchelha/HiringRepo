@@ -70,6 +70,19 @@ export interface Candidate {
   position: string;
   /** Full raw application snapshot for the profile view. */
   application: Record<string, unknown>;
+  /**
+   * The US Social Security Number, given when the offer was accepted.
+   *
+   * Deliberately its own field rather than part of confirmedDetails: those are
+   * built into the candidate view and travel to the browser with every row of
+   * every table, and this is the one value that must never do that. It is read
+   * through `ssnOf` and served by one route, to one person, on request.
+   *
+   * Absent for everybody who is not in the United States, and for anyone who
+   * has not accepted an offer yet. Candidates who applied before the question
+   * moved still carry theirs inside `application`; `ssnOf` reads both.
+   */
+  ssn?: string;
   status: CandidateStatus;
   createdAt: string;
   submittedAt?: string;
@@ -1247,6 +1260,15 @@ export function acceptOfferWithDetails(
   offerSentAt: string,
   details: ConfirmedDetails,
   availability?: Availability,
+  /**
+   * The US Social Security Number, when one was asked for and given.
+   *
+   * Passed separately rather than folded into `details`, because those go into
+   * the candidate view and this must not. Written in the same serialized write
+   * as the acceptance, so there is never an accepted offer whose SSN landed a
+   * moment later or not at all.
+   */
+  ssn?: string,
 ): Promise<OfferAnswerResult> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
@@ -1263,6 +1285,9 @@ export function acceptOfferWithDetails(
     c.confirmedDetails = details;
     c.confirmedDetailsAt = now;
     if (availability) c.availability = availability;
+    // Only ever set, never cleared: a second acceptance cannot happen, and an
+    // empty value arriving here should not wipe a number already on file.
+    if (ssn) c.ssn = ssn;
     // They accepted what the page showed them, which is the capped figure —
     // so that is what the record says they accepted. The original survives on
     // the offer as hoursCappedFrom, because their email still quotes it.

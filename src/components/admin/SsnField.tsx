@@ -20,21 +20,38 @@ import { Icon } from "@/components/Icon";
 export function SsnField({
   candidateId,
   hasSsn,
+  asked,
 }: {
   candidateId: string;
   /** Whether one is on file. The number itself is never passed in. */
   hasSsn: boolean;
+  /**
+   * Whether the question has been reached yet — it is asked when an offer is
+   * accepted, not on the application.
+   *
+   * Without it, a US candidate who applied this morning would be shown as
+   * having failed to provide something nobody has asked them for, which is
+   * the sort of thing that gets chased.
+   */
+  asked: boolean;
 }) {
   const [ssn, setSsn] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   if (!hasSsn) {
-    return (
+    return asked ? (
       <span className="text-amber-700">
         Not provided
         <span className="mt-0.5 block text-xs font-normal text-navy-400">
-          Asked of US applicants on the application form.
+          Asked of US candidates when they accept their offer.
+        </span>
+      </span>
+    ) : (
+      <span className="text-navy-400">
+        Not asked yet
+        <span className="mt-0.5 block text-xs font-normal text-navy-400">
+          US candidates are asked when they accept their offer.
         </span>
       </span>
     );

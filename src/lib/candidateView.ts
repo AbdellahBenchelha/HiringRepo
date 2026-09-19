@@ -289,7 +289,7 @@ export function toCandidateView(
     identityReminderCount: c.identityReminderCount,
     identityReminders: c.identityReminders,
     identityNeeded: !!c.offerAcceptedAt && identityStillNeeded(c),
-    hasSsn: hasSsn(c.application),
+    hasSsn: hasSsn(c),
     interviewCompletedAt: c.interview?.completedAt,
     voiceRequestedAt: c.voiceRequestedAt,
     offer: c.offer,
