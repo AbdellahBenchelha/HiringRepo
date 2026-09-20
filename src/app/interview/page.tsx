@@ -101,6 +101,23 @@ export default async function InterviewPage({
   // opening an email headed "send your residence permit" and being shown a
   // form asking for a passport is the version that actually happened.
   const owesIdentity = alreadyCompleted && needsVerification;
+  const owesVoice = alreadyCompleted && needsVoice;
+
+  /**
+   * What is still waiting once residence is dealt with, in the candidate's
+   * own terms — or nothing, when residence really was the last of it.
+   *
+   * Both of the steps that can follow are named here rather than just the
+   * identity one. A recording is as easy to leave outstanding as a
+   * photograph, and "you can close this page" said over the top of either is
+   * the same failure: somebody does as they are told, is told they are
+   * finished, and does not come back.
+   */
+  const afterResidence = owesIdentity
+    ? "new photos of your identity document"
+    : owesVoice
+      ? "your short voice recording"
+      : undefined;
 
   if (identity?.id && residence && (wantsResidence || !owesIdentity)) {
     return (
@@ -109,7 +126,7 @@ export default async function InterviewPage({
         firstName={identity.name?.split(" ")[0]}
         country={residence.country}
         reason={residence.reason}
-        alsoOwed={owesIdentity ? "new photos of your identity document" : undefined}
+        alsoOwed={afterResidence}
       />
     );
   }
