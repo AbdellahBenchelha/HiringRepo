@@ -100,6 +100,13 @@ export interface CandidateView {
    * `residenceExplainedAt` stays, because the status is derived from whether
    * they answered, not from what they wrote.
    */
+  /**
+   * Starred by a recruiter. A boolean, so it costs nothing to carry on every
+   * row — and it has to be on every row, because the Favorites tab is built
+   * by filtering the same list everything else is.
+   */
+  favorite?: boolean;
+  favoritedAt?: string;
   residenceRequestedAt?: string;
   residenceCountry?: string;
   residenceReason?: string;
@@ -286,6 +293,8 @@ export function toCandidateView(
     identityDocumentType: c.identityDocumentType,
     identityReuploadRequestedAt: c.identityReuploadRequestedAt,
     identityReuploadReason: c.identityReuploadReason,
+    favorite: c.favorite,
+    favoritedAt: c.favoritedAt,
     residenceRequestedAt: c.residenceRequestedAt,
     residenceCountry: c.residenceCountry,
     residenceReason: c.residenceReason,

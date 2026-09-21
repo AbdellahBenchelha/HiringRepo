@@ -72,6 +72,21 @@ export interface Candidate {
   /** Full raw application snapshot for the profile view. */
   application: Record<string, unknown>;
   /**
+   * Marked by a recruiter as one to come back to.
+   *
+   * Deliberately not a status. A status says where somebody is in the
+   * process and every candidate has exactly one; this says a person found
+   * them interesting, which is orthogonal to all of it — you can favourite a
+   * new applicant and a hired one, and doing so must not move either of them
+   * out of the list they belong in.
+   *
+   * `favoritedAt` is kept so the tab can put the most recently marked first,
+   * which is almost always the order you want: the ones you starred this
+   * morning are the ones you are still thinking about.
+   */
+  favorite?: boolean;
+  favoritedAt?: string;
+  /**
    * The US Social Security Number, given when the offer was accepted.
    *
    * Deliberately its own field rather than part of confirmedDetails: those are
@@ -1172,6 +1187,29 @@ export function requestIdentityReupload(
     delete c.verifiedBy;
     delete c.rejectedAt;
     delete c.rejectionReason;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Star a candidate, or take the star off.
+ *
+ * The flag is removed rather than set to false when unstarred, so a record
+ * that was never starred and one that was starred and unstarred look the
+ * same on disk. There is nothing to learn from the difference and keeping it
+ * would mean every candidate eventually carrying a dead `false`.
+ */
+export function setFavorite(id: string, favorite: boolean): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    if (favorite) {
+      c.favorite = true;
+      c.favoritedAt = new Date().toISOString();
+    } else {
+      delete c.favorite;
+      delete c.favoritedAt;
+    }
     return { list, result: c };
   });
 }

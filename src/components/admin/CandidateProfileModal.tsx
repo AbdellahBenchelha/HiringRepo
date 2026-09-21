@@ -29,12 +29,16 @@ import { currentVoiceRecording } from "@/lib/voice";
 import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
 import { SsnField } from "@/components/admin/SsnField";
+import { FavoriteButton } from "@/components/admin/FavoriteButton";
 import { ssnExpected } from "@/lib/ssn";
 
 /**
- * The groups the profile is divided into, in the order the hiring actually
- * happens: who they are, how they did, whether they are who they say, the
- * offer, the company it is with, and what we have written down.
+ * The groups the profile is divided into.
+ *
+ * Ordered by how often they are opened rather than by when they happen in the
+ * process: who they are, then the three checks that stand between an accepted
+ * offer and an agreement, then the assessment — which is read once and settled
+ * — and finally the notes.
  *
  * Every panel stays mounted whichever group is showing, hidden rather than
  * unmounted. A half-typed note, a pasted verification link and a part-filled
@@ -44,10 +48,10 @@ import { ssnExpected } from "@/lib/ssn";
  */
 const TABS = [
   { id: "profile", label: "Profile", icon: "users" },
-  { id: "assessment", label: "Assessment", icon: "microphone" },
   { id: "id", label: "ID check", icon: "shield" },
-  { id: "offer", label: "Offer", icon: "handshake" },
   { id: "company", label: "Company", icon: "briefcase" },
+  { id: "offer", label: "Offer", icon: "handshake" },
+  { id: "assessment", label: "Assessment", icon: "microphone" },
   { id: "notes", label: "Notes", icon: "document" },
 ] as const satisfies readonly { id: string; label: string; icon: IconName }[];
 
@@ -216,7 +220,20 @@ export function CandidateProfileModal({
       >
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-xl font-bold text-navy-900">{candidate.fullName || "Candidate"}</h3>
+            {/* The star sits with the name rather than among the actions on
+                the right, because it is about the person rather than about
+                the record — and because the name is what you are looking at
+                when you decide somebody is worth coming back to. */}
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-xl font-bold text-navy-900">
+                {candidate.fullName || "Candidate"}
+              </h3>
+              <FavoriteButton
+                id={candidate.id}
+                favorite={!!candidate.favorite}
+                onChange={(patch) => onChange(patch)}
+              />
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {/* There is no status column on either table, so this is the only
                   place a status can be changed. Editable here rather than a

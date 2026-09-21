@@ -10,6 +10,10 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin", label: "Dashboard", icon: "trendingUp" },
   { href: "/admin/candidates", label: "Candidates", icon: "users" },
   { href: "/admin/interviews", label: "Interviews", icon: "chat" },
+  // Cuts across the stages below rather than being one of them: somebody can
+  // be starred while they are waiting, offered or hired, and starring them
+  // does not move them out of whichever of those they are in.
+  { href: "/admin/favorites", label: "Favorites", icon: "star" },
   { href: "/admin/waiting", label: "Waiting", icon: "clock" },
   { href: "/admin/offers", label: "Offers", icon: "handshake" },
   { href: "/admin/accepted", label: "Accepted", icon: "checkCircle" },
