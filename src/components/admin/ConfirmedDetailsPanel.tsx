@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon } from "@/components/Icon";
+import { CopyButton } from "@/components/admin/CopyButton";
 import { CONFIRMED_LABELS, detailChanges, type ConfirmedDetails } from "@/lib/hiring";
 import {
   COMPANY_TIME_LABEL,
@@ -56,6 +57,33 @@ function rowsFor(d: ConfirmedDetails): [string, string][] {
   return rows;
 }
 
+/**
+ * The seven fields an agreement is typed from, as text to paste.
+ *
+ * Deliberately not every row above. Nationality, phone and the engagement type
+ * are on the record and are not what somebody is copying — they are copying
+ * the name, the date of birth and the address that the contract carries, and a
+ * block with three extra lines in it means deleting three lines every time.
+ *
+ * Labelled rather than bare values, because the place this lands is a document
+ * or a message to somebody else, where "Morocco" on a line of its own is a
+ * word with no job. The labels are the same ones shown above, so what is
+ * pasted matches what was read.
+ */
+function copyText(d: ConfirmedDetails): string {
+  return [
+    [CONFIRMED_LABELS.firstName, d.firstName],
+    [CONFIRMED_LABELS.lastName, d.lastName],
+    [CONFIRMED_LABELS.dob, d.dob],
+    [CONFIRMED_LABELS.country, d.country],
+    [CONFIRMED_LABELS.city, d.city],
+    [CONFIRMED_LABELS.address, d.address],
+    [CONFIRMED_LABELS.postcode, d.postcode],
+  ]
+    .map(([label, value]) => `${label}: ${value || ""}`)
+    .join("\n");
+}
+
 export function ConfirmedDetailsPanel({ candidate }: { candidate: CandidateView }) {
   const d = candidate.confirmedDetails;
 
@@ -85,6 +113,16 @@ export function ConfirmedDetailsPanel({ candidate }: { candidate: CandidateView 
           <Icon name="checkCircle" className="h-3 w-3" />
           Confirmed {fmt(candidate.confirmedDetailsAt)}
         </span>
+        {/* Up here with the heading rather than under the list: it copies the
+            block as a whole, and a button sitting after the last row reads as
+            belonging to that row. */}
+        <CopyButton
+          text={copyText(d)}
+          label="Copy details"
+          copiedLabel="Copied"
+          title="Copy name, date of birth and address"
+          className="ml-auto"
+        />
       </div>
 
       <dl className="mt-3 divide-y divide-navy-50">
