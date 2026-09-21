@@ -15,13 +15,20 @@ import { Footer } from "./Footer";
  * The offer page is the same kind of place: a private page reached from a
  * signed link, where an "Apply Now" button in the header is nonsense for
  * someone who has already been offered the job.
+ *
+ * So is the live identity check. That page draws its own branded header inside
+ * a full-height main, so the site chrome stacked a second logo above it — and
+ * it is the one page where a row of links away is worst: the candidate is
+ * mid-handover to the verification provider, having just been told the link
+ * they are about to follow is genuinely ours.
  */
 function hidden(pathname: string | null): boolean {
   if (!pathname) return false;
   return (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/interview") ||
-    pathname.startsWith("/offer")
+    pathname.startsWith("/offer") ||
+    pathname.startsWith("/verify")
   );
 }
 
