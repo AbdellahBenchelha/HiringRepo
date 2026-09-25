@@ -9,6 +9,18 @@
  *     table cells rather than an <img>.
  * Every message also ships a plain-text part, which some corporate filters
  * require and which raises deliverability.
+ *
+ * The 600-pixel column is `width:100%; max-width:600px`, never the other way
+ * round. `width:600px; max-width:100%` reads as responsive and is not: a table
+ * inside a cell makes the cell as wide as the table, so "100%" of that cell is
+ * 600 pixels plus its padding, and every email came out 632 pixels wide on a
+ * 375-pixel phone — shrunk to unreadable on an iPhone, scrolled sideways in
+ * Gmail, with the pay and start date cut off the right of the offer. Most
+ * candidates read these on a phone.
+ *
+ * Outlook on Windows ignores max-width, so it would stretch that column to the
+ * full reading pane. The `<!--[if mso]>` table around it gives Outlook, and
+ * only Outlook, a fixed 600 pixels; every other client skips it as a comment.
  */
 import { siteConfig } from "@/config/site";
 import {
@@ -118,7 +130,8 @@ export function interviewInviteHtml({ fullName, interviewUrl, position }: Interv
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
 
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <!-- Header -->
     <tr>
@@ -217,6 +230,7 @@ export function interviewInviteHtml({ fullName, interviewUrl, position }: Interv
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -287,7 +301,8 @@ export function reminderHtml({ fullName, interviewUrl, position }: InterviewInvi
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -358,6 +373,7 @@ export function reminderHtml({ fullName, interviewUrl, position }: InterviewInvi
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -431,7 +447,8 @@ export function verificationRequestHtml({ fullName, interviewUrl, position }: In
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -515,6 +532,7 @@ export function verificationRequestHtml({ fullName, interviewUrl, position }: In
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -600,7 +618,8 @@ export function identityReuploadHtml({ fullName, url, reason }: IdentityReupload
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -688,6 +707,7 @@ export function identityReuploadHtml({ fullName, url, reason }: IdentityReupload
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -795,7 +815,8 @@ export function residenceRequestHtml({
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -889,6 +910,7 @@ export function residenceRequestHtml({
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -956,7 +978,8 @@ export function voiceReminderHtml(invite: VoiceAssessmentInvite): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -1024,6 +1047,7 @@ export function voiceReminderHtml(invite: VoiceAssessmentInvite): string {
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -1134,7 +1158,8 @@ export function identityReminderHtml(invite: IdentityReminderEmail): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -1248,6 +1273,7 @@ export function identityReminderHtml(invite: IdentityReminderEmail): string {
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -1419,7 +1445,8 @@ export function liveVerificationHtml(invite: LiveVerificationEmail): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -1519,6 +1546,7 @@ ${opening}
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -1668,7 +1696,8 @@ export function voiceAckHtml(invite: VoiceAckEmail): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -1784,6 +1813,7 @@ export function voiceAckHtml(invite: VoiceAckEmail): string {
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -1895,7 +1925,8 @@ export function offerReminderHtml(invite: OfferReminderEmail): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -2010,6 +2041,7 @@ export function offerReminderHtml(invite: OfferReminderEmail): string {
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -2093,7 +2125,8 @@ export function companyDetailsHtml(invite: CompanyDetailsEmail): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -2195,6 +2228,7 @@ export function companyDetailsHtml(invite: CompanyDetailsEmail): string {
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -2449,7 +2483,8 @@ export function offerHtml(o: OfferEmail): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -2552,6 +2587,7 @@ export function offerHtml(o: OfferEmail): string {
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -2657,7 +2693,8 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
 
     <tr>
       <td style="padding:0 0 22px 0;">
@@ -2749,6 +2786,7 @@ export function voiceAssessmentHtml(invite: VoiceAssessmentInvite): string {
     </tr>
 
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
