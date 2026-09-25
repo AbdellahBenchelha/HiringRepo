@@ -22,6 +22,9 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   // Settings because it holds a number that changes every day and has to be
   // looked at before a batch, not once a month.
   { href: "/admin/warmup", label: "Warm-up", icon: "mail" },
+  // Beside Warm-up because both are about the email rather than the people.
+  // Read-only: the wording lives in code, where it is reviewed.
+  { href: "/admin/emails", label: "Email templates", icon: "document" },
   // One entry, three sections behind it. As three items they sat among the
   // tabs where candidates are actually worked, making rules you change once a
   // month look like part of the daily round.
