@@ -168,12 +168,17 @@ export function liveStateOf(c: LiveVerificationState): LiveVerificationState {
  * How long somebody may reasonably be left on the waiting page.
  *
  * Not a rule anything enforces — nothing is sent and nothing changes when it
- * passes. It decides two things: what the candidate is told, because "one to
- * three minutes" stops being true and continuing to say it is a lie they can
- * measure; and whether the Admin Panel says in red that this person now needs
- * an email, because a page nobody is coming back to is worse than no page.
+ * passes. It decides two things: when the candidate's page stops saying "we
+ * are preparing it" and says instead that it is taking longer and they will be
+ * emailed; and when the Admin Panel says in red that this person now needs an
+ * email, because a page nobody is coming back to is worse than no page.
+ *
+ * Eight minutes, raised from five: preparing a fresh session with the provider
+ * regularly takes longer than five, and flagging somebody as abandoned while
+ * the link was still being made sent the candidate away to wait for an email
+ * that was about to be unnecessary.
  */
-export const HOLD_TOO_LONG_MINUTES = 5;
+export const HOLD_TOO_LONG_MINUTES = 8;
 
 /** Is the session behind their link marked dead? Says nothing about them. */
 export function isHeld(c: LiveVerificationState): boolean {

@@ -112,8 +112,8 @@ export function LiveVerifyWaiting({
             We are preparing your verification page
           </h2>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-navy-600">
-            This usually takes between one and three minutes. Please keep this page open — it will
-            continue on its own, and there is nothing for you to press.
+            This usually takes a few minutes. Please keep this page open — it will continue on its
+            own, and there is nothing for you to press.
           </p>
         </>
       )}
