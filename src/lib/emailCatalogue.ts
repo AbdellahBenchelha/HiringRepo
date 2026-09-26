@@ -382,7 +382,7 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     name: "Submission received — under review",
     stage: "identity",
     when:
-      "Sent by hand from the ID check tab once a candidate has submitted identity documents or proof of residence that are waiting for review.",
+      "Sent by hand from the ID check tab — once a candidate has submitted identity documents or proof of residence waiting for review, or while their ID check shows Awaiting upload or Verified.",
     kind: "campaign",
     source: "submissionReceivedHtml",
     render: () => {

@@ -3,7 +3,7 @@ import { verifyAdminRequest } from "@/lib/adminAuth";
 import { getCandidate, recordSubmissionAck } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
 import { verificationStatus } from "@/lib/verification";
-import { submissionAwaitingReview } from "@/lib/submissionAck";
+import { submissionAckAllowed } from "@/lib/submissionAck";
 import { sendEmail } from "@/lib/email";
 import {
   submissionReceivedHtml,
@@ -17,8 +17,8 @@ import { siteConfig } from "@/config/site";
  *
  * By hand, from the ID check tab, never automatically: whether it is worth
  * saying — and whether "one to three business days" is true this week — is a
- * recruiter's call. Refused unless something is actually waiting for review,
- * for the reasons in lib/submissionAck.
+ * recruiter's call. Refused when the ID check is rejected or not required and
+ * nothing else is open, for the reasons in lib/submissionAck.
  *
  * Recorded only once the email is accepted. A record saying they were told,
  * for an email that never left, is the worst version of this: the panel shows
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (!candidate) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
   const verification = verificationStatus(candidate, await requiredCountries());
-  if (!submissionAwaitingReview(verification, candidate)) {
+  if (!submissionAckAllowed(verification, candidate)) {
     return NextResponse.json({ ok: false, error: "nothing_to_review" }, { status: 409 });
   }
 

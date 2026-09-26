@@ -4,16 +4,21 @@ import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
-import { submissionAwaitingReview } from "@/lib/submissionAck";
+import {
+  submissionAckAllowed,
+  submissionAckCaution,
+  submissionAwaitingReview,
+} from "@/lib/submissionAck";
 import type { VerificationStatus } from "@/lib/verification";
 import type { ResidenceInput } from "@/lib/residence";
 
 /**
  * Tell a candidate what they sent has arrived and is under review.
  *
- * Offered only while something is actually waiting for review — see
- * lib/submissionAck — and kept on screen afterwards, with its dates, even once
- * a decision is made. "Told on 9 Sept it takes one to three business days" is
+ * Offered while something is waiting for review, and also while the ID check
+ * reads Awaiting upload or Verified — those with a warning in the confirm
+ * step, see lib/submissionAck. Kept on screen afterwards, with its dates, even
+ * once it can no longer be sent. "Told on 9 Sept it takes one to three business days" is
  * what you need in front of you when they write on the 15th asking what
  * happened.
  */
@@ -53,9 +58,11 @@ export function SubmissionReceivedButton({
   const [asking, setAsking] = useState(false);
   const [result, setResult] = useState("");
 
+  const allowed = submissionAckAllowed(candidate.verificationStatus, candidate);
   const awaiting = submissionAwaitingReview(candidate.verificationStatus, candidate);
+  const caution = submissionAckCaution(candidate.verificationStatus, candidate);
   // Silent only when there is nothing to offer and nothing to remember.
-  if (!awaiting && history.length === 0) return null;
+  if (!allowed && history.length === 0) return null;
 
   const hasEmail = !!candidate.email?.includes("@");
   const lastAt = history[history.length - 1];
@@ -105,7 +112,7 @@ export function SubmissionReceivedButton({
       <div className="mt-4 rounded-xl border border-navy-100 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-semibold text-navy-800">Submission received email</p>
-          {awaiting ? (
+          {allowed ? (
             <button
               type="button"
               onClick={() => setAsking(true)}
@@ -134,7 +141,9 @@ export function SubmissionReceivedButton({
           </ol>
         ) : (
           <p className="mt-1.5 text-xs text-navy-500">
-            Not sent yet. They have submitted information that is waiting for review.
+            {awaiting
+              ? "Not sent yet. They have submitted information that is waiting for review."
+              : "Not sent yet."}
           </p>
         )}
 
@@ -154,9 +163,14 @@ export function SubmissionReceivedButton({
         confirmLabel={busy ? "Sending…" : "Send email"}
         busy={busy}
         warning={
-          recent
-            ? `One already went out on ${fmt(lastAt)}. Sending the same message twice in a day reads as a mistake.`
-            : undefined
+          [
+            caution,
+            recent
+              ? `One already went out on ${fmt(lastAt)}. Sending the same message twice in a day reads as a mistake.`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" ") || undefined
         }
         onCancel={() => setAsking(false)}
         onConfirm={() => void send()}
