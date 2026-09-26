@@ -778,6 +778,12 @@ export function CandidatesTable({
         <CandidateProfileModal
           key={profile.id}
           candidate={profile}
+          // The row's own checkbox, reachable from inside the dialog.
+          selection={{
+            selected: chosen.includes(profile.id),
+            onToggle: () => toggleOne(profile.id),
+            count: chosen.length,
+          }}
           nav={nav}
           onClose={closeProfile}
           onOpenDocument={(doc) => setViewing({ c: profile, doc })}

@@ -480,6 +480,12 @@ export function OffersTable({ rows }: { rows: CandidateView[] }) {
         <CandidateProfileModal
           key={profile.id}
           candidate={profile}
+          // The row's own checkbox, reachable from inside the dialog.
+          selection={{
+            selected: chosen.includes(profile.id),
+            onToggle: () => toggleOne(profile.id),
+            count: chosen.length,
+          }}
           /* The reminder and the revised offer both live in the profile, and
              this is the tab they are wanted from. */
           showOffer

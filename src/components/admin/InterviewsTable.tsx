@@ -810,6 +810,12 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
         <CandidateProfileModal
           key={profile.id}
           candidate={profile}
+          // The row's own checkbox, reachable from inside the dialog.
+          selection={{
+            selected: chosen.includes(profile.id),
+            onToggle: () => toggleOne(profile.id),
+            count: chosen.length,
+          }}
           showOffer
           nav={nav}
           onClose={closeProfile}

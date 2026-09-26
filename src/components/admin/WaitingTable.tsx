@@ -459,6 +459,12 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
         <CandidateProfileModal
           key={profile.id}
           candidate={profile}
+          // The row's own checkbox, reachable from inside the dialog.
+          selection={{
+            selected: chosen.includes(profile.id),
+            onToggle: () => toggleOne(profile.id),
+            count: chosen.length,
+          }}
           /* Offers are made from here as well as the Interviews tab: this list
              is a subset of the same people, and a queue you cannot act on
              without navigating away is a queue that gets worked somewhere

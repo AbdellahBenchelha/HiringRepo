@@ -113,6 +113,25 @@ function agreementBlocker(c: CandidateView): string | undefined {
   return `No agreement yet — their ${missing.join(" and ")} are still outstanding.`;
 }
 
+/**
+ * This candidate's row checkbox, reachable from inside the dialog.
+ *
+ * The dialog steps through the list with ‹ and ›, which is exactly how somebody
+ * works out who a bulk action should go to — so the tick belongs here, where
+ * the deciding happens, rather than back in the table behind the dialog where
+ * the row has scrolled out of sight. It is the same selection, not a copy:
+ * ticking here ticks the row, and the row's own checkbox moves with it.
+ *
+ * Omitted by tables that have no bulk actions, which hides the control rather
+ * than offering a selection that does nothing.
+ */
+export interface ProfileSelection {
+  selected: boolean;
+  onToggle: () => void;
+  /** How many are ticked in the list now, so stepping through shows a tally. */
+  count: number;
+}
+
 /** Stepping to the next candidate without closing the dialog. */
 export interface ProfileNav {
   /** Zero-based position in the filtered list. */
@@ -131,6 +150,7 @@ export function CandidateProfileModal({
   onOpenDocument,
   onStatusChange,
   onSendWhatsApp,
+  selection,
 }: {
   candidate: CandidateView;
   /** Omitted where there is nothing to step through, which hides the controls. */
@@ -151,6 +171,7 @@ export function CandidateProfileModal({
   onStatusChange: (id: string, status: CandidateStatus) => void;
   /** Omitted where the tab has no WhatsApp action of its own. */
   onSendWhatsApp?: (c: CandidateView) => void;
+  selection?: ProfileSelection;
 }) {
   const verification = verificationStateOf(candidate);
 
@@ -257,6 +278,35 @@ export function CandidateProfileModal({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            {selection ? (
+              <label
+                className={`mr-1.5 inline-flex cursor-pointer select-none items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                  selection.selected
+                    ? "border-brand-300 bg-brand-50 text-navy-900"
+                    : "border-navy-200 text-navy-600 hover:bg-navy-50"
+                }`}
+                title="Select this candidate in the list, for a bulk action"
+              >
+                <input
+                  type="checkbox"
+                  checked={selection.selected}
+                  onChange={selection.onToggle}
+                  className="h-4 w-4 rounded border-navy-300 text-brand-600"
+                  aria-label={`Select ${candidate.fullName || "this candidate"} in the list`}
+                />
+                {selection.selected ? "Selected" : "Select"}
+                {/* The running tally, so stepping through with the arrows
+                    tells you how many you have picked without closing. */}
+                {selection.count > 0 ? (
+                  <span
+                    className="rounded-full bg-navy-900 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white tabular-nums"
+                    aria-label={`${selection.count} selected in the list`}
+                  >
+                    {selection.count}
+                  </span>
+                ) : null}
+              </label>
+            ) : null}
             {nav ? (
               <>
                 <button
