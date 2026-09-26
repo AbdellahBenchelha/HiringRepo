@@ -917,6 +917,156 @@ export function residenceRequestHtml({
 </html>`;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Submission received                                                         */
+/* -------------------------------------------------------------------------- */
+
+export interface SubmissionReceivedEmail {
+  fullName: string;
+}
+
+/**
+ * "We have what you sent, and here is how long it takes."
+ *
+ * Sent by hand once a candidate has submitted documents that are now waiting
+ * on a person. The silence between uploading a passport and hearing anything
+ * back is where candidates start to wonder whether they have been scammed —
+ * they have just handed a stranger their identity documents and heard nothing
+ * — and a message that names a timescale turns that silence into a wait with
+ * an end.
+ *
+ * It promises exactly two things and no more: a review of one to three
+ * business days, and an email when it is done. Nothing about the outcome,
+ * because the outcome is not known yet, and nothing to click, because there is
+ * nothing for them to do.
+ */
+export function submissionReceivedSubject(): string {
+  return `We've received your information – ${siteConfig.company.name}`;
+}
+
+export function submissionReceivedText({ fullName }: SubmissionReceivedEmail): string {
+  const name = firstNameOf(fullName);
+  return [
+    `Hi ${name},`,
+    ``,
+    `Thank you — we have successfully received the information you submitted,`,
+    `and it is now with our team for review.`,
+    ``,
+    `Verification usually takes 1–3 business days to complete.`,
+    ``,
+    `What happens next`,
+    ``,
+    `As soon as the review is complete, we will email you to confirm that your`,
+    `information has been verified. There is nothing more you need to do in the`,
+    `meantime.`,
+    ``,
+    `Your documents are stored privately, seen only by our recruitment team, and`,
+    `used only to confirm your identity. We will never ask you for a payment, a`,
+    `bank card, or a password.`,
+    ``,
+    `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function submissionReceivedHtml({ fullName }: SubmissionReceivedEmail): string {
+  const name = esc(firstNameOf(fullName));
+  const company = esc(siteConfig.company.name);
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(submissionReceivedSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your information is under review — usually 1–3 business days.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          We&rsquo;ve received your information
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Thank you &mdash; we have successfully received the information you submitted, and it is
+          now with our team for review.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:18px 22px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+              Verification usually takes
+              <strong style="color:${NAVY};">1&ndash;3 business days</strong> to complete.
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 8px 0;font:700 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+          What happens next
+        </p>
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          As soon as the review is complete, we will email you to confirm that your information has
+          been verified. There is nothing more you need to do in the meantime.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+              Your documents are stored privately, seen only by our recruitment team, and used only
+              to confirm your identity. We will <strong style="color:${NAVY};">never</strong> ask you
+              for a payment, a bank card, or a password.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 /**
  * Chasing a voice assessment that has been asked for and not sent.
  *

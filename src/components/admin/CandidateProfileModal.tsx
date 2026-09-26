@@ -27,6 +27,7 @@ import { VoicePanel } from "@/components/admin/VoicePanel";
 import { VoiceAckButton } from "@/components/admin/VoiceAckButton";
 import { currentVoiceRecording } from "@/lib/voice";
 import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
+import { SubmissionReceivedButton } from "@/components/admin/SubmissionReceivedButton";
 import { CompanyCheckPanel } from "@/components/admin/CompanyCheckPanel";
 import { SsnField } from "@/components/admin/SsnField";
 import { FavoriteButton } from "@/components/admin/FavoriteButton";
@@ -585,6 +586,13 @@ export function CandidateProfileModal({
             defaultCountry={candidate.confirmedDetails?.country || candidate.country}
             nationality={candidate.confirmedDetails?.nationality}
             onChange={(patch) => onChange(patch)}
+          />
+
+          {/* Last, because it answers for both panels above: what they sent
+              under either has arrived and is waiting for us. */}
+          <SubmissionReceivedButton
+            candidate={candidate}
+            onSent={(patch) => onChange(patch)}
           />
         </div>
         </div>

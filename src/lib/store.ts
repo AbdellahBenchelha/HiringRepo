@@ -372,6 +372,15 @@ export interface Candidate {
    */
   identityReminders?: string[];
   /**
+   * "We have received what you sent and it is under review" — sent by hand
+   * from the ID check tab. Every one kept, like the reminders, because "told
+   * on 9 Sept that it takes one to three business days" is exactly what you
+   * need in front of you when somebody writes on the 15th asking what happened.
+   */
+  submissionAckSentAt?: string;
+  submissionAckCount?: number;
+  submissionAcks?: string[];
+  /**
    * The country the application was actually sent from, as the server saw it.
    *
    * Deliberately not the IP address: a raw address is personal data with real
@@ -1187,6 +1196,19 @@ export function requestIdentityReupload(
     delete c.verifiedBy;
     delete c.rejectedAt;
     delete c.rejectionReason;
+    return { list, result: c };
+  });
+}
+
+/** A "received, under review" email went out. Kept with the others it followed. */
+export function recordSubmissionAck(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    c.submissionAcks = [...(c.submissionAcks ?? []), now];
+    c.submissionAckSentAt = now;
+    c.submissionAckCount = c.submissionAcks.length;
     return { list, result: c };
   });
 }

@@ -45,6 +45,9 @@ import {
   residenceRequestHtml,
   residenceRequestSubject,
   residenceRequestText,
+  submissionReceivedHtml,
+  submissionReceivedSubject,
+  submissionReceivedText,
   verificationRequestHtml,
   verificationRequestSubject,
   verificationRequestText,
@@ -371,6 +374,23 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         subject: residenceRequestSubject(),
         html: residenceRequestHtml(payload),
         text: residenceRequestText(payload),
+      };
+    },
+  },
+  {
+    id: "submission-received",
+    name: "Submission received — under review",
+    stage: "identity",
+    when:
+      "Sent by hand from the ID check tab once a candidate has submitted identity documents or proof of residence that are waiting for review.",
+    kind: "campaign",
+    source: "submissionReceivedHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME };
+      return {
+        subject: submissionReceivedSubject(),
+        html: submissionReceivedHtml(payload),
+        text: submissionReceivedText(payload),
       };
     },
   },

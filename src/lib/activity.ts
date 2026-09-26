@@ -37,6 +37,7 @@ export interface ActivityInput {
   rejectedAt?: string;
   identityReuploadRequestedAt?: string;
   identityReminderSentAt?: string;
+  submissionAckSentAt?: string;
   residenceRequestedAt?: string;
   residenceExplainedAt?: string;
   residenceVerifiedAt?: string;
@@ -85,6 +86,7 @@ const FIELDS: readonly (keyof ActivityInput)[] = [
   "rejectedAt",
   "identityReuploadRequestedAt",
   "identityReminderSentAt",
+  "submissionAckSentAt",
   "residenceRequestedAt",
   "residenceExplainedAt",
   "residenceVerifiedAt",

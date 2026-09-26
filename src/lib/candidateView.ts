@@ -162,6 +162,10 @@ export interface CandidateView {
   identityReminderCount?: number;
   /** Every identity reminder, oldest first. */
   identityReminders?: string[];
+  /** Every "received, under review" email, oldest first. */
+  submissionAckSentAt?: string;
+  submissionAckCount?: number;
+  submissionAcks?: string[];
   /**
    * Derived: they have accepted an offer and still owe us identity documents.
    *
@@ -329,6 +333,9 @@ export function toCandidateView(
     awaitingDecision: awaitingDecision(c),
     voiceNeeded: voiceRecordingNeeded(c),
     identityReminderSentAt: c.identityReminderSentAt,
+    submissionAckSentAt: c.submissionAckSentAt,
+    submissionAckCount: c.submissionAckCount,
+    submissionAcks: c.submissionAcks,
     identityReminderCount: c.identityReminderCount,
     identityReminders: c.identityReminders,
     identityNeeded: !!c.offerAcceptedAt && identityStillNeeded(c),
