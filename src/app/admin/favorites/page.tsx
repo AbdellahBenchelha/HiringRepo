@@ -7,6 +7,7 @@ import { manualInviteCountries } from "@/lib/manualInviteStore";
 import { toCandidateView } from "@/lib/candidateView";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { CandidatesTable } from "@/components/admin/CandidatesTable";
+import { FAVORITE_ACTIONS } from "@/lib/bulkEmail";
 
 export const metadata: Metadata = { title: "Favorites", robots: { index: false, follow: false } };
 
@@ -29,7 +30,8 @@ async function baseUrl(): Promise<string> {
  *
  * It reuses the Candidates table rather than having a plainer one of its own,
  * because a favourite is still a candidate: you want the same View info, the
- * same filters and the same actions. A stripped-down second table would mean
+ * same filters and the same actions — except in bulk, where only offers and
+ * offer reminders are sent from here. A stripped-down second table would mean
  * finding somebody here and then going to look for them somewhere else to do
  * anything about them.
  */
@@ -63,14 +65,18 @@ export default async function AdminFavoritesPage() {
             </>
           ) : (
             <>
-              {views.length} starred {views.length === 1 ? "candidate" : "candidates"} — the same
-              search, filters and actions as the Candidates tab.
+              {views.length} starred {views.length === 1 ? "candidate" : "candidates"}. Tick
+              several to send them offers or remind them to answer one.
             </>
           )}
         </p>
       </header>
 
-      {views.length > 0 ? <CandidatesTable candidates={views} /> : null}
+      {/* Starred to be hired, so the selection bar sends offers and chases
+          answers rather than the assessment emails the Candidates tab sends. */}
+      {views.length > 0 ? (
+        <CandidatesTable candidates={views} bulkActions={FAVORITE_ACTIONS} bulkOffers />
+      ) : null}
     </AdminShell>
   );
 }

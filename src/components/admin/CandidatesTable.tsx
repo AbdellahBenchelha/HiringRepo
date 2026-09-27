@@ -16,6 +16,8 @@ import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal"
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { useBulkEmail } from "@/components/admin/BulkEmailBar";
+import { useBulkOffer } from "@/components/admin/BulkOfferEditor";
+import { CANDIDATE_ACTIONS, type BulkAction } from "@/lib/bulkEmail";
 import {
   HideCountryPicker,
   HiddenCountryChips,
@@ -84,8 +86,17 @@ export function CandidatesTable({
   candidates,
   initialVerify,
   initialHeld,
+  bulkActions,
+  bulkOffers = false,
 }: {
   candidates: CandidateView[];
+  /**
+   * Which bulk emails the selection bar offers. The Candidates tab chases the
+   * assessment; Favorites passes its own list instead.
+   */
+  bulkActions?: readonly BulkAction[];
+  /** Show the bulk offer editor in the selection bar. */
+  bulkOffers?: boolean;
   /**
    * Filters the dashboard can arrive with already applied. Only the starting
    * value — once here, the filters are the reader's, so changing one does not
@@ -306,7 +317,19 @@ export function CandidatesTable({
       allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])],
     );
 
-  const bulkEmail = useBulkEmail(sorted, chosen, () => setSelected([]));
+  // The offer editor and the bar each need the other — see InterviewsTable.
+  const refreshBatch = useRef<() => void>(() => {});
+  const bulkOffer = useBulkOffer(sorted, chosen, () => setSelected([]), () =>
+    refreshBatch.current(),
+  );
+  const bulkEmail = useBulkEmail(
+    sorted,
+    chosen,
+    () => setSelected([]),
+    bulkActions ?? CANDIDATE_ACTIONS,
+    bulkOffers ? bulkOffer.button : undefined,
+  );
+  refreshBatch.current = () => void bulkEmail.refresh();
 
   // A document reader belongs to the candidate it was opened from, so stepping
   // to the next one closes it rather than leaving someone else's CV on screen.
@@ -809,6 +832,7 @@ export function CandidatesTable({
       ) : null}
 
       {bulkEmail.dialog}
+      {bulkOffers ? bulkOffer.dialog : null}
     </div>
   );
 }

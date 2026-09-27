@@ -36,6 +36,11 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
 export const CANDIDATE_ACTIONS: readonly BulkAction[] = ["assessment", "reminder"];
 export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder", "voiceAck"];
 export const OFFER_ACTIONS: readonly BulkAction[] = ["offerReminder"];
+/**
+ * Favorites cut across every stage, but they are starred to be hired: the tab
+ * only offers the offer reminder here, with the offer editor beside it.
+ */
+export const FAVORITE_ACTIONS: readonly BulkAction[] = ["offerReminder"];
 
 /** How long a batch may be. A misclick must not be able to email everybody. */
 export const MAX_BATCH = 100;
