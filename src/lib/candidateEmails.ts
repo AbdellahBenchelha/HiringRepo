@@ -257,7 +257,7 @@ export async function sendOfferEmail(
   const result = await sendEmail({
     to: email,
     toName: candidate.fullName || undefined,
-    subject: offerSubject(offer.position),
+    subject: offerSubject(),
     html: offerHtml(payload),
     text: offerText(payload),
     replyTo: siteConfig.contact.recruitmentEmail,

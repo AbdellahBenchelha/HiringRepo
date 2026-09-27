@@ -422,7 +422,7 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         sampleVersion: sample?.version,
       };
       return {
-        subject: offerSubject(SAMPLE_OFFER.position),
+        subject: offerSubject(),
         html: offerHtml(payload),
         text: offerText(payload),
       };

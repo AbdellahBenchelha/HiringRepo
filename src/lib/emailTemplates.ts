@@ -2419,9 +2419,14 @@ export interface OfferEmail {
  * It is an offer, not a contract. It says so, because a candidate who treats
  * this as the final word and resigns on the strength of it is a problem for
  * both sides.
+ *
+ * The subject leads with the good news rather than the paperwork, in sentence
+ * case: a capital on every word reads as a newsletter and leans towards the
+ * Promotions tab, and "!", prize or money wording in a subject is what scam
+ * filters look for. The role is in the body, where the terms are.
  */
-export function offerSubject(position: string): string {
-  return `Job offer — ${position} at ${siteConfig.company.name}`;
+export function offerSubject(): string {
+  return `Good news | A place is available for you at ${siteConfig.company.name}`;
 }
 
 function offerRows(o: OfferEmail): [string, string][] {
@@ -2447,13 +2452,16 @@ function offerRows(o: OfferEmail): [string, string][] {
 export function offerText(o: OfferEmail): string {
   const name = firstNameOf(o.fullName);
   return [
+    `Congratulations, ${name}`,
+    ``,
     `Dear ${name},`,
     ``,
-    `Following your interview, it is our pleasure to offer you the position of`,
-    `${o.position} at ${siteConfig.company.name}.`,
+    `We're delighted to let you know that, following your interview, a place is`,
+    `available for you on our team, and we would like to offer you the position`,
+    `of ${o.position} at ${siteConfig.company.name}.`,
     ``,
-    `Your application stood out, and the team is looking forward to working with`,
-    `you. The agreed terms are set out below.`,
+    `Your application stood out, and the team is looking forward to welcoming`,
+    `you. The terms of your offer are set out below.`,
     ``,
     `TERMS OF THE OFFER`,
     ...offerRows(o).map(([k, v]) => `  ${k}: ${v}`),
@@ -2624,11 +2632,11 @@ export function offerHtml(o: OfferEmail): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(offerSubject(o.position))}</title>
+<title>${esc(offerSubject())}</title>
 </head>
 <body style="margin:0;padding:0;background:${CREAM};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-  Your offer from ${company} — the details are inside.
+  Your offer is ready — pay, hours and how to accept are inside.
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
@@ -2649,7 +2657,7 @@ export function offerHtml(o: OfferEmail): string {
       <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
 
         <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
-          Your offer from ${company}
+          Congratulations, ${name}
         </h1>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
@@ -2657,13 +2665,15 @@ export function offerHtml(o: OfferEmail): string {
         </p>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Following your interview, it is our pleasure to offer you the position of
+          We&rsquo;re delighted to let you know that, following your interview,
+          <strong style="color:${NAVY};">a place is available for you on our team</strong>, and we
+          would like to offer you the position of
           <strong style="color:${NAVY};">${esc(o.position)}</strong> at ${company}.
         </p>
 
         <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Your application stood out, and the team is looking forward to working with you. The
-          agreed terms are set out below.
+          Your application stood out, and the team is looking forward to welcoming you. The
+          terms of your offer are set out below.
         </p>
 
         <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
