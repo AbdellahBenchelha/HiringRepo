@@ -142,6 +142,28 @@ export function buildLiveCheckStartedMessage(
   ].join("\n");
 }
 
+/**
+ * A candidate pressed Start on their final-interview chat and is waiting.
+ *
+ * Once per conversation: refreshing the page, or opening it on a second
+ * device, finds the same chat and says nothing more.
+ */
+export function buildChatStartedMessage(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+  adminUrl: string,
+): string {
+  return [
+    "💬 <b>Final interview chat started</b>",
+    "",
+    ...whoLines(name, email, country),
+    "",
+    "They are waiting for a recruiter to join.",
+    `<a href="${escapeHtml(adminUrl)}">Open the Live chat</a>`,
+  ].join("\n");
+}
+
 /** Build the "Personal information" message (sent after the first step). */
 export function buildPersonalMessage(fields: Record<string, unknown>): string | null {
   const lines = PERSONAL_FIELDS.flatMap(({ key, label }) => {

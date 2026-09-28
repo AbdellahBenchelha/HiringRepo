@@ -382,6 +382,12 @@ export interface Candidate {
    */
   identityReminders?: string[];
   /**
+   * Final-interview chat links, oldest first. The last is the live one: the
+   * chat page turns away a link whose time is not this. See lib/chat.
+   */
+  chatLinkSentAt?: string;
+  chatLinks?: string[];
+  /**
    * "We have received what you sent and it is under review" — sent by hand
    * from the ID check tab. Every one kept, like the reminders, because "told
    * on 9 Sept that it takes one to three business days" is exactly what you
@@ -1356,6 +1362,31 @@ export function clearResidenceImages(id: string): Promise<string[]> {
     });
     if (removed.length) c.residenceImagesDeletedAt = new Date().toISOString();
     return { list, result: removed };
+  });
+}
+
+/** A final-interview chat link was emailed. The newest replaces any before it. */
+export function recordChatLink(id: string, sentAt: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.chatLinks = [...(c.chatLinks ?? []), sentAt];
+    c.chatLinkSentAt = sentAt;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Undo a chat link whose email never left, so the previous link keeps working.
+ * Only when it is still the newest — a later send is not touched.
+ */
+export function revertChatLink(id: string, sentAt: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || c.chatLinkSentAt !== sentAt) return { list, result: false };
+    c.chatLinks = (c.chatLinks ?? []).filter((t) => t !== sentAt);
+    c.chatLinkSentAt = c.chatLinks[c.chatLinks.length - 1];
+    return { list, result: true };
   });
 }
 

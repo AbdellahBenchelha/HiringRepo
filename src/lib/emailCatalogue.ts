@@ -46,6 +46,9 @@ import {
   residenceRequestSubject,
   residenceRequestText,
   submissionReceivedHtml,
+  finalChatHtml,
+  finalChatSubject,
+  finalChatText,
   submissionReceivedSubject,
   submissionReceivedText,
   verificationRequestHtml,
@@ -66,6 +69,7 @@ import { deadlineFrom, formatDeadline } from "@/lib/offerReminder";
 import { sampleAgreement } from "@/lib/sampleAgreement";
 import { REUPLOAD_REASONS } from "@/lib/verification";
 import { RESIDENCE_REASONS } from "@/lib/residence";
+import { CHAT_LINK_TTL_DAYS, DEFAULT_HOURS } from "@/lib/chat";
 
 export type EmailStage = "application" | "voice" | "identity" | "offer";
 
@@ -391,6 +395,29 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         subject: submissionReceivedSubject(),
         html: submissionReceivedHtml(payload),
         text: submissionReceivedText(payload),
+      };
+    },
+  },
+  {
+    id: "final-chat",
+    name: "Final interview — live chat invitation",
+    stage: "voice",
+    when:
+      "Sent by hand from View info → Assessment with Send final interview chat link. The link opens the live chat page and is valid for 7 days.",
+    kind: "campaign",
+    source: "finalChatHtml",
+    render: () => {
+      const payload = {
+        fullName: SAMPLE_NAME,
+        chatUrl: link("/chat?t=EXAMPLE"),
+        position: SAMPLE_POSITION,
+        hours: DEFAULT_HOURS,
+        validDays: CHAT_LINK_TTL_DAYS,
+      };
+      return {
+        subject: finalChatSubject(),
+        html: finalChatHtml(payload),
+        text: finalChatText(payload),
       };
     },
   },

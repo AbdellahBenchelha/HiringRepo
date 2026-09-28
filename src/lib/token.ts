@@ -12,6 +12,7 @@
  *   a hard-coded dev fallback
  */
 import crypto from "node:crypto";
+import { CHAT_LINK_TTL_DAYS } from "@/lib/chat";
 
 const SECRET =
   process.env.INTERVIEW_TOKEN_SECRET ||
@@ -246,5 +247,58 @@ export function readInterviewToken(token: string | undefined | null): InterviewI
     };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Link a candidate to their final-interview live chat.
+ *
+ * Its own marker, like the others, so a chat link cannot open an offer or an
+ * identity check and the reverse. Binding the send time into the signature
+ * means sending a new link retires the old one: the chat page compares it with
+ * the link on the record and turns an older one away.
+ */
+export interface ChatLink {
+  id: string;
+  sentAt: string;
+}
+
+export { CHAT_LINK_TTL_DAYS };
+
+export function createChatToken(link: ChatLink): string {
+  const body = b64url(Buffer.from(JSON.stringify({ v: "chat", i: link.id, s: link.sentAt })));
+  return `${body}.${sign(body)}`;
+}
+
+export type ChatTokenResult =
+  | { ok: true; link: ChatLink }
+  | { ok: false; reason: "invalid" }
+  | { ok: false; reason: "expired" };
+
+export function readChatToken(token: string | undefined | null): ChatTokenResult {
+  if (!token || typeof token !== "string" || !token.includes(".") || token.length > 600) {
+    return { ok: false, reason: "invalid" };
+  }
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return { ok: false, reason: "invalid" };
+
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
+
+  try {
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as { v?: unknown; i?: unknown; s?: unknown };
+    if (obj.v !== "chat") return { ok: false, reason: "invalid" };
+    if (typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
+    if (typeof obj.s !== "string" || !obj.s) return { ok: false, reason: "invalid" };
+    const sentAt = Date.parse(obj.s);
+    if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
+    if (Date.now() - sentAt > CHAT_LINK_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      return { ok: false, reason: "expired" };
+    }
+    return { ok: true, link: { id: obj.i, sentAt: obj.s } };
+  } catch {
+    return { ok: false, reason: "invalid" };
   }
 }

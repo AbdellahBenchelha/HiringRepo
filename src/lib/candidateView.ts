@@ -163,6 +163,9 @@ export interface CandidateView {
    */
   voiceNeeded: boolean;
   identityReminderSentAt?: string;
+  /** Final-interview chat links sent. The conversation is fetched on demand. */
+  chatLinkSentAt?: string;
+  chatLinks?: string[];
   identityReminderCount?: number;
   /** Every identity reminder, oldest first. */
   identityReminders?: string[];
@@ -340,6 +343,8 @@ export function toCandidateView(
     awaitingDecision: awaitingDecision(c),
     voiceNeeded: voiceRecordingNeeded(c),
     identityReminderSentAt: c.identityReminderSentAt,
+    chatLinkSentAt: c.chatLinkSentAt,
+    chatLinks: c.chatLinks,
     submissionAckSentAt: c.submissionAckSentAt,
     submissionAckCount: c.submissionAckCount,
     submissionAcks: c.submissionAcks,

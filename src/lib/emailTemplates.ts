@@ -918,6 +918,222 @@ export function residenceRequestHtml({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Final interview — live chat                                                 */
+/* -------------------------------------------------------------------------- */
+
+export interface FinalChatEmail {
+  fullName: string;
+  /** The candidate's personal chat link. */
+  chatUrl: string;
+  position?: string;
+  /** The hours line from the chat settings, e.g. "We reply Monday–Friday, …". */
+  hours?: string;
+  /** How long the link lasts, in days. */
+  validDays: number;
+}
+
+/**
+ * The invitation to the final interview, held as a live text chat.
+ *
+ * Says what it is before asking anybody to click: a chat, in writing, with a
+ * person, at a time they choose within the hours. A "final interview" link from
+ * a remote employer is a well-worn scam opening, so the email says plainly what
+ * will and will not happen in it — no video, no downloads, no payment — and the
+ * button comes after that.
+ */
+export function finalChatSubject(): string {
+  return `Your final interview — live chat with ${siteConfig.company.name}`;
+}
+
+export function finalChatText(e: FinalChatEmail): string {
+  const name = firstNameOf(e.fullName);
+  return [
+    `Hi ${name},`,
+    ``,
+    `Good news — you have reached the final stage of our hiring process${e.position ? ` for the ${e.position} role` : ""}.`,
+    ``,
+    `Your final interview is a short live text chat with our recruitment team.`,
+    `There is no video or phone call: you answer our questions in writing, in`,
+    `your own words.`,
+    ``,
+    `HOW IT WORKS`,
+    `1. Open your chat link below when you are ready.`,
+    `2. Press "Start chat" — a recruiter will join you shortly.`,
+    `3. Answer a few questions. It usually takes 15–20 minutes.`,
+    ...(e.hours ? [``, `${e.hours}.`] : []),
+    ``,
+    `Start your final interview chat:`,
+    e.chatUrl,
+    ``,
+    `This link is personal to you and stays valid for ${e.validDays} days.`,
+    ``,
+    `Tips: find a quiet place with a stable internet connection, and answer`,
+    `honestly in your own words.`,
+    ``,
+    `WE WILL NEVER ASK YOU FOR a payment of any kind, your bank card details or a`,
+    `password — not in this chat and not anywhere else. If anybody does in our`,
+    `name, it did not come from us.`,
+    ``,
+    `Any questions, reply to this email or write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function finalChatHtml(e: FinalChatEmail): string {
+  const name = esc(firstNameOf(e.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(e.chatUrl);
+  const role = e.position ? ` for the <strong style="color:${NAVY};">${esc(e.position)}</strong> role` : "";
+
+  const step = (n: number, text: string) => `
+    <tr>
+      <td width="34" valign="top" style="padding:0 0 12px 0;">
+        <span style="display:inline-block;width:24px;height:24px;border-radius:12px;background:${AMBER};color:${NAVY};font:700 13px/24px Arial,Helvetica,sans-serif;text-align:center;">${n}</span>
+      </td>
+      <td valign="top" style="padding:2px 0 12px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">${text}</td>
+    </tr>`;
+
+  const bullet = (text: string) => `
+    <tr>
+      <td style="padding:0 0 8px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
+        <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; ${text}
+      </td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(finalChatSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  You have reached the final stage — start your live chat interview whenever you are ready.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Your final interview
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Good news &mdash; you have reached the <strong style="color:${NAVY};">final stage</strong>
+          of our hiring process${role}.
+        </p>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Your final interview is a short <strong style="color:${NAVY};">live text chat</strong>
+          with our recruitment team. There is no video or phone call &mdash; you answer our
+          questions in writing, in your own words.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:20px 22px 8px 22px;">
+              <p style="margin:0 0 14px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                How it works
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${step(1, "Open your chat link below when you are ready.")}
+                ${step(2, "Press <strong style=\"color:" + NAVY + ";\">Start chat</strong> &mdash; a recruiter will join you shortly.")}
+                ${step(3, "Answer a few questions. It usually takes 15&ndash;20 minutes.")}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        ${
+          e.hours
+            ? `<p style="margin:0 0 22px 0;font:700 15px/1.55 Arial,Helvetica,sans-serif;color:${NAVY};">
+          &#128339;&nbsp; ${esc(e.hours)}.
+        </p>`
+            : ""
+        }
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 36px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Start my final interview chat
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 6px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          This link is personal to you and stays valid for ${e.validDays} days.
+        </p>
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <p style="margin:0 0 10px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+          Before you start
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+          ${bullet("Find a quiet place with a stable internet connection.")}
+          ${bullet("Answer honestly and in your own words &mdash; there are no trick questions.")}
+          ${bullet("Keep the page open during the chat. If you close it, the same link brings you back.")}
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+              <strong style="color:${NAVY};">We will never ask you for</strong> a payment of any kind,
+              your bank card details or a password &mdash; not in this chat and not anywhere else.
+              If anybody does in our name, it did not come from us.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Submission received                                                         */
 /* -------------------------------------------------------------------------- */
 

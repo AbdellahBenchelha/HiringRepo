@@ -24,6 +24,7 @@ import { holdOverdue, liveStateOf } from "@/lib/liveVerification";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
 import { PanCardPanel } from "@/components/admin/PanCardPanel";
+import { ChatLinkPanel } from "@/components/admin/chat/ChatLinkPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
 import { VoiceAckButton } from "@/components/admin/VoiceAckButton";
 import { currentVoiceRecording } from "@/lib/voice";
@@ -549,6 +550,19 @@ export function CandidateProfileModal({
               hasRecording: !!currentVoiceRecording(candidate.documents),
             }}
             onSent={(patch) => onChange(patch)}
+          />
+
+          {/* The last step of the assessment: the final interview, held as a
+              live chat. The link, whether they started, and the transcript. */}
+          <ChatLinkPanel
+            candidate={{
+              id: candidate.id,
+              fullName: candidate.fullName,
+              email: candidate.email,
+              chatLinkSentAt: candidate.chatLinkSentAt,
+              chatLinks: candidate.chatLinks,
+            }}
+            onChange={(patch) => onChange(patch)}
           />
         </div>
         </div>

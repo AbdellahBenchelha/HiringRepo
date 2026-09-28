@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon, type IconName } from "@/components/Icon";
 import { Logo } from "@/components/layout/Logo";
+import { ChatNavBadge } from "@/components/admin/chat/ChatNavBadge";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin", label: "Dashboard", icon: "trendingUp" },
@@ -17,6 +18,10 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/waiting", label: "Waiting", icon: "clock" },
   { href: "/admin/offers", label: "Offers", icon: "handshake" },
   { href: "/admin/accepted", label: "Accepted", icon: "checkCircle" },
+  // Final interviews held as a live chat. After the stages, because a chat is
+  // something you answer, not a list you work through — and it carries a
+  // count, so a candidate waiting is visible from any page.
+  { href: "/admin/chat", label: "Live chat", icon: "headset" },
   // Not a stage of anyone's application — it is about the sending domain
   // rather than the people — but it sits with the tabs rather than under
   // Settings because it holds a number that changes every day and has to be
@@ -82,7 +87,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
               : "text-navy-600 hover:bg-navy-100 hover:text-navy-900"
           }`}
         >
-          <Icon name={item.icon} className="h-5 w-5 shrink-0" />
+          <span className="relative shrink-0">
+            <Icon name={item.icon} className="h-5 w-5" />
+            {item.href === "/admin/chat" ? <ChatNavBadge /> : null}
+          </span>
           <span className="admin-nav-label">{item.label}</span>
         </Link>
       ))}

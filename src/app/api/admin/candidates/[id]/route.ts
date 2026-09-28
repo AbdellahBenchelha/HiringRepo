@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
 import { deleteCandidate, documentKeys } from "@/lib/store";
 import { deleteObjects } from "@/lib/r2";
+import { deleteSessionsForCandidate } from "@/lib/chatStore";
 
 /** Permanently delete a candidate. No undo — the record holds personal data. */
 
@@ -24,6 +25,8 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     // eslint-disable-next-line no-console
     console.log(`[admin] deleted ${keys.length} document(s) for ${id}`);
   }
+  // And their interview chats: a transcript is personal data like any other.
+  await deleteSessionsForCandidate(id).catch(() => 0);
   // eslint-disable-next-line no-console
   console.log(`[admin] candidate ${id} deleted`);
   return NextResponse.json({ ok: true });
