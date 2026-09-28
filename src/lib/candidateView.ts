@@ -117,6 +117,10 @@ export interface CandidateView {
   residenceReuploadRequestedAt?: string;
   residenceReuploadReason?: string;
   residenceImagesDeletedAt?: string;
+  /** India only — whether they said they have a PAN card. See lib/pan. */
+  panAnswer?: "yes" | "no";
+  panAnsweredAt?: string;
+  panDeletedAt?: string;
   /** The live identity check: what was sent, and how far they got with it. */
   liveVerificationUrl?: string;
   liveVerificationSentAt?: string;
@@ -309,6 +313,9 @@ export function toCandidateView(
     residenceReuploadRequestedAt: c.residenceReuploadRequestedAt,
     residenceReuploadReason: c.residenceReuploadReason,
     residenceImagesDeletedAt: c.residenceImagesDeletedAt,
+    panAnswer: c.panAnswer,
+    panAnsweredAt: c.panAnsweredAt,
+    panDeletedAt: c.panDeletedAt,
     liveVerificationUrl: c.liveVerificationUrl,
     liveVerificationSentAt: c.liveVerificationSentAt,
     liveVerificationCount: c.liveVerificationCount,

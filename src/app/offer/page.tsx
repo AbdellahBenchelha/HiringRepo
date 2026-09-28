@@ -321,6 +321,7 @@ export default async function OfferPage({
 
       <OfferAcceptForm
         token={token ?? ""}
+        candidateId={candidate.id}
         email={candidate.email}
         declineFirst={declineFirst}
         identity={{ candidateId: candidate.id, needed: needsIdentity, notice: reuploadNotice }}

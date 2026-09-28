@@ -23,6 +23,7 @@ import { canOffer } from "@/lib/offer";
 import { holdOverdue, liveStateOf } from "@/lib/liveVerification";
 import { ConfirmedDetailsPanel } from "@/components/admin/ConfirmedDetailsPanel";
 import { CompanyDetailsPanel } from "@/components/admin/CompanyDetailsPanel";
+import { PanCardPanel } from "@/components/admin/PanCardPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
 import { VoiceAckButton } from "@/components/admin/VoiceAckButton";
 import { currentVoiceRecording } from "@/lib/voice";
@@ -640,6 +641,14 @@ export function CandidateProfileModal({
             agreement is actually with — and separating them would mean looking
             in two places to notice they disagree. */}
         <ConfirmedDetailsPanel candidate={candidate} />
+
+        {/* India only, and optional: the card they chose to send when
+            accepting, for the agreement and its payments. */}
+        <PanCardPanel
+          candidate={candidate}
+          onOpenDocument={onOpenDocument}
+          onChange={onChange}
+        />
 
         <CompanyDetailsPanel
           candidate={candidate}

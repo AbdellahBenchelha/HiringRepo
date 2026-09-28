@@ -61,6 +61,15 @@ export const DOCUMENT_KINDS = [
   "w9",
   "formation",
   "einLetter",
+  /**
+   * The Indian PAN card, offered at acceptance by candidates living in India.
+   *
+   * Two kinds for the same reason the ID card has two: one document per kind,
+   * replaced on re-upload, so a back filed under the front's kind would delete
+   * it. The back is optional — an e-PAN has none. See lib/pan.
+   */
+  "panFront",
+  "panBack",
 ] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
@@ -81,6 +90,8 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   w9: "Form W-9",
   formation: "Certificate of Formation",
   einLetter: "EIN confirmation letter",
+  panFront: "PAN card — front",
+  panBack: "PAN card — back",
 };
 
 /** Short form for the table chips, where three of them share one cell. */
@@ -97,6 +108,8 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   w9: "W-9",
   formation: "Formation",
   einLetter: "EIN",
+  panFront: "PAN",
+  panBack: "PAN back",
 };
 
 /** The identity pair, which the application documents column does not show. */
@@ -182,6 +195,14 @@ export function isCompanyKind(kind: DocumentKind): boolean {
 }
 
 /**
+ * The PAN card, which arrives the way company paperwork does: a phone photo of
+ * the card, or the e-PAN PDF the tax department emails out.
+ */
+export function isPanDocumentKind(kind: DocumentKind): boolean {
+  return kind === "panFront" || kind === "panBack";
+}
+
+/**
  * Company paperwork arrives as a PDF from a filing agent or as a photograph of
  * a printed page. Both are ordinary; a Word file is not, and allowing one
  * would mean accepting a document that can rewrite itself when opened.
@@ -193,19 +214,19 @@ export function maxBytesFor(kind: DocumentKind): number {
   if (isAudioKind(kind)) return MAX_AUDIO_BYTES;
   // A scanned certificate runs to several pages, and a phone photograph of one
   // is no smaller than a photograph of a passport.
-  if (isCompanyKind(kind)) return MAX_IMAGE_BYTES;
+  if (isCompanyKind(kind) || isPanDocumentKind(kind)) return MAX_IMAGE_BYTES;
   return isImageKind(kind) ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
 }
 
 export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_EXTENSIONS;
-  if (isCompanyKind(kind)) return COMPANY_EXTENSIONS;
+  if (isCompanyKind(kind) || isPanDocumentKind(kind)) return COMPANY_EXTENSIONS;
   return isImageKind(kind) ? IMAGE_EXTENSIONS : ALLOWED_EXTENSIONS;
 }
 
 export function allowedMimeFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_MIME;
-  if (isCompanyKind(kind)) return COMPANY_MIME;
+  if (isCompanyKind(kind) || isPanDocumentKind(kind)) return COMPANY_MIME;
   return isImageKind(kind) ? IMAGE_MIME : ALLOWED_MIME;
 }
 

@@ -24,6 +24,7 @@ import { normaliseEmail, normalisePhone } from "@/lib/identity";
 import { isCandidateOpen, type OpenSource } from "@/lib/followUp";
 import {
   currentDocument,
+  isPanDocumentKind,
   keepsHistory,
   type CandidateDocument,
   type DocumentKind,
@@ -35,6 +36,7 @@ import { isResidenceKind, MAX_EXPLANATION } from "@/lib/residence";
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
 import { effectiveOffer, type Offer } from "@/lib/offer";
+import type { PanAnswer } from "@/lib/pan";
 import { deadlineFrom } from "@/lib/offerReminder";
 import type { Availability } from "@/lib/availability";
 import type { ConfirmedDetails } from "@/lib/hiring";
@@ -272,6 +274,14 @@ export interface Candidate {
   residenceReuploadRequestedAt?: string;
   residenceReuploadReason?: string;
   residenceImagesDeletedAt?: string;
+  /**
+   * Whether they said they have a PAN card, at acceptance. India only, and
+   * optional — see lib/pan. The card itself is in documents.
+   */
+  panAnswer?: PanAnswer;
+  panAnsweredAt?: string;
+  /** When the PAN card was deleted from the Admin Panel. */
+  panDeletedAt?: string;
   /**
    * The live identity check: a link created for this one candidate in Persona,
    * emailed to them by hand when photographs could not settle the question.
@@ -1350,6 +1360,27 @@ export function clearResidenceImages(id: string): Promise<string[]> {
 }
 
 /**
+ * Forget a candidate's PAN card: both sides, every version. Returns the storage
+ * keys to delete. Their answer is kept, so the record still says they had one.
+ */
+export function clearPanDocuments(id: string): Promise<string[]> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: [] as string[] };
+    const removed: string[] = [];
+    let any = false;
+    c.documents = (c.documents ?? []).filter((d) => {
+      if (!isPanDocumentKind(d.kind)) return true;
+      any = true;
+      if (d.key) removed.push(d.key);
+      return false;
+    });
+    if (any) c.panDeletedAt = new Date().toISOString();
+    return { list, result: removed };
+  });
+}
+
+/**
  * Record which of the three documents a candidate chose.
  *
  * Written when they submit, alongside consent, rather than when they pick:
@@ -1470,6 +1501,8 @@ export function acceptOfferWithDetails(
    * moment later or not at all.
    */
   ssn?: string,
+  /** India only: whether they have a PAN card. Absent when not asked. */
+  pan?: PanAnswer,
 ): Promise<OfferAnswerResult> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
@@ -1489,6 +1522,10 @@ export function acceptOfferWithDetails(
     // Only ever set, never cleared: a second acceptance cannot happen, and an
     // empty value arriving here should not wipe a number already on file.
     if (ssn) c.ssn = ssn;
+    if (pan) {
+      c.panAnswer = pan;
+      c.panAnsweredAt = now;
+    }
     // They accepted what the page showed them, which is the capped figure —
     // so that is what the record says they accepted. The original survives on
     // the offer as hoursCappedFrom, because their email still quotes it.

@@ -3,6 +3,7 @@ import { readOfferToken } from "@/lib/token";
 import { acceptOfferWithDetails, declineOfferByCandidate, type OfferAnswerResult } from "@/lib/store";
 import { validateConfirmed } from "@/lib/hiring";
 import { isValidSsn, ssnExpected } from "@/lib/ssn";
+import { isPanAnswer, panExpected } from "@/lib/pan";
 import { formatAvailability, validateAvailability } from "@/lib/availability";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
@@ -50,6 +51,8 @@ export async function POST(req: NextRequest) {
     availability?: unknown;
     /** US only, and outside `details` on purpose — see acceptOfferWithDetails. */
     ssn?: unknown;
+    /** India only: "yes" or "no" to having a PAN card. */
+    pan?: unknown;
   }>(req, 16 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const body = parsed.data;
@@ -125,6 +128,9 @@ export async function POST(req: NextRequest) {
     // Stored only when it was the thing asked for. A number posted by a
     // candidate outside the US is discarded rather than kept for no reason.
     ssnWanted ? ssnRaw : undefined,
+    // Optional, and kept only from someone living in India — the only people
+    // the form asks. The card itself follows as an upload once this returns.
+    panExpected(check.details.country) && isPanAnswer(body.pan) ? body.pan : undefined,
   );
   if (!result.ok) {
     const { status, error } = REFUSAL[result.reason];

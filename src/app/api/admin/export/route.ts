@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
-import { DOCUMENT_SHORT } from "@/lib/documents";
+import { DOCUMENT_SHORT, isPanDocumentKind } from "@/lib/documents";
 import { requiredCountries } from "@/lib/verificationStore";
 import { verificationStatus, VERIFICATION_LABEL } from "@/lib/verification";
 import { residenceStatus, RESIDENCE_LABEL } from "@/lib/residence";
@@ -92,11 +92,13 @@ export async function GET(_req: NextRequest) {
       // anyone asked twice, which says less than the number does.
       [
         (c.documents ?? [])
-          .filter((d) => !d.supersededAt)
+          // Not even that a PAN card exists: it is a tax identifier, and this
+          // file gets emailed around. It lives in View info only.
+          .filter((d) => !d.supersededAt && !isPanDocumentKind(d.kind))
           .map((d) => `${DOCUMENT_SHORT[d.kind]}${d.status === "clean" ? "" : ` (${d.status})`}`)
           .join(" / "),
-        (c.documents ?? []).filter((d) => d.supersededAt).length
-          ? `+${(c.documents ?? []).filter((d) => d.supersededAt).length} earlier`
+        (c.documents ?? []).filter((d) => d.supersededAt && !isPanDocumentKind(d.kind)).length
+          ? `+${(c.documents ?? []).filter((d) => d.supersededAt && !isPanDocumentKind(d.kind)).length} earlier`
           : "",
       ]
         .filter(Boolean)
