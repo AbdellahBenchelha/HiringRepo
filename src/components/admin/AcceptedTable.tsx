@@ -47,7 +47,9 @@ function fmtDate(iso?: string) {
 export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
-  const [confirmed, setConfirmed] = useState<"all" | "yes" | "no">("all");
+  // Replaces the old "Details confirmed" filter: the question asked of this
+  // list now is whether somebody is Full verified.
+  const [verified, setVerified] = useState<"all" | "yes" | "no">("all");
   const [engagedAs, setEngagedAs] = useState<"all" | "Individual" | "Company">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
@@ -85,12 +87,12 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
         (v || "").toLowerCase().includes(q),
       )) return false;
       if (country !== "all" && c.country !== country) return false;
-      if (confirmed === "yes" && !c.confirmedDetails) return false;
-      if (confirmed === "no" && c.confirmedDetails) return false;
+      if (verified === "yes" && c.status !== FULL_VERIFIED) return false;
+      if (verified === "no" && c.status === FULL_VERIFIED) return false;
       if (engagedAs !== "all" && c.confirmedDetails?.engagedAs !== engagedAs) return false;
       return true;
     });
-  }, [live, search, country, confirmed, engagedAs]);
+  }, [live, search, country, verified, engagedAs]);
 
   const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
   const current = Math.min(page, pageCount);
@@ -137,7 +139,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, confirmed, engagedAs, pageSize]);
+  }, [search, country, verified, engagedAs, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -173,16 +175,16 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           </label>
 
           <label className="block">
-            <span className="label">Details confirmed</span>
+            <span className="label">Status</span>
             <select
-              id="confirmed"
+              id="verified"
               className="select"
-              value={confirmed}
-              onChange={(e) => setConfirmed(e.target.value as typeof confirmed)}
+              value={verified}
+              onChange={(e) => setVerified(e.target.value as typeof verified)}
             >
               <option value="all">All</option>
-              <option value="yes">Confirmed</option>
-              <option value="no">Still waiting</option>
+              <option value="yes">Full verified</option>
+              <option value="no">Not full verified</option>
             </select>
           </label>
 
@@ -221,7 +223,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
               onClick={() => {
                 setSearch("");
                 setCountry("all");
-                setConfirmed("all");
+                setVerified("all");
                 setEngagedAs("all");
               }}
               className="rounded-full px-3 py-1 text-xs font-semibold text-navy-600 transition hover:bg-navy-100"

@@ -270,7 +270,7 @@ export function toCandidateView(
     city: c.city,
     address: c.address,
     linkedin: c.linkedin,
-    languages: c.languages.filter((l) => l.language).map((l) => l.language),
+    languages: (c.languages ?? []).filter((l) => l.language).map((l) => l.language),
     position: c.position,
     status: c.status,
     createdAt: c.createdAt,
