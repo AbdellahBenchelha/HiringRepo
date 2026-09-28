@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
+import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ChatMessages } from "@/components/admin/chat/ChatMessages";
 import type { ChatMessage } from "@/lib/chat";
@@ -14,7 +15,12 @@ import type { ChatMessage } from "@/lib/chat";
  *
  * The transcript is fetched when the panel opens rather than carried in the
  * candidate list — a conversation can be long, and the list is loaded for
- * everybody on every page.
+ * everybody on every page. It refreshes while it is on screen, so "Link sent —
+ * not started" does not sit there after they have started.
+ *
+ * Only the latest request counts. Stepping to the next candidate while one is
+ * loading must never let the slower answer land under the new name — that would
+ * put one person's interview on another person's record.
  */
 
 interface SessionInfo {
@@ -59,25 +65,43 @@ export function ChatLinkPanel({
 
   const links = candidate.chatLinks ?? (candidate.chatLinkSentAt ? [candidate.chatLinkSentAt] : []);
   const hasEmail = !!candidate.email?.includes("@");
+  const seq = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
+    const mine = ++seq.current;
     try {
-      const res = await fetch(`/api/admin/candidates/${candidate.id}/chat`, { cache: "no-store" });
+      const res = await fetchWithTimeout(`/api/admin/candidates/${candidate.id}/chat`, { cache: "no-store" }, 12_000);
       const data = (await res.json()) as { ok?: boolean; sessions?: SessionInfo[]; link?: string; linkExpired?: boolean };
+      if (mine !== seq.current) return; // overtaken — possibly by another candidate
       if (data.ok) {
         setSessions(data.sessions ?? []);
         setLink(data.link);
         setExpired(!!data.linkExpired);
+      } else {
+        setSessions((s) => s ?? []);
       }
     } catch {
-      setSessions((s) => s ?? []);
+      if (mine === seq.current) setSessions((s) => s ?? []);
     }
   }, [candidate.id]);
 
   useEffect(() => {
     setSessions(null);
+    setLink(undefined);
+    setExpired(false);
     setResult("");
+    setShowAll(false);
     void load();
+    // Refresh while the panel is actually showing — not while the Assessment
+    // tab is hidden, and not while the browser tab is in the background.
+    const timer = setInterval(() => {
+      if (!document.hidden && rootRef.current?.offsetParent) void load();
+    }, 15_000);
+    return () => {
+      clearInterval(timer);
+      seq.current++; // anything still in flight is for a candidate no longer shown
+    };
   }, [load]);
 
   const current = sessions?.find((s) => s.linkSentAt === candidate.chatLinkSentAt);
@@ -99,7 +123,9 @@ export function ChatLinkPanel({
         void load();
       } else {
         setResult(
-          data.error === "warmup_limit"
+          res.status === 401
+            ? "your admin session has expired — sign in again"
+            : data.error === "warmup_limit"
             ? "today's sending limit is reached"
             : data.error === "no_email"
               ? "no email address on file"
@@ -127,7 +153,7 @@ export function ChatLinkPanel({
   const shown = showAll ? sessions ?? [] : (sessions ?? []).slice(0, 1);
 
   return (
-    <div className="mt-5 rounded-xl border border-navy-100 p-4" data-chat-panel>
+    <div ref={rootRef} className="mt-5 rounded-xl border border-navy-100 p-4" data-chat-panel>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-semibold text-navy-800">
           <Icon name="headset" className="h-4 w-4 text-navy-400" />

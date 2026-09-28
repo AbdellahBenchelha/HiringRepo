@@ -932,6 +932,12 @@ export interface FinalChatEmail {
   validDays: number;
 }
 
+/** The hours line as a sentence: one full stop, however it was typed in Settings. */
+function hoursSentence(hours: string): string {
+  const trimmed = hours.trim().replace(/[.\s]+$/, "");
+  return trimmed ? `${trimmed}.` : "";
+}
+
 /**
  * The invitation to the final interview, held as a live text chat.
  *
@@ -960,7 +966,7 @@ export function finalChatText(e: FinalChatEmail): string {
     `1. Open your chat link below when you are ready.`,
     `2. Press "Start chat" — a recruiter will join you shortly.`,
     `3. Answer a few questions. It usually takes 15–20 minutes.`,
-    ...(e.hours ? [``, `${e.hours}.`] : []),
+    ...(e.hours && hoursSentence(e.hours) ? [``, hoursSentence(e.hours)] : []),
     ``,
     `Start your final interview chat:`,
     e.chatUrl,
@@ -1067,9 +1073,9 @@ export function finalChatHtml(e: FinalChatEmail): string {
         </table>
 
         ${
-          e.hours
+          e.hours && hoursSentence(e.hours)
             ? `<p style="margin:0 0 22px 0;font:700 15px/1.55 Arial,Helvetica,sans-serif;color:${NAVY};">
-          &#128339;&nbsp; ${esc(e.hours)}.
+          &#128339;&nbsp; ${esc(hoursSentence(e.hours))}
         </p>`
             : ""
         }

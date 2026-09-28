@@ -11,6 +11,8 @@ import {
   type PublicMessage,
 } from "@/lib/chat";
 import { newId } from "@/lib/id";
+import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
+import { useHydrated } from "@/components/chat/useHydrated";
 
 /**
  * The candidate's side of the final-interview chat.
@@ -20,13 +22,20 @@ import { newId } from "@/lib/id";
  * seconds late is nothing in an interview. Every failure has a visible state —
  * a dropped connection says it is reconnecting, a message that did not go says
  * so and offers to try again, and a link that stopped working says why.
+ *
+ * Replies can arrive out of order — a poll sent before a message can be
+ * answered after it — so a reply describing an older conversation than the one
+ * on screen is ignored rather than allowed to wind the screen back. Messages
+ * only ever grow, so "older" is simply "fewer".
  */
 
-type Pending = { clientId: string; text: string; at: string; failed?: string };
+type Pending = { clientId: string; text: string; failed?: string };
 type Blocked = "replaced" | "expired" | "invalid" | "not_found" | null;
+type ApiReply = { ok?: boolean; state?: CandidateChatState; error?: string };
 
 const POLL_VISIBLE_MS = 2500;
 const POLL_HIDDEN_MS = 8000;
+const REQUEST_TIMEOUT_MS = 12_000;
 
 function time(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -57,7 +66,10 @@ function Linked({ text }: { text: string }) {
 
 function Avatar() {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[11px] font-extrabold tracking-tight text-brand-400">
+    <span
+      aria-hidden
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[11px] font-extrabold tracking-tight text-brand-400"
+    >
       WR
     </span>
   );
@@ -87,6 +99,11 @@ function chime() {
   }
 }
 
+/** Where an unsent answer is kept, so a refresh does not lose it. Per link. */
+function draftKey(token: string) {
+  return `wr-chat-draft:${token.slice(-24)}`;
+}
+
 export function ChatRoom({
   token,
   firstName,
@@ -100,6 +117,7 @@ export function ChatRoom({
   hours: string;
   initial: CandidateChatState;
 }) {
+  const hydrated = useHydrated();
   const [status, setStatus] = useState<CandidateChatState["status"]>(initial.status);
   const [messages, setMessages] = useState<PublicMessage[]>(initial.messages);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -111,7 +129,7 @@ export function ChatRoom({
   const [startError, setStartError] = useState("");
   const [offline, setOffline] = useState(false);
   const [blocked, setBlocked] = useState<Blocked>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(0);
   const [showJump, setShowJump] = useState(false);
 
   const countRef = useRef(initial.total);
@@ -119,17 +137,21 @@ export function ChatRoom({
   const failures = useRef(0);
   const listRef = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
+  const shownCount = useRef(initial.messages.length);
   const lastTypingSent = useRef(0);
   const unseen = useRef(0);
   const baseTitle = useRef("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const pollNow = useRef<() => void>(() => {});
 
-  /** Fold a server state into what is on screen. Idempotent, so racing replies are harmless. */
+  /* -- folding server replies into the screen ----------------------------- */
   const apply = useCallback((state: CandidateChatState) => {
-    const start = state.total - state.messages.length;
+    if (!state.reset && state.total < countRef.current) return; // an older reply, overtaken
     const fresh = state.messages.filter((m) => m.from === "recruiter" && !known.current.has(m.id));
+    if (state.reset) known.current = new Set();
     state.messages.forEach((m) => known.current.add(m.id));
-    setMessages((prev) => prev.slice(0, Math.max(0, start)).concat(state.messages));
+    const start = state.total - state.messages.length;
+    setMessages((prev) => (state.reset ? state.messages : prev.slice(0, Math.max(0, start)).concat(state.messages)));
     countRef.current = state.total;
     setPending((p) => p.filter((x) => !state.messages.some((m) => m.clientId === x.clientId)));
     setStatus(state.status);
@@ -137,14 +159,14 @@ export function ChatRoom({
     setEndedReason(state.endedReason);
     setRecruiterTyping(state.recruiterTyping);
     // Tell somebody who has switched tabs that the recruiter has written.
-    if (fresh.length && typeof document !== "undefined" && document.hidden) {
+    if (fresh.length && document.hidden) {
       unseen.current += fresh.length;
       document.title = `(${unseen.current}) New message — WorkRoute`;
       chime();
     }
   }, []);
 
-  const handleRefusal = useCallback((res: Response, data: { error?: string }) => {
+  const handleRefusal = useCallback((res: Response, data: ApiReply) => {
     if (res.status === 409 && data.error === "replaced") setBlocked("replaced");
     else if (res.status === 403) setBlocked(data.error === "expired" ? "expired" : "invalid");
     else if (res.status === 404 && data.error === "not_found") setBlocked("not_found");
@@ -152,66 +174,124 @@ export function ChatRoom({
     return true;
   }, []);
 
-  /* -- polling ------------------------------------------------------------ */
+  const pollUrl = useCallback(
+    () => `/api/chat?t=${encodeURIComponent(token)}&from=${countRef.current}`,
+    [token],
+  );
+
+  /* -- polling, while the conversation is live ------------------------------ */
+  const live = (status === "waiting" || status === "active") && !blocked;
   useEffect(() => {
-    if (status === "not_started" || blocked) return;
+    if (!live) return;
     let stop = false;
+    let inFlight = false;
     let timer: ReturnType<typeof setTimeout>;
 
     const poll = async () => {
+      if (inFlight || stop) return;
+      inFlight = true;
+      let wait = document.hidden ? POLL_HIDDEN_MS : POLL_VISIBLE_MS;
       try {
-        const res = await fetch(`/api/chat?t=${encodeURIComponent(token)}&from=${countRef.current}`, {
-          cache: "no-store",
-        });
-        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; state?: CandidateChatState; error?: string };
-        if (data.ok && data.state) {
-          failures.current = 0;
-          setOffline(false);
-          apply(data.state);
-        } else if (!handleRefusal(res, data)) {
-          failures.current += 1;
+        const res = await fetchWithTimeout(pollUrl(), { cache: "no-store" }, REQUEST_TIMEOUT_MS);
+        if (res.status === 429) {
+          // Not a lost connection — just asked too often. Wait as told.
+          wait = Math.max(wait, Number(res.headers.get("Retry-After") ?? 10) * 1000);
+        } else {
+          const data = (await res.json().catch(() => ({}))) as ApiReply;
+          if (data.ok && data.state) {
+            failures.current = 0;
+            setOffline(false);
+            apply(data.state);
+          } else if (!handleRefusal(res, data)) {
+            failures.current += 1;
+          }
         }
       } catch {
         failures.current += 1;
       }
+      inFlight = false;
       if (failures.current >= 2) setOffline(true);
       if (stop) return;
-      const hidden = typeof document !== "undefined" && document.hidden;
       // Back off gently while the connection is down, to a ceiling.
-      const base = hidden ? POLL_HIDDEN_MS : POLL_VISIBLE_MS;
-      timer = setTimeout(poll, Math.min(base * Math.max(1, failures.current), 15000));
+      if (failures.current) wait = Math.min(wait * (failures.current + 1), 15_000);
+      timer = setTimeout(poll, wait);
     };
-    timer = setTimeout(poll, status === "ended" ? 5000 : 800);
+
+    pollNow.current = () => {
+      clearTimeout(timer);
+      void poll();
+    };
+    timer = setTimeout(poll, 600);
     const onVisible = () => {
-      if (!document.hidden) {
-        unseen.current = 0;
-        if (baseTitle.current) document.title = baseTitle.current;
-        clearTimeout(timer);
-        timer = setTimeout(poll, 100);
-      }
+      if (document.hidden) return;
+      unseen.current = 0;
+      if (baseTitle.current) document.title = baseTitle.current;
+      pollNow.current();
     };
+    const onOnline = () => pollNow.current();
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
     return () => {
       stop = true;
       clearTimeout(timer);
+      pollNow.current = () => {};
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
     };
-    // An ended chat still polls, slowly, in case a page was left open — but it
-    // is the status change that matters, so the effect restarts on it.
-  }, [status === "not_started", status === "ended", blocked, token, apply, handleRefusal]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [live, pollUrl, apply, handleRefusal]);
+
+  /** One fetch, outside the loop — for the final state once a chat has ended. */
+  const refreshOnce = useCallback(async () => {
+    try {
+      const res = await fetchWithTimeout(pollUrl(), { cache: "no-store" }, REQUEST_TIMEOUT_MS);
+      const data = (await res.json().catch(() => ({}))) as ApiReply;
+      if (data.ok && data.state) apply(data.state);
+      else handleRefusal(res, data);
+    } catch {
+      /* the screen already says it has ended */
+    }
+  }, [pollUrl, apply, handleRefusal]);
 
   useEffect(() => {
     baseTitle.current = document.title;
+    setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
+
+  /* -- an unsent answer survives a refresh --------------------------------- */
+  const skipFirstSave = useRef(true);
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(draftKey(token));
+      if (saved) setDraft(saved);
+    } catch {
+      /* storage unavailable: nothing to restore */
+    }
+  }, [token]);
+  useEffect(() => {
+    // The first run sees the empty box from before the restore above has
+    // landed; saving that would delete the very draft being restored.
+    if (skipFirstSave.current) {
+      skipFirstSave.current = false;
+      return;
+    }
+    try {
+      if (draft) sessionStorage.setItem(draftKey(token), draft);
+      else sessionStorage.removeItem(draftKey(token));
+    } catch {
+      /* storage unavailable: the draft just is not kept */
+    }
+  }, [draft, token]);
 
   /* -- scrolling ---------------------------------------------------------- */
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el) return;
+    const grew = messages.length > shownCount.current;
+    shownCount.current = messages.length;
     if (atBottom.current) el.scrollTop = el.scrollHeight;
-    else setShowJump(true);
+    else if (grew) setShowJump(true);
   }, [messages.length, pending.length, recruiterTyping, status]);
 
   const onScroll = () => {
@@ -233,12 +313,16 @@ export function ChatRoom({
     setStarting(true);
     setStartError("");
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ t: token, action: "start", from: 0 }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; state?: CandidateChatState; error?: string };
+      const res = await fetchWithTimeout(
+        "/api/chat",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ t: token, action: "start", from: 0 }),
+        },
+        REQUEST_TIMEOUT_MS,
+      );
+      const data = (await res.json().catch(() => ({}))) as ApiReply;
       if (data.ok && data.state) {
         apply(data.state);
         setTimeout(() => inputRef.current?.focus(), 50);
@@ -257,40 +341,49 @@ export function ChatRoom({
 
   async function deliver(p: Pending) {
     setPending((list) => list.map((x) => (x.clientId === p.clientId ? { ...x, failed: undefined } : x)));
+    const fail = (why: string) =>
+      setPending((list) => list.map((x) => (x.clientId === p.clientId ? { ...x, failed: why } : x)));
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ t: token, action: "send", text: p.text, clientId: p.clientId, from: countRef.current }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; state?: CandidateChatState; error?: string };
+      const res = await fetchWithTimeout(
+        "/api/chat",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ t: token, action: "send", text: p.text, clientId: p.clientId, from: countRef.current }),
+        },
+        REQUEST_TIMEOUT_MS,
+      );
+      const data = (await res.json().catch(() => ({}))) as ApiReply;
       if (data.ok && data.state) {
         setOffline(false);
         apply(data.state);
         return;
       }
       if (handleRefusal(res, data)) return;
-      const why =
-        data.error === "ended"
-          ? "The chat has ended."
-          : res.status === 429
-            ? "You are sending messages too quickly. Wait a moment and try again."
-            : data.error === "too_long"
-              ? "That message is too long."
-              : "Not sent.";
-      if (data.error === "ended") setStatus("ended");
-      setPending((list) => list.map((x) => (x.clientId === p.clientId ? { ...x, failed: why } : x)));
-    } catch {
-      setPending((list) =>
-        list.map((x) => (x.clientId === p.clientId ? { ...x, failed: "Not sent — check your connection." } : x)),
+      if (data.error === "ended") {
+        fail("The chat has ended.");
+        void refreshOnce();
+        return;
+      }
+      fail(
+        res.status === 429
+          ? "You are sending messages too quickly. Wait a moment and try again."
+          : data.error === "too_long"
+            ? "That message is too long."
+            : "Not sent.",
       );
+    } catch {
+      // It may have arrived even so — the retry carries the same id, so it is
+      // never stored twice, and the next poll shows it if it did.
+      fail("Not sent — check your connection.");
+      pollNow.current();
     }
   }
 
   function send() {
     const text = draft.trim();
-    if (!text || text.length > MAX_MESSAGE || status === "ended" || status === "not_started") return;
-    const p: Pending = { clientId: newId(12), text, at: new Date().toISOString() };
+    if (!text || text.length > MAX_MESSAGE || (status !== "waiting" && status !== "active")) return;
+    const p: Pending = { clientId: newId(12), text };
     setPending((list) => [...list, p]);
     setDraft("");
     atBottom.current = true;
@@ -318,14 +411,14 @@ export function ChatRoom({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  }, [draft]);
+  }, [draft, status]);
 
-  const waitedMin = startedAt ? (now - Date.parse(startedAt)) / 60000 : 0;
+  const waitedMin = hydrated && startedAt && now ? (now - Date.parse(startedAt)) / 60000 : 0;
   const busy = status === "waiting" && waitedMin >= BUSY_AFTER_MINUTES;
-  const touch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
   const over = draft.length > MAX_MESSAGE;
+  const t = (iso: string) => (hydrated ? time(iso) : "");
 
-  /* -- the link stopped working mid-chat --------------------------------- */
+  /* -- the link stopped working ------------------------------------------ */
   if (blocked) {
     return (
       <Frame status="ended" statusLabel="Chat unavailable">
@@ -355,7 +448,7 @@ export function ChatRoom({
   /* -- before Start -------------------------------------------------------- */
   if (status === "not_started") {
     return (
-      <Frame status="idle" statusLabel="Final interview">
+      <Frame status="idle" statusLabel="Recruitment team">
         <div className="flex flex-1 items-start justify-center overflow-y-auto px-4 py-8 sm:items-center sm:py-12">
           <div className="w-full max-w-lg">
             <div className="overflow-hidden rounded-3xl border border-navy-100 bg-white shadow-card">
@@ -367,9 +460,7 @@ export function ChatRoom({
                 <h1 className="mt-4 text-2xl font-extrabold leading-tight text-white sm:text-3xl">
                   Hi {firstName}, welcome to your final interview
                 </h1>
-                {position ? (
-                  <p className="mt-2 text-sm text-navy-200">For the {position} role</p>
-                ) : null}
+                {position ? <p className="mt-2 text-sm text-navy-200">For the {position} role</p> : null}
               </div>
 
               <div className="px-6 py-6 sm:px-8">
@@ -438,7 +529,13 @@ export function ChatRoom({
     <Frame status={status} statusLabel={statusLabel} offline={offline}>
       <div className="relative min-h-0 flex-1">
         <div ref={listRef} onScroll={onScroll} className="h-full overflow-y-auto overscroll-contain">
-          <div className="mx-auto flex max-w-3xl flex-col gap-1 px-3 py-5 sm:px-6">
+          <div
+            className="mx-auto flex max-w-3xl flex-col gap-1 px-3 py-5 sm:px-6"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+            aria-label="Conversation"
+          >
             {status === "waiting" ? (
               <div className="mx-auto mb-4 w-full max-w-md rounded-2xl border border-brand-200 bg-white p-5 text-center shadow-sm">
                 <span className="relative mx-auto flex h-14 w-14 items-center justify-center">
@@ -472,8 +569,9 @@ export function ChatRoom({
               if (m.from === "system") {
                 return (
                   <div key={m.id} className="my-2 flex justify-center">
-                    <span className="rounded-full bg-navy-100/70 px-3 py-1 text-[11px] font-semibold text-navy-600">
-                      {m.text} · {time(m.at)}
+                    <span className="rounded-full bg-navy-100/70 px-3 py-1 text-center text-[11px] font-semibold text-navy-600">
+                      {m.text}
+                      {hydrated ? ` · ${t(m.at)}` : ""}
                     </span>
                   </div>
                 );
@@ -481,8 +579,11 @@ export function ChatRoom({
               const mine = m.from === "candidate";
               const grouped = prev && prev.from === m.from;
               return (
-                <div key={m.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${grouped ? "mt-0.5" : "mt-3"}`}>
-                  {!mine ? (grouped ? <span className="w-8 shrink-0" /> : <Avatar />) : null}
+                <div
+                  key={m.id}
+                  className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${grouped ? "mt-0.5" : "mt-3"}`}
+                >
+                  {!mine ? grouped ? <span className="w-8 shrink-0" /> : <Avatar /> : null}
                   <div className={`flex max-w-[82%] flex-col ${mine ? "items-end" : "items-start"} sm:max-w-[70%]`}>
                     {!mine && !grouped ? (
                       <span className="mb-1 ml-1 text-[11px] font-bold text-navy-500">{RECRUITER_NAME}</span>
@@ -496,7 +597,7 @@ export function ChatRoom({
                     >
                       {mine ? m.text : <Linked text={m.text} />}
                     </div>
-                    <span className="mx-1 mt-1 text-[10px] font-medium text-navy-400">{time(m.at)}</span>
+                    <span className="mx-1 mt-1 min-h-[14px] text-[10px] font-medium text-navy-400">{t(m.at)}</span>
                   </div>
                 </div>
               );
@@ -513,9 +614,9 @@ export function ChatRoom({
                     {p.text}
                   </div>
                   {p.failed ? (
-                    <span className="mx-1 mt-1 flex items-center gap-2 text-[11px] font-semibold text-red-700">
+                    <span className="mx-1 mt-1 flex items-center gap-2 text-[11px] font-semibold text-red-700" role="alert">
                       {p.failed}
-                      {status !== "ended" ? (
+                      {status === "waiting" || status === "active" ? (
                         <button type="button" onClick={() => void deliver(p)} className="underline hover:text-red-900">
                           Try again
                         </button>
@@ -529,11 +630,11 @@ export function ChatRoom({
             ))}
 
             {recruiterTyping && status === "active" ? (
-              <div className="mt-3 flex items-end gap-2" aria-live="polite">
+              <div className="mt-3 flex items-end gap-2">
                 <Avatar />
                 <div className="rounded-2xl rounded-bl-md border border-navy-100 bg-white px-4 py-3 shadow-sm">
                   <span className="sr-only">The recruiter is typing</span>
-                  <span className="flex gap-1">
+                  <span className="flex gap-1" aria-hidden>
                     {[0, 150, 300].map((d) => (
                       <span key={d} className="h-2 w-2 animate-bounce rounded-full bg-navy-300" style={{ animationDelay: `${d}ms` }} />
                     ))}
@@ -556,7 +657,7 @@ export function ChatRoom({
       </div>
 
       {status === "ended" ? (
-        <div className="border-t border-navy-100 bg-white px-4 py-5">
+        <div className="border-t border-navy-100 bg-white px-4 py-5" style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
           <div className="mx-auto flex max-w-3xl items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
               <Icon name="checkCircle" className="h-5 w-5" />
@@ -586,6 +687,7 @@ export function ChatRoom({
             <label htmlFor="chat-input" className="sr-only">
               Your message
             </label>
+            {/* 16px on phones: iOS zooms the whole page into any smaller field. */}
             <textarea
               id="chat-input"
               ref={inputRef}
@@ -595,13 +697,14 @@ export function ChatRoom({
               onKeyDown={(e) => {
                 // Enter sends on a keyboard; on a phone it is a new line, and
                 // the button sends.
+                const touch = window.matchMedia?.("(pointer: coarse)").matches;
                 if (e.key === "Enter" && !e.shiftKey && !touch && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   send();
                 }
               }}
               placeholder="Type your message…"
-              className="max-h-40 min-h-[46px] flex-1 resize-none rounded-2xl border-2 border-navy-100 bg-cream-50 px-4 py-2.5 text-[15px] leading-relaxed text-navy-900 placeholder:text-navy-400 focus:border-brand-400 focus:bg-white focus:outline-none"
+              className="max-h-40 min-h-[46px] flex-1 resize-none rounded-2xl border-2 border-navy-100 bg-cream-50 px-4 py-2.5 text-base leading-relaxed text-navy-900 placeholder:text-navy-400 focus:border-brand-400 focus:bg-white focus:outline-none sm:text-[15px]"
             />
             <button
               type="submit"
@@ -638,7 +741,7 @@ function Frame({
   const dot =
     status === "active" ? "bg-green-500" : status === "waiting" ? "bg-brand-500 animate-pulse" : "bg-navy-300";
   return (
-    <div className="flex h-[100dvh] flex-col bg-cream-100">
+    <div className="h-dvh-safe flex flex-col bg-cream-100">
       <header className="border-b border-navy-100 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -648,7 +751,9 @@ function Frame({
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-navy-900">{RECRUITER_NAME}</p>
-              <p className="truncate text-xs font-medium text-navy-500">{statusLabel}</p>
+              <p className="truncate text-xs font-medium text-navy-500" data-chat-status>
+                {statusLabel}
+              </p>
             </div>
           </div>
           <span className="shrink-0 rounded-full bg-navy-900 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-300">

@@ -160,7 +160,8 @@ export function buildChatStartedMessage(
     ...whoLines(name, email, country),
     "",
     "They are waiting for a recruiter to join.",
-    `<a href="${escapeHtml(adminUrl)}">Open the Live chat</a>`,
+    // Quotes escaped too: escapeHtml is for text, and this is an attribute.
+    `<a href="${escapeHtml(adminUrl).replace(/"/g, "&quot;")}">Open the Live chat</a>`,
   ].join("\n");
 }
 

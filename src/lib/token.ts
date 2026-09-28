@@ -270,10 +270,15 @@ export function createChatToken(link: ChatLink): string {
   return `${body}.${sign(body)}`;
 }
 
+/**
+ * A genuine link past its seven days is still reported with its contents.
+ * Expiry decides whether a chat can be *started*; a conversation already under
+ * way when the week runs out must not be cut off mid-interview, so the caller
+ * — which can see whether one exists — makes that call.
+ */
 export type ChatTokenResult =
-  | { ok: true; link: ChatLink }
-  | { ok: false; reason: "invalid" }
-  | { ok: false; reason: "expired" };
+  | { ok: true; link: ChatLink; expired: boolean }
+  | { ok: false; reason: "invalid" };
 
 export function readChatToken(token: string | undefined | null): ChatTokenResult {
   if (!token || typeof token !== "string" || !token.includes(".") || token.length > 600) {
@@ -294,10 +299,8 @@ export function readChatToken(token: string | undefined | null): ChatTokenResult
     if (typeof obj.s !== "string" || !obj.s) return { ok: false, reason: "invalid" };
     const sentAt = Date.parse(obj.s);
     if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
-    if (Date.now() - sentAt > CHAT_LINK_TTL_DAYS * 24 * 60 * 60 * 1000) {
-      return { ok: false, reason: "expired" };
-    }
-    return { ok: true, link: { id: obj.i, sentAt: obj.s } };
+    const expired = Date.now() - sentAt > CHAT_LINK_TTL_DAYS * 24 * 60 * 60 * 1000;
+    return { ok: true, link: { id: obj.i, sentAt: obj.s }, expired };
   } catch {
     return { ok: false, reason: "invalid" };
   }

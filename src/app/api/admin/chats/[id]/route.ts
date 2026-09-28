@@ -9,7 +9,15 @@ import {
   presenceOf,
   setTyping,
 } from "@/lib/chatStore";
-import { MAX_MESSAGE, chatStatus, cleanMessage, isValidClientId, type ChatSession } from "@/lib/chat";
+import {
+  MAX_MESSAGE,
+  chatStatus,
+  cleanMessage,
+  isSessionId,
+  isValidClientId,
+  type AdminSessionView,
+  type ChatSession,
+} from "@/lib/chat";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 
 /**
@@ -26,11 +34,21 @@ import { readJsonBody, badBodyResponse } from "@/lib/http";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function view(s: ChatSession, from: number) {
-  const start = Math.max(0, Math.min(from, s.messages.length));
+
+function fromOf(v: unknown): number {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : 0;
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function view(s: ChatSession, from: number): AdminSessionView {
+  const total = s.messages.length;
+  // More than exists: the page holds a conversation the server does not.
+  const reset = from > total;
+  const start = reset ? 0 : Math.floor(from);
   const presence = presenceOf(s.id);
   const status = chatStatus(s);
   return {
+    ...(reset ? { reset: true } : {}),
     id: s.id,
     candidateId: s.candidateId,
     candidateName: s.candidateName,
@@ -43,7 +61,7 @@ function view(s: ChatSession, from: number) {
     endedAt: s.endedAt,
     endedReason: s.endedReason,
     messages: s.messages.slice(start),
-    total: s.messages.length,
+    total,
     recruiterRead: s.recruiterRead,
     candidateOnline: status !== "ended" && presence.candidateOnline,
     candidateSeenAt: presence.candidateSeenAt,
@@ -51,16 +69,19 @@ function view(s: ChatSession, from: number) {
   };
 }
 
+const notFound = () => NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await getAdminSession())) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
   const { id } = await ctx.params;
+  // Checked before it goes anywhere near a file path.
+  if (!isSessionId(id)) return notFound();
   const s = await getSession(id);
-  if (!s) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
-  const from = Number(req.nextUrl.searchParams.get("from") ?? 0);
+  if (!s) return notFound();
   return NextResponse.json(
-    { ok: true, session: view(s, Number.isFinite(from) ? from : 0) },
+    { ok: true, session: view(s, fromOf(req.nextUrl.searchParams.get("from"))) },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -71,6 +92,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
   const by = (await getAdminSession())?.u ?? "admin";
   const { id } = await ctx.params;
+  if (!isSessionId(id)) return notFound();
 
   const parsed = await readJsonBody<{
     action?: string;
@@ -82,16 +104,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }>(req, 16 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const body = parsed.data;
-  const from = typeof body.from === "number" && Number.isFinite(body.from) ? body.from : 0;
-
-  const existing = await getSession(id);
-  if (!existing) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  const from = fromOf(body.from);
 
   switch (body.action) {
     case "join": {
-      if (existing.endedAt) return NextResponse.json({ ok: false, error: "ended" }, { status: 409 });
       const s = await joinSession(id, by);
-      return NextResponse.json({ ok: true, session: s && view(s, from) });
+      if (!s) return notFound();
+      if (s.endedAt) return NextResponse.json({ ok: false, error: "ended" }, { status: 409 });
+      return NextResponse.json({ ok: true, session: view(s, from) });
     }
     case "send": {
       const text = cleanMessage(body.text);
@@ -102,25 +122,32 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const clientId = isValidClientId(body.clientId) ? body.clientId : undefined;
       const result = await appendMessage(id, "recruiter", text, clientId, by);
       if (!result.ok) {
-        return NextResponse.json({ ok: false, error: result.reason }, { status: result.reason === "not_found" ? 404 : 409 });
+        return NextResponse.json(
+          { ok: false, error: result.reason },
+          { status: result.reason === "not_found" ? 404 : 409 },
+        );
       }
       setTyping(id, "recruiter", false);
       return NextResponse.json({ ok: true, session: view(result.session, from) });
     }
     case "end": {
       const s = await endSession(id, by);
-      setTyping(id, "recruiter", false);
+      if (!s) return notFound();
       // eslint-disable-next-line no-console
       console.log(`[chat] ${id} ended by ${by}`);
-      return NextResponse.json({ ok: true, session: s && view(s, from) });
+      return NextResponse.json({ ok: true, session: view(s, from) });
     }
     case "read": {
-      const count = typeof body.count === "number" ? body.count : existing.messages.length;
+      const s = await getSession(id);
+      if (!s) return notFound();
+      const count = typeof body.count === "number" && Number.isFinite(body.count) ? body.count : s.messages.length;
       await markRead(id, count);
       return NextResponse.json({ ok: true });
     }
     case "typing": {
-      if (!existing.endedAt) setTyping(id, "recruiter", body.typing === true);
+      const s = await getSession(id);
+      if (!s) return notFound();
+      if (!s.endedAt) setTyping(id, "recruiter", body.typing === true);
       return NextResponse.json({ ok: true });
     }
     default:

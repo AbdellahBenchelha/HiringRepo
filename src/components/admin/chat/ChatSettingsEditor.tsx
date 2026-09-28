@@ -1,17 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { newId } from "@/lib/id";
 import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { MAX_HOURS_TEXT, MAX_QUESTION, MAX_QUESTIONS } from "@/lib/chat";
 
-/** Saved questions for the Live chat, and the hours line candidates see. */
+/**
+ * Saved questions for the Live chat, and the hours line candidates see.
+ *
+ * Each question carries its own id while it is being edited, so moving or
+ * deleting one moves the right text box — keyed by position, the box you are
+ * typing in would silently become a different question.
+ */
+type Item = { key: string; text: string };
+const itemsOf = (qs: string[]): Item[] => qs.map((text) => ({ key: newId(6), text }));
+
 export function ChatSettingsEditor({
   initial,
 }: {
   initial: { questions: string[]; hours: string; updatedAt?: string; isDefault: boolean };
 }) {
-  const [questions, setQuestions] = useState<string[]>(initial.questions);
+  const [items, setItems] = useState<Item[]>(() => itemsOf(initial.questions));
+  const questions = items.map((i) => i.text);
   const [hours, setHours] = useState(initial.hours);
   const [saved, setSaved] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -19,14 +30,14 @@ export function ChatSettingsEditor({
 
   const dirty = JSON.stringify(questions) !== JSON.stringify(saved.questions) || hours !== saved.hours;
 
-  function update(i: number, v: string) {
-    setQuestions((q) => q.map((x, j) => (j === i ? v : x)));
+  function update(key: string, v: string) {
+    setItems((list) => list.map((x) => (x.key === key ? { ...x, text: v } : x)));
   }
   function move(i: number, by: -1 | 1) {
-    setQuestions((q) => {
+    setItems((list) => {
       const j = i + by;
-      if (j < 0 || j >= q.length) return q;
-      const next = [...q];
+      if (j < 0 || j >= list.length) return list;
+      const next = [...list];
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
@@ -43,7 +54,7 @@ export function ChatSettingsEditor({
         settings?: { questions: string[]; hours: string; updatedAt?: string; isDefault: boolean };
       };
       if (data.ok && data.settings) {
-        setQuestions(data.settings.questions);
+        setItems(itemsOf(data.settings.questions));
         setHours(data.settings.hours);
         setSaved(data.settings);
         setMessage({ ok: true, text: reset ? "Suggested questions restored." : "Saved." });
@@ -87,14 +98,14 @@ export function ChatSettingsEditor({
         </div>
 
         <ol className="mt-4 space-y-2.5" data-question-list>
-          {questions.map((q, i) => (
-            <li key={i} className="flex items-start gap-2">
+          {items.map(({ key, text: q }, i) => (
+            <li key={key} className="flex items-start gap-2">
               <span className="mt-2.5 w-5 shrink-0 text-right text-xs font-bold text-navy-400">{i + 1}.</span>
               <textarea
                 value={q}
                 rows={2}
                 maxLength={MAX_QUESTION}
-                onChange={(e) => update(i, e.target.value)}
+                onChange={(e) => update(key, e.target.value)}
                 aria-label={`Question ${i + 1}`}
                 className="min-h-[60px] flex-1 resize-y rounded-xl border-2 border-navy-100 px-3 py-2 text-sm leading-relaxed text-navy-900 focus:border-brand-400 focus:outline-none"
               />
@@ -108,7 +119,7 @@ export function ChatSettingsEditor({
               </div>
               <button
                 type="button"
-                onClick={() => setQuestions((list) => list.filter((_, j) => j !== i))}
+                onClick={() => setItems((list) => list.filter((x) => x.key !== key))}
                 aria-label={`Delete question ${i + 1}`}
                 className="mt-1 shrink-0 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
               >
@@ -120,7 +131,7 @@ export function ChatSettingsEditor({
 
         <button
           type="button"
-          onClick={() => setQuestions((q) => [...q, ""])}
+          onClick={() => setItems((list) => [...list, { key: newId(6), text: "" }])}
           disabled={questions.length >= MAX_QUESTIONS}
           className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-navy-200 px-4 py-2 text-xs font-bold text-navy-700 hover:bg-navy-50 disabled:opacity-40"
         >

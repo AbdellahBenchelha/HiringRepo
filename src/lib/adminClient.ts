@@ -11,13 +11,26 @@ export function csrfToken(): string {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
-/** POST JSON to an admin endpoint with the CSRF header attached. */
-export async function adminPost(url: string, body: unknown): Promise<Response> {
-  return fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken() },
-    body: JSON.stringify(body ?? {}),
-  });
+/**
+ * POST JSON to an admin endpoint with the CSRF header attached.
+ *
+ * `timeoutMs`, when given, gives up rather than letting a request hang — for
+ * the live chat, where "Sending…" that never resolves is worse than an honest
+ * "Not sent — try again".
+ */
+export async function adminPost(url: string, body: unknown, timeoutMs?: number): Promise<Response> {
+  const controller = timeoutMs ? new AbortController() : undefined;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+  try {
+    return await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken() },
+      body: JSON.stringify(body ?? {}),
+      signal: controller?.signal,
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 /** DELETE an admin resource with the CSRF header attached. */

@@ -228,3 +228,20 @@ html:not(.nav-open) .admin-nav-collapse,
 html.nav-open .admin-nav-expand {
   display: none;
 }
+
+/* Full-height layouts that respect a phone's moving address bar.
+   100dvh is the visible height; browsers that do not know it ignore the
+   second declaration and keep 100vh, rather than dropping the height
+   altogether — which, for the chat, would unpin the message box. */
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-dvh-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.chat-inbox-h {
+  height: calc(100vh - 10rem);
+  height: calc(100dvh - 10rem);
+}

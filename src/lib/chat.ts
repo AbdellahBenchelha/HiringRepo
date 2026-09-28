@@ -71,15 +71,24 @@ export function unreadCount(s: Pick<ChatSession, "messages" | "recruiterRead">):
   return s.messages.slice(s.recruiterRead).filter((m) => m.from === "candidate").length;
 }
 
-/** Tidy what somebody typed: trim, cap, and drop control characters. */
+/**
+ * Tidy what somebody typed: trim, and drop control characters — including the
+ * invisible direction overrides, which can make text read differently from
+ * what it is (a link that looks like one address and is another).
+ */
 export function cleanMessage(raw: unknown): string {
   if (typeof raw !== "string") return "";
   return raw
     // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069]/g, "")
     .replace(/\r\n?/g, "\n")
     .replace(/\n{4,}/g, "\n\n\n")
     .trim();
+}
+
+/** Conversation ids are base62; checked before one is used in a file path. */
+export function isSessionId(v: unknown): v is string {
+  return typeof v === "string" && /^[A-Za-z0-9]{6,40}$/.test(v);
 }
 
 export function isValidClientId(v: unknown): v is string {
@@ -108,8 +117,13 @@ export function splitLinks(text: string): TextPart[] {
   for (const match of text.matchAll(URL_RE)) {
     let raw = match[1];
     const start = match.index ?? 0;
-    const trail = raw.match(/[.,!?;:)\]}'"]+$/);
-    if (trail) raw = raw.slice(0, -trail[0].length);
+    // Trailing punctuation belongs to the sentence, not the address — except a
+    // closing bracket the address itself opened, as in a Wikipedia link.
+    while (raw && /[.,!?;:)\]}'"]$/.test(raw)) {
+      const last = raw[raw.length - 1];
+      if (last === ")" && (raw.match(/\(/g)?.length ?? 0) >= (raw.match(/\)/g)?.length ?? 0)) break;
+      raw = raw.slice(0, -1);
+    }
     if (!raw) continue;
     const href = raw.toLowerCase().startsWith("www.") ? `https://${raw}` : raw;
     try {
@@ -183,6 +197,12 @@ export function cleanSettings(raw: unknown): ChatSettings | { error: string } {
 export type PublicMessage = Pick<ChatMessage, "id" | "from" | "text" | "at" | "clientId">;
 
 export interface CandidateChatState {
+  /**
+   * The client asked for messages from further on than exist, which only
+   * happens when the conversation on the server is not the one it has — so
+   * this carries the whole conversation, to replace what is on screen.
+   */
+  reset?: boolean;
   status: "not_started" | ChatStatus;
   /** Only messages at or after `from`, so a poll carries only what is new. */
   messages: PublicMessage[];
@@ -191,4 +211,72 @@ export interface CandidateChatState {
   startedAt?: string;
   endedReason?: "replaced" | "ended";
   recruiterTyping: boolean;
+}
+
+/* ------------------------------------------------------------------------ */
+/* The inbox                                                                 */
+/* ------------------------------------------------------------------------ */
+
+/** One row of the Live chat list — what the list needs and nothing more. */
+export interface ChatSummary {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail?: string;
+  candidateCountry?: string;
+  candidatePosition?: string;
+  status: ChatStatus;
+  startedAt: string;
+  joinedAt?: string;
+  endedAt?: string;
+  endedReason?: "replaced" | "ended";
+  lastMessageAt?: string;
+  preview?: { from: ChatSender; text: string };
+  unread: number;
+  candidateOnline: boolean;
+  candidateTyping: boolean;
+}
+
+/** One conversation as the recruiter's Live chat tab is sent it. */
+export interface AdminSessionView {
+  reset?: boolean;
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail?: string;
+  candidateCountry?: string;
+  candidatePosition?: string;
+  status: "waiting" | "active" | "ended";
+  startedAt: string;
+  joinedAt?: string;
+  endedAt?: string;
+  endedReason?: "replaced" | "ended";
+  messages: ChatMessage[];
+  total: number;
+  recruiterRead: number;
+  candidateOnline: boolean;
+  candidateSeenAt?: string;
+  candidateTyping: boolean;
+}
+
+/**
+ * Does this conversation need the recruiter? Somebody waiting, or somebody
+ * who has written and not been read. The sidebar badge counts these — people,
+ * not messages, so one person waiting with one message is one, not two.
+ */
+export function needsAttention(s: Pick<ChatSummary, "status" | "unread">): boolean {
+  return s.status === "waiting" || (s.status === "active" && s.unread > 0);
+}
+
+/** A stored conversation, checked field by field before it is trusted. */
+export function isChatSession(v: unknown): v is ChatSession {
+  if (!v || typeof v !== "object") return false;
+  const s = v as Partial<ChatSession>;
+  return (
+    isSessionId(s.id) &&
+    typeof s.candidateId === "string" &&
+    typeof s.linkSentAt === "string" &&
+    typeof s.startedAt === "string" &&
+    Array.isArray(s.messages)
+  );
 }

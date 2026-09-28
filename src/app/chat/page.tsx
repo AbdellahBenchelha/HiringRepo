@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { resolveChatLink } from "@/lib/chatAccess";
-import { getChatSettings, sessionForLink } from "@/lib/chatStore";
+import { getChatSettings } from "@/lib/chatStore";
 import { chatStatus, type CandidateChatState } from "@/lib/chat";
 import { CHAT_LINK_TTL_DAYS } from "@/lib/token";
 import { siteConfig } from "@/config/site";
@@ -31,7 +31,7 @@ export default async function ChatPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const token = one((await searchParams).t) ?? "";
-  const access = await resolveChatLink(token);
+  const access = await resolveChatLink(token, { fresh: true });
 
   if (!access.ok) {
     const copy = {
@@ -53,7 +53,7 @@ export default async function ChatPage({
       },
     }[access.reason];
     return (
-      <main className="flex min-h-[100dvh] items-center justify-center bg-cream-100 px-4 py-10">
+      <main className="min-h-dvh-safe flex items-center justify-center bg-cream-100 px-4 py-10">
         <div className="w-full max-w-md rounded-3xl border border-navy-100 bg-white p-8 text-center shadow-card">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-navy-100 text-navy-600">
             <Icon name="chat" className="h-7 w-7" />
@@ -71,11 +71,8 @@ export default async function ChatPage({
     );
   }
 
-  const { candidate, link } = access;
-  const [session, settings] = await Promise.all([
-    sessionForLink(candidate.id, link.sentAt),
-    getChatSettings(),
-  ]);
+  const { candidate, session } = access;
+  const settings = await getChatSettings();
 
   const initial: CandidateChatState = session
     ? {
