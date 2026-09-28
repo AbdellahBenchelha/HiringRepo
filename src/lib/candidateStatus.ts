@@ -9,6 +9,9 @@ export const CANDIDATE_STATUSES = [
   // "Accepted" is a decision we made; these two are what happened next.
   "Offer Sent",
   "Hired",
+  // The final interview (live chat) is done and every check has passed —
+  // marked by hand from the Live chat tab or here. Rows in Accepted turn green.
+  "Full verified",
   "Rejected",
 ] as const;
 
@@ -62,8 +65,12 @@ const PAST_INTERVIEW: readonly CandidateStatus[] = [
   "Accepted",
   "Offer Sent",
   "Hired",
+  "Full verified",
 ];
 
 export function reachedInterviewStage(status?: string): boolean {
   return !!status && PAST_INTERVIEW.includes(status as CandidateStatus);
 }
+
+/** The status the Live chat's "Full verified" label sets. */
+export const FULL_VERIFIED: CandidateStatus = "Full verified";

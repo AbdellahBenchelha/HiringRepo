@@ -74,7 +74,18 @@ export default async function ChatPage({
   const { candidate, session } = access;
   const settings = await getChatSettings();
 
-  const initial: CandidateChatState = session
+  // An ended chat is shown as ended, with none of the conversation — that
+  // stays with the recruiter (see the API route).
+  const initial: CandidateChatState = session?.endedAt
+    ? {
+        status: "ended",
+        messages: [],
+        total: 0,
+        startedAt: session.startedAt,
+        endedReason: session.endedReason,
+        recruiterTyping: false,
+      }
+    : session
     ? {
         status: chatStatus(session),
         messages: session.messages.map(({ id, from, text, at, clientId }) => ({

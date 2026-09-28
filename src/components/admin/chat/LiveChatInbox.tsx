@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ChatMessages } from "@/components/admin/chat/ChatMessages";
 import { MAX_MESSAGE, type AdminSessionView, type ChatSummary } from "@/lib/chat";
 import { newId } from "@/lib/id";
+import { FULL_VERIFIED } from "@/lib/candidateStatus";
 
 /**
  * The Live chat tab: every conversation on the left, the open one on the right.
@@ -81,6 +82,7 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [showQuestions, setShowQuestions] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirmVerify, setConfirmVerify] = useState(false);
   const [busy, setBusy] = useState("");
   const [actionError, setActionError] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -255,7 +257,7 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
   }, [open?.id, open?.messages.length, myPending.length, open?.candidateTyping]);
 
   /* -- actions ------------------------------------------------------------ */
-  async function act(action: "join" | "end") {
+  async function act(action: "join" | "end" | "verify") {
     if (!open || busy) return;
     setBusy(action);
     setActionError("");
@@ -263,20 +265,28 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
       const res = await adminPost(`/api/admin/chats/${open.id}`, { action, from: open.messages.length }, TIMEOUT_MS);
       noteStatus(res.status);
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; session?: AdminSessionView; error?: string };
-      if (data.ok && data.session) applySession(data.session);
-      else
+      if (data.ok && data.session) {
+        applySession(data.session);
+        const st = data.session.candidateStatus;
+        if (action === "verify" && st) {
+          setList((l) => l?.map((x) => (x.candidateId === data.session!.candidateId ? { ...x, candidateStatus: st } : x)) ?? l);
+        }
+      } else
         setActionError(
           res.status === 401
             ? "Your admin session has expired — sign in again."
             : data.error === "ended"
               ? "This chat has already ended."
-              : "That did not go through. Try again.",
+              : data.error === "not_ended"
+                ? "End the chat before marking it Full verified."
+                : "That did not go through. Try again.",
         );
     } catch {
       setActionError("Could not reach the server.");
     }
     setBusy("");
     setConfirmEnd(false);
+    setConfirmVerify(false);
     if (action === "join") setTimeout(() => inputRef.current?.focus(), 50);
   }
 
@@ -472,8 +482,13 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                               {s.status === "waiting" ? `waiting ${ago(s.startedAt, now)}` : ago(s.lastMessageAt, now)}
                             </span>
                           </span>
-                          <span className="block truncate text-[11px] text-navy-500">
-                            {[s.candidateCountry, s.candidatePosition].filter(Boolean).join(" · ")}
+                          <span className="flex items-center gap-1.5 truncate text-[11px] text-navy-500">
+                            {s.candidateStatus === FULL_VERIFIED ? (
+                              <span className="shrink-0 rounded-full bg-emerald-600 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white">
+                                Full verified
+                              </span>
+                            ) : null}
+                            <span className="truncate">{[s.candidateCountry, s.candidatePosition].filter(Boolean).join(" · ")}</span>
                           </span>
                           <span className="mt-0.5 flex items-center justify-between gap-2">
                             <span className={`truncate text-xs ${s.unread ? "font-semibold text-navy-800" : "text-navy-500"}`}>
@@ -547,13 +562,20 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                     </p>
                     <p className="truncate text-xs text-navy-500">
                       {view.status === "ended" ? (
-                        <>Ended {ago(view.endedAt, now)} ago</>
+                        <>{ago(view.endedAt, now) === "just now" ? "Ended just now" : `Ended ${ago(view.endedAt, now)} ago`}</>
                       ) : view.candidateTyping ? (
                         <span className="font-semibold text-brand-700">typing…</span>
                       ) : view.candidateOnline ? (
                         <span className="font-semibold text-green-700">● On the chat page</span>
                       ) : (
-                        <>Not on the page{view.candidateSeenAt ? ` · last seen ${ago(view.candidateSeenAt, now)} ago` : ""}</>
+                        <>
+                          Not on the page
+                          {view.candidateSeenAt
+                            ? ago(view.candidateSeenAt, now) === "just now"
+                              ? " · last seen just now"
+                              : ` · last seen ${ago(view.candidateSeenAt, now)} ago`
+                            : ""}
+                        </>
                       )}
                       {[view.candidateCountry, view.candidatePosition, view.candidateEmail].filter(Boolean).length
                         ? ` · ${[view.candidateCountry, view.candidatePosition, view.candidateEmail].filter(Boolean).join(" · ")}`
@@ -583,9 +605,32 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                       End chat
                     </button>
                   ) : (
-                    <span className="rounded-full bg-navy-100 px-3 py-1 text-[11px] font-bold text-navy-600">
-                      {view.endedReason === "replaced" ? "Closed — new link sent" : "Ended"}
-                    </span>
+                    <>
+                      <span className="rounded-full bg-navy-100 px-3 py-1 text-[11px] font-bold text-navy-600">
+                        {view.endedReason === "replaced" ? "Closed — new link sent" : "Ended"}
+                      </span>
+                      {/* The outcome, set in the same place the interview was
+                          held. Once set it is a label, not a button: changing
+                          it back is done from the status in View info. */}
+                      {view.candidateStatus === FULL_VERIFIED ? (
+                        <span
+                          data-full-verified="done"
+                          className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white"
+                        >
+                          <Icon name="checkCircle" className="h-3.5 w-3.5" /> Full verified
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          data-full-verified="button"
+                          onClick={() => setConfirmVerify(true)}
+                          disabled={!!busy}
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+                        >
+                          <Icon name="shield" className="h-3.5 w-3.5" /> Full verified
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </header>
@@ -741,6 +786,23 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        open={confirmVerify}
+        icon="shield"
+        title="Mark as Full verified?"
+        confirmLabel={busy === "verify" ? "Saving…" : "Mark Full verified"}
+        busy={busy === "verify"}
+        onCancel={() => setConfirmVerify(false)}
+        onConfirm={() => void act("verify")}
+        body={
+          <>
+            {view?.candidateName || "This candidate"}&rsquo;s status changes to{" "}
+            <strong className="text-navy-900">Full verified</strong>, and their row in Accepted turns
+            green. You can change the status back at any time from their View info.
+          </>
+        }
+      />
 
       <ConfirmDialog
         open={confirmEnd}

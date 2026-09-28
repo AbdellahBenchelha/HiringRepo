@@ -19,6 +19,9 @@ import {
   type ChatSession,
 } from "@/lib/chat";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
+import { candidateStatuses, forgetCandidateStatuses } from "@/lib/chatAccess";
+import { setStatus } from "@/lib/store";
+import { FULL_VERIFIED } from "@/lib/candidateStatus";
 
 /**
  * One conversation, from the recruiter's side.
@@ -29,6 +32,7 @@ import { readJsonBody, badBodyResponse } from "@/lib/http";
  *   POST end            close it for good
  *   POST read           everything up to `count` has been seen
  *   POST typing         "is typing…" for the candidate, for a few seconds
+ *   POST verify         mark the candidate Full verified — ended chats only
  */
 
 export const runtime = "nodejs";
@@ -40,7 +44,7 @@ function fromOf(v: unknown): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-function view(s: ChatSession, from: number): AdminSessionView {
+function view(s: ChatSession, from: number, candidateStatus?: string): AdminSessionView {
   const total = s.messages.length;
   // More than exists: the page holds a conversation the server does not.
   const reset = from > total;
@@ -66,7 +70,12 @@ function view(s: ChatSession, from: number): AdminSessionView {
     candidateOnline: status !== "ended" && presence.candidateOnline,
     candidateSeenAt: presence.candidateSeenAt,
     candidateTyping: status !== "ended" && presence.candidateTyping,
+    candidateStatus,
   };
+}
+
+async function statusOf(candidateId: string): Promise<string | undefined> {
+  return (await candidateStatuses()).get(candidateId);
 }
 
 const notFound = () => NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
@@ -81,7 +90,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const s = await getSession(id);
   if (!s) return notFound();
   return NextResponse.json(
-    { ok: true, session: view(s, fromOf(req.nextUrl.searchParams.get("from"))) },
+    { ok: true, session: view(s, fromOf(req.nextUrl.searchParams.get("from")), await statusOf(s.candidateId)) },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -111,7 +120,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const s = await joinSession(id, by);
       if (!s) return notFound();
       if (s.endedAt) return NextResponse.json({ ok: false, error: "ended" }, { status: 409 });
-      return NextResponse.json({ ok: true, session: view(s, from) });
+      return NextResponse.json({ ok: true, session: view(s, from, await statusOf(s.candidateId)) });
     }
     case "send": {
       const text = cleanMessage(body.text);
@@ -128,14 +137,27 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         );
       }
       setTyping(id, "recruiter", false);
-      return NextResponse.json({ ok: true, session: view(result.session, from) });
+      return NextResponse.json({ ok: true, session: view(result.session, from, await statusOf(result.session.candidateId)) });
     }
     case "end": {
       const s = await endSession(id, by);
       if (!s) return notFound();
       // eslint-disable-next-line no-console
       console.log(`[chat] ${id} ended by ${by}`);
-      return NextResponse.json({ ok: true, session: view(s, from) });
+      return NextResponse.json({ ok: true, session: view(s, from, await statusOf(s.candidateId)) });
+    }
+    case "verify": {
+      // After the interview, not during it: the label only appears once the
+      // chat has ended, and the server holds the same line.
+      const s = await getSession(id);
+      if (!s) return notFound();
+      if (!s.endedAt) return NextResponse.json({ ok: false, error: "not_ended" }, { status: 409 });
+      const updated = await setStatus(s.candidateId, FULL_VERIFIED, by);
+      if (!updated) return NextResponse.json({ ok: false, error: "candidate_not_found" }, { status: 404 });
+      forgetCandidateStatuses();
+      // eslint-disable-next-line no-console
+      console.log(`[chat] ${s.candidateId} marked Full verified by ${by} from chat ${id}`);
+      return NextResponse.json({ ok: true, session: view(s, from, updated.status) });
     }
     case "read": {
       const s = await getSession(id);

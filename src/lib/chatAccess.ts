@@ -13,7 +13,7 @@
  *     sent, would be the worst moment to do it.
  *   - An older link that never started anything says a newer one was sent.
  */
-import { getCandidate, type Candidate } from "@/lib/store";
+import { getCandidate, listCandidates, type Candidate } from "@/lib/store";
 import { sessionForLink } from "@/lib/chatStore";
 import { readChatToken, type ChatLink } from "@/lib/token";
 import type { ChatSession } from "@/lib/chat";
@@ -80,3 +80,25 @@ export const ACCESS_STATUS: Record<Exclude<ChatAccess, { ok: true }>["reason"], 
   not_found: 404,
   replaced: 409,
 };
+
+/**
+ * Every candidate's status, for the Live chat tab's "Full verified" label.
+ *
+ * Cached for a few seconds: the inbox polls every three, and the candidate
+ * file holds every application. A change made here clears it at once, so the
+ * label never lags behind a click.
+ */
+const STATUS_TTL_MS = 3000;
+const S = globalThis as unknown as { __wrChatStatuses?: { at: number; map: Map<string, string> } };
+
+export async function candidateStatuses(): Promise<Map<string, string>> {
+  const hit = S.__wrChatStatuses;
+  if (hit && Date.now() - hit.at < STATUS_TTL_MS) return hit.map;
+  const map = new Map((await listCandidates()).map((c) => [c.id, c.status as string]));
+  S.__wrChatStatuses = { at: Date.now(), map };
+  return map;
+}
+
+export function forgetCandidateStatuses(): void {
+  S.__wrChatStatuses = undefined;
+}

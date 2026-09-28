@@ -9,6 +9,7 @@ const STATUS_STYLES: Record<CandidateStatus, string> = {
   Accepted: "bg-green-50 text-green-700 border-green-200",
   "Offer Sent": "bg-brand-50 text-brand-800 border-brand-300",
   Hired: "bg-green-600 text-white border-green-600",
+  "Full verified": "bg-emerald-700 text-white border-emerald-700",
   Rejected: "bg-red-50 text-red-700 border-red-200",
 };
 

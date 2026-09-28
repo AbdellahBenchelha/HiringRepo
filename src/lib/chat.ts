@@ -235,6 +235,8 @@ export interface ChatSummary {
   unread: number;
   candidateOnline: boolean;
   candidateTyping: boolean;
+  /** The candidate's status now — for the "Full verified" label. */
+  candidateStatus?: string;
 }
 
 /** One conversation as the recruiter's Live chat tab is sent it. */
@@ -257,6 +259,7 @@ export interface AdminSessionView {
   candidateOnline: boolean;
   candidateSeenAt?: string;
   candidateTyping: boolean;
+  candidateStatus?: string;
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
+import { FULL_VERIFIED } from "@/lib/candidateStatus";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { RefreshButton } from "@/components/admin/RefreshButton";
@@ -316,12 +317,28 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
               visible.map((c) => {
                 const d = c.confirmedDetails;
                 return (
-                  <tr key={c.id} className="align-top hover:bg-navy-50/40">
+                  <tr
+                    key={c.id}
+                    data-full-verified={c.status === FULL_VERIFIED ? "true" : undefined}
+                    // Green for Full verified: the final interview is done and
+                    // every check passed — the ones ready to go, at a glance.
+                    className={`align-top ${
+                      c.status === FULL_VERIFIED
+                        ? "bg-emerald-50 shadow-[inset_4px_0_0_0_#059669] hover:bg-emerald-100/70"
+                        : "hover:bg-navy-50/40"
+                    }`}
+                  >
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy-900">
                         {d ? `${d.firstName} ${d.lastName}`.trim() : c.fullName || "—"}
                       </p>
                       <p className="text-xs text-navy-500">{c.email || "—"}</p>
+                      {c.status === FULL_VERIFIED ? (
+                        <span className="mt-1 mr-1 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                          <Icon name="checkCircle" className="h-3 w-3" />
+                          Full verified
+                        </span>
+                      ) : null}
                       {d?.engagedAs === "Company" ? (
                         <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-navy-100 px-2 py-0.5 text-[11px] font-semibold text-navy-700">
                           <Icon name="briefcase" className="h-3 w-3" />
@@ -363,7 +380,11 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                         onOpenPhotos={() => openProfile(c)}
                       />
                     </td>
-                    <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
+                    <td
+                      className={`sticky right-0 px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)] ${
+                        c.status === FULL_VERIFIED ? "bg-emerald-50" : "bg-white"
+                      }`}
+                    >
                       <div className="flex items-center gap-2">
                         <CandidateInfoButton onOpen={() => openProfile(c)} />
                         <DeleteCandidateButton candidate={c} onDeleted={dropRow} />

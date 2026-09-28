@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminRequest } from "@/lib/adminAuth";
+import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
 import { CANDIDATE_STATUSES, setStatus, type CandidateStatus } from "@/lib/store";
+import { forgetCandidateStatuses } from "@/lib/chatAccess";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ ok: false, error: "invalid_status" }, { status: 400 });
   }
 
-  const updated = await setStatus(id, status);
+  const updated = await setStatus(id, status, (await getAdminSession())?.u);
   if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  forgetCandidateStatuses(); // the Live chat tab shows this status too
   return NextResponse.json({ ok: true, status: updated.status });
 }

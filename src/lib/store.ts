@@ -387,6 +387,9 @@ export interface Candidate {
    */
   chatLinkSentAt?: string;
   chatLinks?: string[];
+  /** When the status was set to "Full verified", and by whom. Cleared if it is changed away. */
+  fullyVerifiedAt?: string;
+  fullyVerifiedBy?: string;
   /**
    * "We have received what you sent and it is under review" — sent by hand
    * from the ID check tab. Every one kept, like the reminders, because "told
@@ -1764,11 +1767,22 @@ export function recordInterview(
   });
 }
 
-export function setStatus(id: string, status: CandidateStatus): Promise<Candidate | null> {
+export function setStatus(id: string, status: CandidateStatus, by?: string): Promise<Candidate | null> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
     c.status = status;
+    // The date belongs to the status: set when it becomes Full verified, gone
+    // when it stops being — so a green row always means it is true now.
+    if (status === "Full verified") {
+      if (!c.fullyVerifiedAt) {
+        c.fullyVerifiedAt = new Date().toISOString();
+        c.fullyVerifiedBy = by;
+      }
+    } else {
+      delete c.fullyVerifiedAt;
+      delete c.fullyVerifiedBy;
+    }
     return { list, result: c };
   });
 }

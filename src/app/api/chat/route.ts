@@ -42,6 +42,20 @@ function stateOf(session: ChatSession | null, from: number): CandidateChatState 
   if (!session) {
     return { status: "not_started", messages: [], total: 0, recruiterTyping: false };
   }
+  // Once ended, the conversation is the recruiter's record, not the
+  // candidate's to reread: they are told it has ended and nothing more. Sent
+  // as a reset to nothing, so a page still holding messages clears them.
+  if (session.endedAt) {
+    return {
+      reset: true,
+      status: "ended",
+      messages: [],
+      total: 0,
+      startedAt: session.startedAt,
+      endedReason: session.endedReason,
+      recruiterTyping: false,
+    };
+  }
   const total = session.messages.length;
   // Asking for more than exists means the page holds a conversation the
   // server does not (a restored backup, say): send all of it, flagged.

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { listSessions, presenceOf, type SessionIndex } from "@/lib/chatStore";
 import { needsAttention, type ChatSummary } from "@/lib/chat";
+import { candidateStatuses } from "@/lib/chatAccess";
 
 /**
  * The Live chat inbox: every conversation, newest activity first within each
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 /** Ended chats kept in the list. Older ones are still on the candidate. */
 const ENDED_SHOWN = 60;
 
-function summarise(s: SessionIndex): ChatSummary {
+function summarise(s: SessionIndex, statuses: Map<string, string>): ChatSummary {
   const presence = presenceOf(s.id);
   const live = s.status !== "ended";
   return {
@@ -36,6 +37,7 @@ function summarise(s: SessionIndex): ChatSummary {
     unread: s.unread,
     candidateOnline: live && presence.candidateOnline,
     candidateTyping: live && presence.candidateTyping,
+    candidateStatus: statuses.get(s.candidateId),
   };
 }
 
@@ -43,7 +45,8 @@ export async function GET() {
   if (!(await getAdminSession())) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
-  const all = (await listSessions()).map(summarise);
+  const [sessions, statuses] = await Promise.all([listSessions(), candidateStatuses()]);
+  const all = sessions.map((s) => summarise(s, statuses));
   const newest = (a?: string, b?: string) => (b ?? "").localeCompare(a ?? "");
   // Longest wait first: the person who has waited longest is the one to join.
   const waiting = all.filter((s) => s.status === "waiting").sort((a, b) => a.startedAt.localeCompare(b.startedAt));
