@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
-import { getCandidate, recordChatLink, revertChatLink } from "@/lib/store";
-import { closeOlderSessions, getChatSettings, sessionsForCandidate } from "@/lib/chatStore";
-import { chatStatus } from "@/lib/chat";
+import {
+  getCandidate,
+  recordChatLink,
+  recordLiveReminder,
+  revertChatLink,
+  revertLiveReminder,
+  type Candidate,
+} from "@/lib/store";
+import { closeOlderSessions, getChatSettings, sessionForLink, sessionsForCandidate } from "@/lib/chatStore";
+import { REMINDER_MIN_GAP_MS, chatStatus, type LiveReminder } from "@/lib/chat";
 import { CHAT_LINK_TTL_DAYS, createChatToken } from "@/lib/token";
 import { sendEmail } from "@/lib/email";
-import { finalChatHtml, finalChatSubject, finalChatText } from "@/lib/emailTemplates";
+import {
+  chatLiveNowHtml,
+  chatLiveNowSubject,
+  chatLiveNowText,
+  finalChatHtml,
+  finalChatSubject,
+  finalChatText,
+} from "@/lib/emailTemplates";
+import { forgetCandidateStatuses } from "@/lib/chatAccess";
+import { readJsonBody, badBodyResponse } from "@/lib/http";
+import { newId } from "@/lib/id";
 import { campaignBlocked } from "@/lib/warmupStore";
 import { siteConfig } from "@/config/site";
 
@@ -14,6 +31,8 @@ import { siteConfig } from "@/config/site";
  *
  *   GET   their conversations (transcripts) and the current link
  *   POST  email a new chat link — which retires any earlier one
+ *   POST  {action:"remind"}  "our team is live now" — the same link, or a fresh
+ *         one if it has expired and never opened a chat
  */
 
 export const runtime = "nodejs";
@@ -63,6 +82,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       link: sentAt && linkLive(sentAt) ? linkFor(req, id, sentAt) : undefined,
       linkSentAt: sentAt,
       linkExpired: !!sentAt && !linkLive(sentAt),
+      reminders: sentAt ? (candidate.liveReminders ?? []).filter((r) => r.linkSentAt === sentAt) : [],
     },
     { headers: { "Cache-Control": "no-store" } },
   );
@@ -74,11 +94,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
   const by = (await getAdminSession())?.u ?? "admin";
   const { id } = await ctx.params;
+  // No body at all still means "send a link", as it always has.
+  const parsed = req.headers.get("content-length") === "0" ? null : await readJsonBody<{ action?: string } | null>(req, 4 * 1024);
+  if (parsed && !parsed.ok) return badBodyResponse(parsed.reason);
   const candidate = await getCandidate(id);
   if (!candidate) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
   const email = (candidate.email || "").trim();
   if (!email.includes("@")) return NextResponse.json({ ok: false, error: "no_email" }, { status: 400 });
+  if (parsed?.data?.action === "remind") return remind(req, candidate, email, by);
   // Asked before the write, so a held email never retires a working link.
   if (await campaignBlocked()) {
     return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
@@ -127,5 +151,88 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     chatLinkSentAt: sentAt,
     chatLinks: updated.chatLinks,
     link: chatUrl,
+  });
+}
+
+/**
+ * "Our recruitment team is live now" — for somebody who has a chat link but is
+ * not on the page while the recruiter is.
+ *
+ * The same link as before, so nothing about their chat changes. Only when that
+ * link has run out without ever opening a chat is a fresh one sent in its place
+ * (which retires it, exactly as "Send a new chat link" would). A chat that has
+ * already ended is refused: the page would only say so.
+ */
+async function remind(req: NextRequest, candidate: Candidate, email: string, by: string) {
+  const id = candidate.id;
+  const current = candidate.chatLinkSentAt;
+  if (!current) return NextResponse.json({ ok: false, error: "no_link" }, { status: 409 });
+
+  const session = await sessionForLink(id, current);
+  if (session?.endedAt) return NextResponse.json({ ok: false, error: "ended" }, { status: 409 });
+
+  const last = (candidate.liveReminders ?? []).at(-1);
+  if (last && Date.now() - Date.parse(last.sentAt) < REMINDER_MIN_GAP_MS) {
+    return NextResponse.json({ ok: false, error: "too_soon" }, { status: 409 });
+  }
+  if (await campaignBlocked()) {
+    return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
+  }
+
+  const now = new Date().toISOString();
+  // A started chat keeps its link working past the seven days; only a link
+  // that never opened anything needs replacing.
+  const newLink = !session && !linkLive(current);
+  let linkSentAt = current;
+  let updated: Candidate | null = candidate;
+  if (newLink) {
+    linkSentAt = now;
+    updated = await recordChatLink(id, linkSentAt);
+    if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
+  // Recorded before the send, so a candidate who clicks at once is recognised.
+  const reminder: LiveReminder = { id: newId(12), sentAt: now, by, linkSentAt };
+  updated = (await recordLiveReminder(id, reminder)) ?? updated;
+
+  const chatUrl = `${linkFor(req, id, linkSentAt)}&r=${reminder.id}`;
+  const payload = {
+    fullName: candidate.fullName || "Candidate",
+    chatUrl,
+    newLink,
+    validDays: CHAT_LINK_TTL_DAYS,
+  };
+  const result = await sendEmail({
+    to: email,
+    toName: candidate.fullName || undefined,
+    subject: chatLiveNowSubject(),
+    html: chatLiveNowHtml(payload),
+    text: chatLiveNowText(payload),
+    replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+  });
+
+  if (!result.ok) {
+    await revertLiveReminder(id, reminder.id);
+    if (newLink) await revertChatLink(id, linkSentAt);
+    forgetCandidateStatuses();
+    const reason = "skipped" in result ? result.skipped : result.error;
+    // eslint-disable-next-line no-console
+    console.warn(`[chat] "we're live" email for ${id} not sent: ${reason}`);
+    return NextResponse.json({ ok: false, error: reason }, { status: 502 });
+  }
+
+  if (newLink) await closeOlderSessions(id, linkSentAt);
+  forgetCandidateStatuses(); // the Live chat header shows it on its next poll
+  // eslint-disable-next-line no-console
+  console.log(`[chat] "we're live" email to ${id} by ${by}${newLink ? " (with a fresh link)" : ""}`);
+  return NextResponse.json({
+    ok: true,
+    newLink,
+    reminder,
+    reminders: (updated.liveReminders ?? []).filter((r) => r.linkSentAt === linkSentAt),
+    chatLinkSentAt: updated.chatLinkSentAt,
+    chatLinks: updated.chatLinks,
+    link: linkFor(req, id, linkSentAt),
   });
 }

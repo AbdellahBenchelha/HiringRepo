@@ -7,7 +7,8 @@ import { adminPost } from "@/lib/adminClient";
 import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ChatMessages } from "@/components/admin/chat/ChatMessages";
-import type { ChatMessage } from "@/lib/chat";
+import { LiveNowButton, LiveNowHistory } from "@/components/admin/chat/LiveNowButton";
+import type { ChatMessage, LiveReminder } from "@/lib/chat";
 
 /**
  * The final-interview chat, in View info: send the link, see whether they
@@ -62,6 +63,7 @@ export function ChatLinkPanel({
   const [result, setResult] = useState("");
   const [copied, setCopied] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [reminders, setReminders] = useState<LiveReminder[]>([]);
 
   const links = candidate.chatLinks ?? (candidate.chatLinkSentAt ? [candidate.chatLinkSentAt] : []);
   const hasEmail = !!candidate.email?.includes("@");
@@ -72,12 +74,19 @@ export function ChatLinkPanel({
     const mine = ++seq.current;
     try {
       const res = await fetchWithTimeout(`/api/admin/candidates/${candidate.id}/chat`, { cache: "no-store" }, 12_000);
-      const data = (await res.json()) as { ok?: boolean; sessions?: SessionInfo[]; link?: string; linkExpired?: boolean };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        sessions?: SessionInfo[];
+        link?: string;
+        linkExpired?: boolean;
+        reminders?: LiveReminder[];
+      };
       if (mine !== seq.current) return; // overtaken — possibly by another candidate
       if (data.ok) {
         setSessions(data.sessions ?? []);
         setLink(data.link);
         setExpired(!!data.linkExpired);
+        setReminders(data.reminders ?? []);
       } else {
         setSessions((s) => s ?? []);
       }
@@ -92,6 +101,7 @@ export function ChatLinkPanel({
     setExpired(false);
     setResult("");
     setShowAll(false);
+    setReminders([]);
     void load();
     // Refresh while the panel is actually showing — not while the Assessment
     // tab is hidden, and not while the browser tab is in the background.
@@ -105,6 +115,10 @@ export function ChatLinkPanel({
   }, [load]);
 
   const current = sessions?.find((s) => s.linkSentAt === candidate.chatLinkSentAt);
+  // "We're live" makes sense while their chat can still happen: a link is out,
+  // and it has not ended. Hidden until the transcript has loaded, so an ended
+  // chat never shows the button for a moment.
+  const canRemind = !!candidate.chatLinkSentAt && sessions !== null && current?.status !== "ended";
   const lastAt = links[links.length - 1];
   const recent = !!lastAt && Date.now() - Date.parse(lastAt) < 24 * 60 * 60 * 1000;
 
@@ -177,6 +191,26 @@ export function ChatLinkPanel({
               <Icon name="chat" className="h-3.5 w-3.5" /> Open in Live chat
             </Link>
           ) : null}
+          {canRemind ? (
+            <LiveNowButton
+              key={candidate.id}
+              size="sm"
+              candidateId={candidate.id}
+              candidateName={candidate.fullName}
+              email={candidate.email}
+              reminders={reminders}
+              linkExpired={expired && !current}
+              onSent={(r) => {
+                setReminders(r.reminders);
+                if (r.newLink) {
+                  onChange({ chatLinkSentAt: r.chatLinkSentAt, chatLinks: r.chatLinks });
+                  setLink(r.link);
+                  setExpired(false);
+                }
+                void load();
+              }}
+            />
+          ) : null}
           <button
             type="button"
             onClick={() => setAsking(true)}
@@ -204,6 +238,7 @@ export function ChatLinkPanel({
               </li>
             ))}
           </ol>
+          <LiveNowHistory reminders={reminders} className="mt-2" />
           {link ? (
             <div className="mt-2 flex items-center gap-2">
               <input readOnly value={link} onFocus={(e) => e.target.select()} className="min-w-0 flex-1 truncate rounded-lg border border-navy-200 bg-navy-50 px-2 py-1 font-mono text-[11px] text-navy-600" aria-label="Current chat link" />

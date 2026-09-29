@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { resolveChatLink } from "@/lib/chatAccess";
 import { getChatSettings } from "@/lib/chatStore";
-import { chatStatus, type CandidateChatState } from "@/lib/chat";
+import { chatStatus, isReminderId, type CandidateChatState } from "@/lib/chat";
 import { CHAT_LINK_TTL_DAYS } from "@/lib/token";
 import { siteConfig } from "@/config/site";
 import { Icon } from "@/components/Icon";
@@ -30,7 +30,11 @@ export default async function ChatPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const token = one((await searchParams).t) ?? "";
+  const sp = await searchParams;
+  const token = one(sp.t) ?? "";
+  // Set on the link in a "we're live" email; the page reports it once it is
+  // actually open in a browser.
+  const reminder = one(sp.r);
   const access = await resolveChatLink(token, { fresh: true });
 
   if (!access.ok) {
@@ -105,6 +109,7 @@ export default async function ChatPage({
       position={candidate.offer?.position || candidate.position || undefined}
       hours={settings.hours}
       initial={initial}
+      reminder={isReminderId(reminder) && !session?.endedAt ? reminder : undefined}
     />
   );
 }

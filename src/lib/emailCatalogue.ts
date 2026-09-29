@@ -49,6 +49,9 @@ import {
   finalChatHtml,
   finalChatSubject,
   finalChatText,
+  chatLiveNowHtml,
+  chatLiveNowSubject,
+  chatLiveNowText,
   gstinRequestHtml,
   gstinRequestSubject,
   gstinRequestText,
@@ -422,6 +425,19 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         html: finalChatHtml(payload),
         text: finalChatText(payload),
       };
+    },
+  },
+  {
+    id: "chat-live-now",
+    name: "Final interview — “our team is live now”",
+    stage: "voice",
+    when:
+      "Sent by hand with Send “We’re live” email — in Live chat when the candidate is not on the chat page, or in View info → Assessment. Uses their same chat link (a fresh one if it has expired). When they open it you get a Telegram message.",
+    kind: "campaign",
+    source: "chatLiveNowHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME, chatUrl: link("/chat?t=EXAMPLE&r=EXAMPLE"), validDays: CHAT_LINK_TTL_DAYS };
+      return { subject: chatLiveNowSubject(), html: chatLiveNowHtml(payload), text: chatLiveNowText(payload) };
     },
   },
   {

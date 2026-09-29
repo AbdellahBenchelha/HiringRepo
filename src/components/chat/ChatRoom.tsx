@@ -110,12 +110,15 @@ export function ChatRoom({
   position,
   hours,
   initial,
+  reminder,
 }: {
   token: string;
   firstName: string;
   position?: string;
   hours: string;
   initial: CandidateChatState;
+  /** Opened from a "we're live" email: tell the recruiter, once. */
+  reminder?: string;
 }) {
   const hydrated = useHydrated();
   const [status, setStatus] = useState<CandidateChatState["status"]>(initial.status);
@@ -258,6 +261,47 @@ export function ChatRoom({
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
+
+  /* -- came from a "we're live" email --------------------------------------- */
+  // Reported by this script, once the page is on screen for a moment — not by
+  // the page load, which a mail scanner checking the link makes too. The mark
+  // is then taken off the address, so a refresh does not report it again.
+  useEffect(() => {
+    if (!reminder) return;
+    let done = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const report = () => {
+      if (done || document.hidden) return;
+      done = true;
+      document.removeEventListener("visibilitychange", arm);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("r");
+        window.history.replaceState(window.history.state, "", url.toString());
+      } catch {
+        /* the address keeps its mark; the server tells the recruiter once anyway */
+      }
+      void fetchWithTimeout(
+        "/api/chat",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ t: token, action: "opened", r: reminder }),
+        },
+        REQUEST_TIMEOUT_MS,
+      ).catch(() => {});
+    };
+    function arm() {
+      clearTimeout(timer);
+      if (!document.hidden) timer = setTimeout(report, 1200);
+    }
+    arm();
+    document.addEventListener("visibilitychange", arm);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", arm);
+    };
+  }, [reminder, token]);
 
   /* -- an unsent answer survives a refresh --------------------------------- */
   const skipFirstSave = useRef(true);

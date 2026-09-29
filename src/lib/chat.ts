@@ -96,6 +96,38 @@ export function isValidClientId(v: unknown): v is string {
 }
 
 /* ------------------------------------------------------------------------ */
+/* "We're live now" emails                                                   */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * A "our team is live now — join the chat" email, sent by hand when the
+ * recruiter is there and the candidate is not. Kept on the candidate, since it
+ * can go out before any conversation exists.
+ *
+ * Its link is the candidate's chat link plus this id. The page reports the id
+ * once it has loaded in a real browser, which is when the recruiter is told —
+ * never on the fetch itself, which a mail scanner makes too.
+ */
+export interface LiveReminder {
+  id: string;
+  sentAt: string;
+  by?: string;
+  /** The chat link it pointed at. */
+  linkSentAt: string;
+  /** When the candidate first opened it. Telegram is told once, at this moment. */
+  openedAt?: string;
+}
+
+/** Below this, a second send is refused as a double click. */
+export const REMINDER_MIN_GAP_MS = 60_000;
+/** Below this, the confirm step warns that one has just gone out. */
+export const REMINDER_WARN_MINUTES = 30;
+
+export function isReminderId(v: unknown): v is string {
+  return typeof v === "string" && /^[A-Za-z0-9]{8,32}$/.test(v);
+}
+
+/* ------------------------------------------------------------------------ */
 /* Links                                                                     */
 /* ------------------------------------------------------------------------ */
 
@@ -260,6 +292,8 @@ export interface AdminSessionView {
   candidateSeenAt?: string;
   candidateTyping: boolean;
   candidateStatus?: string;
+  /** "We're live" emails sent for this chat's link, oldest first. */
+  reminders?: LiveReminder[];
 }
 
 /**

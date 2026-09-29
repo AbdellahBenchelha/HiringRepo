@@ -7,6 +7,7 @@ import { adminPost } from "@/lib/adminClient";
 import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ChatMessages } from "@/components/admin/chat/ChatMessages";
+import { LiveNowButton } from "@/components/admin/chat/LiveNowButton";
 import { MAX_MESSAGE, type AdminSessionView, type ChatSummary } from "@/lib/chat";
 import { newId } from "@/lib/id";
 import { FULL_VERIFIED } from "@/lib/candidateStatus";
@@ -40,6 +41,12 @@ function ago(iso: string | undefined, now: number) {
   const h = Math.round(m / 60);
   if (h < 24) return `${h} h`;
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+/** "just now", "5 min ago", "2 h ago", or "on 3 Oct" — for a sentence. */
+function agoText(iso: string, now: number) {
+  const a = ago(iso, now);
+  return a === "just now" ? a : /^\d+ (min|h)$/.test(a) ? `${a} ago` : `on ${a}`;
 }
 
 function initials(name: string) {
@@ -583,7 +590,20 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {/* Here, and they are not: email them that the team is live. */}
+                  {view.status !== "ended" && !view.candidateOnline ? (
+                    <LiveNowButton
+                      key={view.id}
+                      candidateId={view.candidateId}
+                      candidateName={view.candidateName}
+                      email={view.candidateEmail}
+                      reminders={view.reminders ?? []}
+                      onSent={(r) =>
+                        setOpen((o) => (o && o.id === view.id ? { ...o, reminders: r.reminders } : o))
+                      }
+                    />
+                  ) : null}
                   {view.status === "waiting" ? (
                     <button
                       type="button"
@@ -637,6 +657,27 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
 
               {actionError ? (
                 <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">{actionError}</p>
+              ) : null}
+
+              {view.status !== "ended" && view.reminders?.length ? (
+                (() => {
+                  const r = view.reminders[view.reminders.length - 1];
+                  return (
+                    <p
+                      data-live-now="last"
+                      className={`border-b px-4 py-1.5 text-[11px] font-medium ${
+                        r.openedAt ? "border-green-200 bg-green-50 text-green-800" : "border-navy-100 bg-navy-50/60 text-navy-600"
+                      }`}
+                    >
+                      <Icon name="mail" className="mr-1 inline h-3 w-3 align-[-2px]" />
+                      &ldquo;We&rsquo;re live&rdquo; email sent {agoText(r.sentAt, now)}
+                      {view.reminders.length > 1 ? ` (${view.reminders.length} in total)` : ""}
+                      {r.openedAt
+                        ? ` · opened ${agoText(r.openedAt, now)}`
+                        : " · not opened yet"}
+                    </p>
+                  );
+                })()
               ) : null}
 
               <div

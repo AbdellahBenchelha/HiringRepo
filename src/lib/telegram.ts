@@ -165,6 +165,31 @@ export function buildChatStartedMessage(
   ].join("\n");
 }
 
+/**
+ * The candidate opened a "we're live" email and the chat page loaded. Sent once
+ * per email. Whether they have pressed Start yet decides what to say next.
+ */
+export function buildLiveReminderOpenedMessage(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+  adminUrl: string,
+  state: "not_started" | "waiting" | "active",
+): string {
+  return [
+    "👋 <b>Candidate clicked your “We’re live” email</b>",
+    "",
+    ...whoLines(name, email, country),
+    "",
+    state === "not_started"
+      ? "They are on the chat page now. They appear in Live chat when they press Start chat."
+      : state === "waiting"
+        ? "They are on the chat page now, waiting for a recruiter to join."
+        : "They are back on the chat page now.",
+    `<a href="${escapeHtml(adminUrl).replace(/"/g, "&quot;")}">Open the Live chat</a>`,
+  ].join("\n");
+}
+
 /** Build the "Personal information" message (sent after the first step). */
 export function buildPersonalMessage(fields: Record<string, unknown>): string | null {
   const lines = PERSONAL_FIELDS.flatMap(({ key, label }) => {

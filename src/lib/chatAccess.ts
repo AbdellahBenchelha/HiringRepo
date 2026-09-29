@@ -16,7 +16,7 @@
 import { getCandidate, listCandidates, type Candidate } from "@/lib/store";
 import { sessionForLink } from "@/lib/chatStore";
 import { readChatToken, type ChatLink } from "@/lib/token";
-import type { ChatSession } from "@/lib/chat";
+import type { ChatSession, LiveReminder } from "@/lib/chat";
 
 export type ChatAccess =
   | {
@@ -82,21 +82,37 @@ export const ACCESS_STATUS: Record<Exclude<ChatAccess, { ok: true }>["reason"], 
 };
 
 /**
- * Every candidate's status, for the Live chat tab's "Full verified" label.
+ * Every candidate's status, for the Live chat tab's "Full verified" label, and
+ * the "we're live" emails sent, for the conversation header.
  *
  * Cached for a few seconds: the inbox polls every three, and the candidate
  * file holds every application. A change made here clears it at once, so the
  * label never lags behind a click.
  */
 const STATUS_TTL_MS = 3000;
-const S = globalThis as unknown as { __wrChatStatuses?: { at: number; map: Map<string, string> } };
+type Facts = { at: number; map: Map<string, string>; reminders: Map<string, LiveReminder[]> };
+const S = globalThis as unknown as { __wrChatStatuses?: Facts };
+
+async function facts(): Promise<Facts> {
+  const hit = S.__wrChatStatuses;
+  if (hit && Date.now() - hit.at < STATUS_TTL_MS) return hit;
+  const all = await listCandidates();
+  const next: Facts = {
+    at: Date.now(),
+    map: new Map(all.map((c) => [c.id, c.status as string])),
+    reminders: new Map(all.filter((c) => c.liveReminders?.length).map((c) => [c.id, c.liveReminders!])),
+  };
+  S.__wrChatStatuses = next;
+  return next;
+}
 
 export async function candidateStatuses(): Promise<Map<string, string>> {
-  const hit = S.__wrChatStatuses;
-  if (hit && Date.now() - hit.at < STATUS_TTL_MS) return hit.map;
-  const map = new Map((await listCandidates()).map((c) => [c.id, c.status as string]));
-  S.__wrChatStatuses = { at: Date.now(), map };
-  return map;
+  return (await facts()).map;
+}
+
+/** The "we're live" emails sent for one chat link — from the same short cache. */
+export async function liveRemindersFor(candidateId: string, linkSentAt: string): Promise<LiveReminder[]> {
+  return ((await facts()).reminders.get(candidateId) ?? []).filter((r) => r.linkSentAt === linkSentAt);
 }
 
 export function forgetCandidateStatuses(): void {

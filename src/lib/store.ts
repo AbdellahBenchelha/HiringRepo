@@ -37,6 +37,7 @@ export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
 import { effectiveOffer, type Offer } from "@/lib/offer";
 import type { PanAnswer } from "@/lib/pan";
+import type { LiveReminder } from "@/lib/chat";
 import { deadlineFrom } from "@/lib/offerReminder";
 import type { Availability } from "@/lib/availability";
 import type { ConfirmedDetails } from "@/lib/hiring";
@@ -397,6 +398,8 @@ export interface Candidate {
    */
   chatLinkSentAt?: string;
   chatLinks?: string[];
+  /** "Our team is live now" emails, oldest first — see lib/chat. */
+  liveReminders?: LiveReminder[];
   /** When the status was set to "Full verified", and by whom. Cleared if it is changed away. */
   fullyVerifiedAt?: string;
   fullyVerifiedBy?: string;
@@ -1386,6 +1389,51 @@ export function recordChatLink(id: string, sentAt: string): Promise<Candidate | 
     c.chatLinks = [...(c.chatLinks ?? []), sentAt];
     c.chatLinkSentAt = sentAt;
     return { list, result: c };
+  });
+}
+
+/** Longest "we're live" history kept per candidate. */
+const MAX_LIVE_REMINDERS = 50;
+
+/**
+ * A "we're live" email is about to go out. Recorded before the send, like a
+ * chat link, so a candidate who clicks at once is recognised; undone if the
+ * send fails.
+ */
+export function recordLiveReminder(id: string, reminder: LiveReminder): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.liveReminders = [...(c.liveReminders ?? []), reminder].slice(-MAX_LIVE_REMINDERS);
+    return { list, result: c };
+  });
+}
+
+export function revertLiveReminder(id: string, reminderId: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c?.liveReminders?.some((r) => r.id === reminderId)) return { list, result: false };
+    c.liveReminders = c.liveReminders.filter((r) => r.id !== reminderId);
+    return { list, result: true };
+  });
+}
+
+/**
+ * The candidate opened a "we're live" email. Returns the reminder only the
+ * first time, and only for the link it was sent with — so a refresh, a second
+ * tab, or an old email for a replaced link tells nobody anything.
+ */
+export function markLiveReminderOpened(
+  id: string,
+  reminderId: string,
+  linkSentAt: string,
+): Promise<LiveReminder | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    const r = c?.liveReminders?.find((x) => x.id === reminderId);
+    if (!r || r.openedAt || r.linkSentAt !== linkSentAt) return { list, result: null };
+    r.openedAt = new Date().toISOString();
+    return { list, result: { ...r } };
   });
 }
 

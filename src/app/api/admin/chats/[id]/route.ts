@@ -17,9 +17,10 @@ import {
   isValidClientId,
   type AdminSessionView,
   type ChatSession,
+  type LiveReminder,
 } from "@/lib/chat";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
-import { candidateStatuses, forgetCandidateStatuses } from "@/lib/chatAccess";
+import { candidateStatuses, forgetCandidateStatuses, liveRemindersFor } from "@/lib/chatAccess";
 import { setStatus } from "@/lib/store";
 import { FULL_VERIFIED } from "@/lib/candidateStatus";
 
@@ -44,7 +45,9 @@ function fromOf(v: unknown): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-function view(s: ChatSession, from: number, candidateStatus?: string): AdminSessionView {
+type Facts = { candidateStatus?: string; reminders?: LiveReminder[] };
+
+function view(s: ChatSession, from: number, { candidateStatus, reminders }: Facts = {}): AdminSessionView {
   const total = s.messages.length;
   // More than exists: the page holds a conversation the server does not.
   const reset = from > total;
@@ -71,11 +74,16 @@ function view(s: ChatSession, from: number, candidateStatus?: string): AdminSess
     candidateSeenAt: presence.candidateSeenAt,
     candidateTyping: status !== "ended" && presence.candidateTyping,
     candidateStatus,
+    reminders,
   };
 }
 
-async function statusOf(candidateId: string): Promise<string | undefined> {
-  return (await candidateStatuses()).get(candidateId);
+async function factsOf(s: ChatSession): Promise<Facts> {
+  const [statuses, reminders] = await Promise.all([
+    candidateStatuses(),
+    liveRemindersFor(s.candidateId, s.linkSentAt),
+  ]);
+  return { candidateStatus: statuses.get(s.candidateId), reminders };
 }
 
 const notFound = () => NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
@@ -90,7 +98,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const s = await getSession(id);
   if (!s) return notFound();
   return NextResponse.json(
-    { ok: true, session: view(s, fromOf(req.nextUrl.searchParams.get("from")), await statusOf(s.candidateId)) },
+    { ok: true, session: view(s, fromOf(req.nextUrl.searchParams.get("from")), await factsOf(s)) },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -120,7 +128,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const s = await joinSession(id, by);
       if (!s) return notFound();
       if (s.endedAt) return NextResponse.json({ ok: false, error: "ended" }, { status: 409 });
-      return NextResponse.json({ ok: true, session: view(s, from, await statusOf(s.candidateId)) });
+      return NextResponse.json({ ok: true, session: view(s, from, await factsOf(s)) });
     }
     case "send": {
       const text = cleanMessage(body.text);
@@ -137,14 +145,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         );
       }
       setTyping(id, "recruiter", false);
-      return NextResponse.json({ ok: true, session: view(result.session, from, await statusOf(result.session.candidateId)) });
+      return NextResponse.json({ ok: true, session: view(result.session, from, await factsOf(result.session)) });
     }
     case "end": {
       const s = await endSession(id, by);
       if (!s) return notFound();
       // eslint-disable-next-line no-console
       console.log(`[chat] ${id} ended by ${by}`);
-      return NextResponse.json({ ok: true, session: view(s, from, await statusOf(s.candidateId)) });
+      return NextResponse.json({ ok: true, session: view(s, from, await factsOf(s)) });
     }
     case "verify": {
       // After the interview, not during it: the label only appears once the
@@ -157,7 +165,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       forgetCandidateStatuses();
       // eslint-disable-next-line no-console
       console.log(`[chat] ${s.candidateId} marked Full verified by ${by} from chat ${id}`);
-      return NextResponse.json({ ok: true, session: view(s, from, updated.status) });
+      return NextResponse.json({ ok: true, session: view(s, from, { ...(await factsOf(s)), candidateStatus: updated.status }) });
     }
     case "read": {
       const s = await getSession(id);

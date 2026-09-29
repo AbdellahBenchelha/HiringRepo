@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ACCESS_STATUS, resolveChatLink } from "@/lib/chatAccess";
+import { ACCESS_STATUS, forgetCandidateStatuses, resolveChatLink } from "@/lib/chatAccess";
 import { appendMessage, presenceOf, setTyping, startSession, touchCandidate } from "@/lib/chatStore";
 import {
   MAX_MESSAGE,
   chatStatus,
   cleanMessage,
+  isReminderId,
   isValidClientId,
   type CandidateChatState,
   type ChatSession,
 } from "@/lib/chat";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
-import { buildChatStartedMessage, sendTelegramMessage } from "@/lib/telegram";
+import { buildChatStartedMessage, buildLiveReminderOpenedMessage, sendTelegramMessage } from "@/lib/telegram";
+import { markLiveReminderOpened } from "@/lib/store";
 
 /**
  * The candidate's side of the final-interview chat.
@@ -23,6 +25,7 @@ import { buildChatStartedMessage, sendTelegramMessage } from "@/lib/telegram";
  *   POST start         open the conversation — the only thing that does
  *   POST send          one message
  *   POST typing        "is typing…", for a few seconds
+ *   POST opened        the page was opened from a "we're live" email
  *
  * Opening the page never starts anything. Mail scanners fetch every link in
  * an email, and a chat that started on a GET would page a recruiter for a
@@ -113,6 +116,7 @@ export async function POST(req: NextRequest) {
     clientId?: unknown;
     typing?: unknown;
     from?: unknown;
+    r?: unknown;
   }>(req, 16 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const body = parsed.data;
@@ -163,6 +167,42 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line no-console
     console.log(`[chat] ${candidate.id} ${created ? "started" : "resumed"} chat ${session.id}`);
     return NextResponse.json({ ok: true, state: stateOf(session, from) });
+  }
+
+  /* -- opened from a "we're live" email ---------------------------------- */
+  if (body.action === "opened") {
+    // Sent by the page's own script once it is on screen, never by the GET a
+    // mail scanner makes: that is what makes this mean a person is here.
+    if (!isReminderId(body.r)) return NextResponse.json({ ok: false, error: "bad_reminder" }, { status: 400 });
+    const limit = rateLimit(`chat:opened:${candidate.id}`, 10, MINUTE);
+    if (!limit.ok) return tooManyRequests(limit.retryAfter, "chat opened");
+    const s = access.session;
+    // An ended chat has nobody to join; the page says so, and nobody is paged.
+    if (s?.endedAt) return NextResponse.json({ ok: true, notified: false });
+    const reminder = await markLiveReminderOpened(candidate.id, body.r, link.sentAt);
+    if (reminder) {
+      const base = process.env.PUBLIC_BASE_URL?.replace(/\/$/, "") || req.nextUrl.origin;
+      const name =
+        s?.candidateName ||
+        candidate.fullName?.trim() ||
+        `${candidate.firstName ?? ""} ${candidate.lastName ?? ""}`.trim() ||
+        candidate.email ||
+        "Candidate";
+      void sendTelegramMessage(
+        buildLiveReminderOpenedMessage(
+          name,
+          candidate.email,
+          candidate.confirmedDetails?.country || candidate.country || undefined,
+          `${base}/admin/chat${s ? `?s=${s.id}` : ""}`,
+          !s ? "not_started" : chatStatus(s) === "active" ? "active" : "waiting",
+        ),
+      ).catch(() => {});
+      if (s) touchCandidate(s.id);
+      forgetCandidateStatuses(); // so the Live chat header shows "opened" at once
+      // eslint-disable-next-line no-console
+      console.log(`[chat] ${candidate.id} opened "we're live" email ${reminder.id}`);
+    }
+    return NextResponse.json({ ok: true, notified: !!reminder });
   }
 
   const session = access.session;
