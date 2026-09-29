@@ -287,6 +287,11 @@ export interface Candidate {
    * normalised (capitals, no spaces) and only once it has passed the check.
    */
   gstin?: string;
+  /** Set when a recruiter typed it in from a reply, rather than the candidate on the offer page. */
+  gstinAddedAt?: string;
+  gstinAddedBy?: string;
+  /** "GSTIN needed" emails sent from View info, oldest first. */
+  gstinRequests?: string[];
   /**
    * The live identity check: a link created for this one candidate in Persona,
    * emailed to them by hand when photographs could not settle the question.
@@ -1380,6 +1385,28 @@ export function recordChatLink(id: string, sentAt: string): Promise<Candidate | 
     if (!c) return { list, result: null };
     c.chatLinks = [...(c.chatLinks ?? []), sentAt];
     c.chatLinkSentAt = sentAt;
+    return { list, result: c };
+  });
+}
+
+/** A "GSTIN needed" email went out. */
+export function recordGstinRequest(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.gstinRequests = [...(c.gstinRequests ?? []), new Date().toISOString()];
+    return { list, result: c };
+  });
+}
+
+/** A recruiter added (or corrected) the GSTIN — already checked by the caller. */
+export function setGstinByRecruiter(id: string, gstin: string, by?: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.gstin = gstin;
+    c.gstinAddedAt = new Date().toISOString();
+    c.gstinAddedBy = by;
     return { list, result: c };
   });
 }

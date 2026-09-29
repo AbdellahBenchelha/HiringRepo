@@ -121,6 +121,9 @@ export interface CandidateView {
   panAnswer?: "yes" | "no";
   /** India only, optional. */
   gstin?: string;
+  gstinAddedAt?: string;
+  gstinAddedBy?: string;
+  gstinRequests?: string[];
   panAnsweredAt?: string;
   panDeletedAt?: string;
   /** The live identity check: what was sent, and how far they got with it. */
@@ -321,6 +324,9 @@ export function toCandidateView(
     residenceImagesDeletedAt: c.residenceImagesDeletedAt,
     panAnswer: c.panAnswer,
     gstin: c.gstin,
+    gstinAddedAt: c.gstinAddedAt,
+    gstinAddedBy: c.gstinAddedBy,
+    gstinRequests: c.gstinRequests,
     panAnsweredAt: c.panAnsweredAt,
     panDeletedAt: c.panDeletedAt,
     liveVerificationUrl: c.liveVerificationUrl,

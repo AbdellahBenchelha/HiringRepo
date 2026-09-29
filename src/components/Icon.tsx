@@ -50,7 +50,8 @@ export type IconName =
   | "document"
   | "microphone"
   | "star"
-  | "send";
+  | "send"
+  | "pencil";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -106,6 +107,7 @@ const paths: Record<IconName, React.ReactNode> = {
   headset: <path d="M12 2a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h1v-8H5v-1a7 7 0 0 1 14 0v1h-2v8h1a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9Z" />,
   star: <path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 20.5l1.4-6.8L2.2 9l6.9-.7L12 2Z" />,
   send: <path d="M3.4 20.4 21 12 3.4 3.6 3.4 10.2l12.6 1.8-12.6 1.8v6.6Z" />,
+  pencil: <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25Zm17.7-10.2a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" />,
   microphone: (
     <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM6 10a1 1 0 0 0-2 0 8 8 0 0 0 7 7.94V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.06A8 8 0 0 0 20 10a1 1 0 1 0-2 0 6 6 0 0 1-12 0Z" />
   ),

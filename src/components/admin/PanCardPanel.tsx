@@ -5,7 +5,7 @@ import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ImageZoom } from "@/components/admin/ImageZoom";
-import { CopyButton } from "@/components/admin/CopyButton";
+import { GstinRow } from "@/components/admin/GstinRow";
 import { DOCUMENT_LABEL, extensionOf, type CandidateDocument } from "@/lib/documents";
 import { PAN_KINDS, currentPanDocument, panExpected, panStatus, type PanStatus } from "@/lib/pan";
 import type { CandidateView } from "@/lib/candidateView";
@@ -178,17 +178,7 @@ export function PanCardPanel({
 
       {/* The GSTIN, optional: shown whenever the card is, so an empty one reads
           as "not given" rather than as missing from the page. */}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-navy-100 pt-3" data-gstin>
-        <p className="text-sm text-navy-700">
-          <span className="font-semibold text-navy-800">GSTIN:</span>{" "}
-          {candidate.gstin ? (
-            <span className="font-mono tracking-wider text-navy-900">{candidate.gstin}</span>
-          ) : (
-            <span className="text-navy-400">Not provided (optional)</span>
-          )}
-        </p>
-        {candidate.gstin ? <CopyButton text={candidate.gstin} title="GSTIN" /> : null}
-      </div>
+      <GstinRow candidate={candidate} onChange={onChange} />
 
       {error ? <p className="mt-2 text-xs font-medium text-amber-700">Not deleted ({error}).</p> : null}
 

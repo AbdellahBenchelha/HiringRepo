@@ -49,6 +49,9 @@ import {
   finalChatHtml,
   finalChatSubject,
   finalChatText,
+  gstinRequestHtml,
+  gstinRequestSubject,
+  gstinRequestText,
   submissionReceivedSubject,
   submissionReceivedText,
   verificationRequestHtml,
@@ -419,6 +422,19 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         html: finalChatHtml(payload),
         text: finalChatText(payload),
       };
+    },
+  },
+  {
+    id: "gstin-request",
+    name: "GSTIN request",
+    stage: "identity",
+    when:
+      "Sent by hand from View info → Company (PAN card & GSTIN) with Request GSTIN, to a candidate in India who has not given one. They reply with it, and you add it with the edit icon.",
+    kind: "campaign",
+    source: "gstinRequestHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME };
+      return { subject: gstinRequestSubject(), html: gstinRequestHtml(payload), text: gstinRequestText(payload) };
     },
   },
 

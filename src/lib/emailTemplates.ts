@@ -1140,6 +1140,148 @@ export function finalChatHtml(e: FinalChatEmail): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* GSTIN request                                                               */
+/* -------------------------------------------------------------------------- */
+
+export interface GstinRequestEmail {
+  fullName: string;
+}
+
+/**
+ * Asking a candidate in India for their GSTIN before the final agreement.
+ *
+ * Sent by hand from View info, to somebody who accepted without giving one.
+ * The wording is the recruitment team's own. The answer comes back by reply —
+ * there is no link — and the recruiter adds it to the profile.
+ */
+export function gstinRequestSubject(): string {
+  return "Action Required: GSTIN Needed to Finalize Your Agreement";
+}
+
+export function gstinRequestText({ fullName }: GstinRequestEmail): string {
+  const name = firstNameOf(fullName);
+  return [
+    `Dear ${name},`,
+    ``,
+    `Thank you for completing the previous stages of our recruitment process.`,
+    ``,
+    `Before we can issue your final agreement, we require your GSTIN (Goods and`,
+    `Services Tax Identification Number) as part of our contractor onboarding and`,
+    `tax reporting process.`,
+    ``,
+    `Your GSTIN includes the PAN associated with your GST registration, which allows`,
+    `us to complete the required taxpayer information for your contractor profile.`,
+    ``,
+    `Please provide your GSTIN and ensure that the details are accurate and`,
+    `correspond to you or the applicable business entity.`,
+    ``,
+    `If you do not have a GSTIN yet, please proceed with the GST registration`,
+    `process and send us your GSTIN once it has been issued. After verification, we`,
+    `will be able to finalise your agreement and send it to you.`,
+    ``,
+    `Your application will remain pending until the GSTIN information has been`,
+    `provided and verified. Please note that providing your GSTIN is required to`,
+    `complete your final agreement.`,
+    ``,
+    `To send it, simply reply to this email with your 15-character GSTIN.`,
+    ``,
+    `Kind regards,`,
+    `${siteConfig.company.name} Recruitment Team`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function gstinRequestHtml({ fullName }: GstinRequestEmail): string {
+  const name = esc(firstNameOf(fullName));
+  const company = esc(siteConfig.company.name);
+  const p = (html: string, bottom = 16) =>
+    `<p style="margin:0 0 ${bottom}px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">${html}</p>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(gstinRequestSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  We need your GSTIN before we can issue your final agreement.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Your GSTIN is needed
+        </h1>
+
+        ${p(`Dear ${name},`)}
+        ${p("Thank you for completing the previous stages of our recruitment process.")}
+        ${p(`Before we can issue your final agreement, we require your
+          <strong style="color:${NAVY};">GSTIN (Goods and Services Tax Identification Number)</strong>
+          as part of our contractor onboarding and tax reporting process.`)}
+        ${p(`Your GSTIN includes the PAN associated with your GST registration, which allows us to
+          complete the required taxpayer information for your contractor profile.`)}
+        ${p(`Please provide your GSTIN and ensure that the details are accurate and correspond to you
+          or the applicable business entity.`, 22)}
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:0 0 22px 0;">
+          <tr>
+            <td style="padding:18px 22px;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+              <strong>If you do not have a GSTIN yet,</strong> please proceed with the GST registration
+              process and send us your GSTIN once it has been issued. After verification, we will be
+              able to finalise your agreement and send it to you.
+            </td>
+          </tr>
+        </table>
+
+        ${p(`Your application will remain pending until the GSTIN information has been provided and
+          verified. Please note that providing your GSTIN is required to complete your final agreement.`)}
+        ${p(`<strong style="color:${NAVY};">To send it, simply reply to this email with your
+          15-character GSTIN.</strong>`, 24)}
+
+        <p style="margin:0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Kind regards,<br>
+          <strong style="color:${NAVY};">${company} Recruitment Team</strong>
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Submission received                                                         */
 /* -------------------------------------------------------------------------- */
 
