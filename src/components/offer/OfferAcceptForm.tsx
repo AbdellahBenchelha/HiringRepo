@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Field, TextInput, Textarea } from "@/components/forms/fields";
 import { CountrySelect } from "@/components/forms/CountrySelect";
@@ -16,9 +16,9 @@ import {
 } from "@/components/offer/AvailabilityPicker";
 import { validateAvailability } from "@/lib/availability";
 import { NextSteps } from "@/components/offer/NextSteps";
-import { PanCardQuestion, type PanFiles } from "@/components/offer/PanCardQuestion";
+import { PanCardSection, gstinProblem, type PanFiles } from "@/components/offer/PanCardSection";
 import { uploadDocument } from "@/components/verify/uploadDocument";
-import { panExpected, type PanAnswer } from "@/lib/pan";
+import { normaliseGstin, panExpected } from "@/lib/pan";
 
 /**
  * Accepting an offer, and correcting the record while doing it.
@@ -89,11 +89,14 @@ export function OfferAcceptForm({
   const [postcode, setPostcode] = useState("");
   // Asked of US candidates only, and only here — never on the application.
   const [ssn, setSsn] = useState("");
-  // India only, optional. Sent after the acceptance, never instead of it.
-  const [panAnswer, setPanAnswer] = useState<PanAnswer | "">("");
+  // India only: the PAN card (required) and GSTIN (optional). The card is
+  // uploaded before the acceptance is sent — the server refuses one from
+  // India without it.
   const [panFiles, setPanFiles] = useState<PanFiles>({});
-  const [panStage, setPanStage] = useState<"idle" | "uploading" | "failed" | "done" | "skipped">("idle");
-  const [panError, setPanError] = useState("");
+  const [gstin, setGstin] = useState("");
+  const [uploading, setUploading] = useState(false);
+  /** Files already uploaded, so a second attempt does not send them again. */
+  const uploaded = useRef<Partial<Record<keyof PanFiles, File>>>({});
 
   // No days chosen to begin with. A pre-ticked Monday-to-Friday is a schedule
   // we picked and they agreed to by not noticing — and the whole point of
@@ -127,30 +130,30 @@ export function OfferAcceptForm({
   const ssnWanted = ssnExpected(country);
   /** Same rule for the PAN card: asked of whoever is confirming India, live. */
   const panWanted = panExpected(country);
-  const panToSend = panWanted && panAnswer === "yes" && !!panFiles.front;
 
   /**
-   * Upload the PAN card, front then back. Sequential for the reason the
-   * identity photos are: two uploads at once on a weak phone signal is how
-   * both fail.
+   * Upload the PAN card, front then back — skipping whatever already went up
+   * on an earlier attempt. Sequential for the reason the identity photos are:
+   * two uploads at once on a weak phone signal is how both fail. Returns the
+   * problem in words, or "" when both are on the server.
    */
-  async function sendPan(): Promise<boolean> {
-    setPanStage("uploading");
-    setPanError("");
-    for (const [kind, file] of [
-      ["panFront", panFiles.front],
-      ["panBack", panFiles.back],
-    ] as const) {
-      if (!file) continue;
-      const result = await uploadDocument(candidateId, kind, file);
-      if (!result.ok) {
-        setPanError(result.message);
-        setPanStage("failed");
-        return false;
+  async function sendPan(): Promise<string> {
+    setUploading(true);
+    try {
+      for (const [side, kind] of [
+        ["front", "panFront"],
+        ["back", "panBack"],
+      ] as const) {
+        const file = panFiles[side];
+        if (!file || uploaded.current[side] === file) continue;
+        const result = await uploadDocument(candidateId, kind, file);
+        if (!result.ok) return `Your PAN card did not upload: ${result.message}`;
+        uploaded.current[side] = file;
       }
+      return "";
+    } finally {
+      setUploading(false);
     }
-    setPanStage("done");
-    return true;
   }
 
   function details() {
@@ -176,8 +179,10 @@ export function OfferAcceptForm({
         found.push("Please enter a valid Social Security Number (e.g. 123-45-6789).");
       }
     }
-    if (panWanted && panAnswer === "yes" && !panFiles.front) {
-      found.push("Please add the front of your PAN card, or choose \u201cNo / skip\u201d.");
+    if (panWanted) {
+      if (!panFiles.front) found.push("Please add the front of your PAN card — it is required.");
+      const g = gstinProblem(gstin);
+      if (g) found.push(g);
     }
     if (!agreed) found.push("Please tick the box to confirm you accept the offer.");
     setProblems(found);
@@ -187,6 +192,16 @@ export function OfferAcceptForm({
     }
 
     setBusy(true);
+    // The card first: without it on the server, the acceptance is refused.
+    if (panWanted) {
+      const problem = await sendPan();
+      if (problem) {
+        setFailed(`${problem} Please check your connection and try again.`);
+        setBusy(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
     try {
       const res = await fetch("/api/offer/confirm", {
         method: "POST",
@@ -199,17 +214,11 @@ export function OfferAcceptForm({
           // Outside details on purpose: those are shown back in the Admin
           // Panel and travel with the candidate view, and this must not.
           ssn: ssnWanted ? ssn.trim() : undefined,
-          // Left unanswered is the same answer as "No / skip": they were
-          // asked and went on without it.
-          pan: panWanted ? panAnswer || "no" : undefined,
+          gstin: panWanted ? normaliseGstin(gstin) || undefined : undefined,
         }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; problems?: string[] };
       if (data.ok) {
-        // Recorded first, photographs second. Making the acceptance wait on a
-        // successful upload would mean a dropped connection loses both — and
-        // the acceptance is the part that cannot be asked for again.
-        if (panToSend) await sendPan();
         setOutcome("accepted");
       } else if (data.problems?.length) {
         setProblems(data.problems);
@@ -240,47 +249,6 @@ export function OfferAcceptForm({
       setFailed("We could not reach the server. Please check your connection and try again.");
     }
     setBusy(false);
-  }
-
-  if (outcome === "accepted" && (panStage === "failed" || panStage === "uploading")) {
-    return (
-      <div className="card p-6 sm:p-8">
-        <div className="flex items-start gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-700">
-            <Icon name="checkCircle" className="h-6 w-6" />
-          </span>
-          <div>
-            <h2 className="text-xl font-bold text-navy-900">Your acceptance is confirmed</h2>
-            <p className="mt-2 text-sm leading-relaxed text-navy-600">
-              {panStage === "uploading"
-                ? "Uploading your PAN card…"
-                : "But your PAN card did not upload. You can try again, or skip it — it is optional and does not affect your offer."}
-            </p>
-            {panError && panStage === "failed" ? (
-              <p className="mt-2 text-sm font-medium text-red-700">{panError}</p>
-            ) : null}
-          </div>
-        </div>
-        {panStage === "failed" ? (
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => void sendPan()}
-              className="rounded-full bg-navy-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-navy-800"
-            >
-              Try again
-            </button>
-            <button
-              type="button"
-              onClick={() => setPanStage("skipped")}
-              className="rounded-full border border-navy-200 px-5 py-2.5 text-sm font-bold text-navy-700 transition hover:bg-navy-50"
-            >
-              Skip for now
-            </button>
-          </div>
-        ) : null}
-      </div>
-    );
   }
 
   if (outcome === "accepted") {
@@ -573,11 +541,11 @@ export function OfferAcceptForm({
           </div>
 
           {panWanted ? (
-            <PanCardQuestion
-              answer={panAnswer}
-              onAnswer={setPanAnswer}
+            <PanCardSection
               files={panFiles}
               onFiles={setPanFiles}
+              gstin={gstin}
+              onGstin={setGstin}
               disabled={busy}
             />
           ) : null}
@@ -606,7 +574,7 @@ export function OfferAcceptForm({
                 className="inline-flex items-center gap-2 rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-green-700 disabled:opacity-50"
               >
                 <Icon name="checkCircle" className="h-4 w-4" />
-                {busy ? (panStage === "uploading" ? "Uploading PAN card…" : "Confirming…") : "Confirm and accept"}
+                {busy ? (uploading ? "Uploading PAN card…" : "Confirming…") : "Confirm and accept"}
               </button>
               <button
                 type="button"

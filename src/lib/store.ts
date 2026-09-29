@@ -283,6 +283,11 @@ export interface Candidate {
   /** When the PAN card was deleted from the Admin Panel. */
   panDeletedAt?: string;
   /**
+   * GSTIN, optional, given at acceptance by somebody living in India. Kept
+   * normalised (capitals, no spaces) and only once it has passed the check.
+   */
+  gstin?: string;
+  /**
    * The live identity check: a link created for this one candidate in Persona,
    * emailed to them by hand when photographs could not settle the question.
    *
@@ -1537,6 +1542,8 @@ export function acceptOfferWithDetails(
   ssn?: string,
   /** India only: whether they have a PAN card. Absent when not asked. */
   pan?: PanAnswer,
+  /** India only, optional: a GSTIN that has already passed the check. */
+  gstin?: string,
 ): Promise<OfferAnswerResult> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
@@ -1560,6 +1567,7 @@ export function acceptOfferWithDetails(
       c.panAnswer = pan;
       c.panAnsweredAt = now;
     }
+    if (gstin) c.gstin = gstin;
     // They accepted what the page showed them, which is the capped figure —
     // so that is what the record says they accepted. The original survives on
     // the offer as hoursCappedFrom, because their email still quotes it.

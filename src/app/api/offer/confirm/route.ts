@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readOfferToken } from "@/lib/token";
-import { acceptOfferWithDetails, declineOfferByCandidate, type OfferAnswerResult } from "@/lib/store";
+import { acceptOfferWithDetails, declineOfferByCandidate, getCandidate, type OfferAnswerResult } from "@/lib/store";
 import { validateConfirmed } from "@/lib/hiring";
 import { isValidSsn, ssnExpected } from "@/lib/ssn";
-import { isPanAnswer, panExpected } from "@/lib/pan";
+import { currentPanDocument, isValidGstin, normaliseGstin, panExpected } from "@/lib/pan";
 import { formatAvailability, validateAvailability } from "@/lib/availability";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
     ssn?: unknown;
     /** India only: "yes" or "no" to having a PAN card. */
     pan?: unknown;
+    /** India only, optional. */
+    gstin?: unknown;
   }>(req, 16 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const body = parsed.data;
@@ -111,11 +113,33 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (!check.ok || !when.ok || ssnProblems.length) {
+  /**
+   * India: the PAN card is required, the GSTIN optional.
+   *
+   * The card is uploaded before this is called, so here it has to be on the
+   * record already — the final agreement needs it, and an acceptance without
+   * it would be one we then have to chase. A GSTIN, when given, must pass the
+   * check; an empty one is fine. Neither is kept from anywhere but India.
+   */
+  const panWanted = check.ok && panExpected(check.details.country);
+  const gstin = normaliseGstin(body.gstin);
+  const indiaProblems: string[] = [];
+  if (panWanted) {
+    const onFile = await getCandidate(id);
+    if (onFile && !currentPanDocument(onFile.documents, "panFront")) {
+      indiaProblems.push("Please upload the front of your PAN card — it is required for candidates living in India.");
+    }
+    if (gstin && !isValidGstin(gstin)) {
+      indiaProblems.push("This doesn't look like a valid GSTIN — please check it, or leave it empty.");
+    }
+  }
+
+  if (!check.ok || !when.ok || ssnProblems.length || indiaProblems.length) {
     const problems = [
       ...(check.ok ? [] : check.problems),
       ...(when.ok ? [] : when.problems),
       ...ssnProblems,
+      ...indiaProblems,
     ];
     return NextResponse.json({ ok: false, error: "invalid", problems }, { status: 400 });
   }
@@ -128,9 +152,10 @@ export async function POST(req: NextRequest) {
     // Stored only when it was the thing asked for. A number posted by a
     // candidate outside the US is discarded rather than kept for no reason.
     ssnWanted ? ssnRaw : undefined,
-    // Optional, and kept only from someone living in India — the only people
-    // the form asks. The card itself follows as an upload once this returns.
-    panExpected(check.details.country) && isPanAnswer(body.pan) ? body.pan : undefined,
+    // Required from India, so the answer is always "yes" there; the card
+    // itself is already on the record (checked above).
+    panWanted ? "yes" : undefined,
+    panWanted && gstin ? gstin : undefined,
   );
   if (!result.ok) {
     const { status, error } = REFUSAL[result.reason];
