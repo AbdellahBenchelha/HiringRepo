@@ -1,12 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminRequest } from "@/lib/adminAuth";
-import { deleteCandidate, documentKeys } from "@/lib/store";
+import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
+import { deleteCandidate, documentKeys, getCandidate } from "@/lib/store";
+import { toCandidateView } from "@/lib/candidateView";
+import { requiredCountries } from "@/lib/verificationStore";
 import { deleteObjects } from "@/lib/r2";
 import { deleteSessionsForCandidate } from "@/lib/chatStore";
 
-/** Permanently delete a candidate. No undo — the record holds personal data. */
+/**
+ *   GET     one candidate, as View info shows them — for opening View info from
+ *           somewhere that has only their id (the Live chat tab)
+ *   DELETE  permanently delete a candidate. No undo — the record holds personal data.
+ */
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function baseUrl(req: NextRequest): string {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, "");
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
+  return `${proto}://${host}`;
+}
+
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  if (!(await getAdminSession())) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+  const { id } = await ctx.params;
+  const [c, required] = await Promise.all([getCandidate(id), requiredCountries()]);
+  if (!c) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  // The same view the tables are given — nothing more (no SSN).
+  return NextResponse.json(
+    { ok: true, candidate: toCandidateView(c, baseUrl(req), required) },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
 
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await verifyAdminRequest(req.headers.get("x-csrf-token")))) {

@@ -8,6 +8,7 @@ import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ChatMessages } from "@/components/admin/chat/ChatMessages";
 import { LiveNowButton } from "@/components/admin/chat/LiveNowButton";
+import { ChatProfilePopup } from "@/components/admin/chat/ChatProfilePopup";
 import { MAX_MESSAGE, type AdminSessionView, type ChatSummary } from "@/lib/chat";
 import { newId } from "@/lib/id";
 import { FULL_VERIFIED } from "@/lib/candidateStatus";
@@ -90,6 +91,8 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
   const [showQuestions, setShowQuestions] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [confirmVerify, setConfirmVerify] = useState(false);
+  /** The candidate whose View info is open, from clicking their name. */
+  const [profileOf, setProfileOf] = useState<string | null>(null);
   const [busy, setBusy] = useState("");
   const [actionError, setActionError] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -560,13 +563,32 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                   >
                     <Icon name="chevronLeft" className="h-5 w-5" />
                   </button>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-900 text-sm font-bold text-white">
+                  {/* Their name opens View info — everything on record, without
+                      leaving the conversation. */}
+                  <button
+                    type="button"
+                    onClick={() => setProfileOf(view.candidateId)}
+                    tabIndex={-1}
+                    aria-hidden
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-900 text-sm font-bold text-white transition hover:ring-2 hover:ring-brand-400"
+                  >
                     {initials(view.candidateName)}
-                  </span>
+                  </button>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-navy-900" data-chat-title>
-                      {view.candidateName}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setProfileOf(view.candidateId)}
+                      title="View info — all their information"
+                      data-chat-profile
+                      className="group flex max-w-full items-center gap-1.5 text-left"
+                    >
+                      <span className="truncate text-sm font-bold text-navy-900 group-hover:text-brand-700 group-hover:underline" data-chat-title>
+                        {view.candidateName}
+                      </span>
+                      <span className="shrink-0 rounded-full border border-navy-200 px-1.5 py-px text-[10px] font-semibold text-navy-500 group-hover:border-brand-300 group-hover:text-brand-700">
+                        View info
+                      </span>
+                    </button>
                     <p className="truncate text-xs text-navy-500">
                       {view.status === "ended" ? (
                         <>{ago(view.endedAt, now) === "just now" ? "Ended just now" : `Ended ${ago(view.endedAt, now)} ago`}</>
@@ -827,6 +849,17 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
           )}
         </section>
       </div>
+
+      {profileOf ? (
+        <ChatProfilePopup
+          candidateId={profileOf}
+          onClose={() => setProfileOf(null)}
+          onStatusChange={(st) => {
+            setList((l) => l?.map((x) => (x.candidateId === profileOf ? { ...x, candidateStatus: st } : x)) ?? l);
+            setOpen((o) => (o && o.candidateId === profileOf ? { ...o, candidateStatus: st } : o));
+          }}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={confirmVerify}
