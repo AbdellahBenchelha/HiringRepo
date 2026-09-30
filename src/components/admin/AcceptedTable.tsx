@@ -1,5 +1,6 @@
 "use client";
 
+import { panExpected } from "@/lib/pan";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { FULL_VERIFIED } from "@/lib/candidateStatus";
@@ -51,6 +52,9 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   // list now is whether somebody is Full verified.
   const [verified, setVerified] = useState<"all" | "yes" | "no">("all");
   const [engagedAs, setEngagedAs] = useState<"all" | "Individual" | "Company">("all");
+  // GSTIN is only asked of people in India, so "empty" means somebody in India
+  // without one — the people a Request GSTIN email is for — not everyone else.
+  const [gstin, setGstin] = useState<"all" | "yes" | "no">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -90,9 +94,11 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       if (verified === "yes" && c.status !== FULL_VERIFIED) return false;
       if (verified === "no" && c.status === FULL_VERIFIED) return false;
       if (engagedAs !== "all" && c.confirmedDetails?.engagedAs !== engagedAs) return false;
+      if (gstin === "yes" && !c.gstin) return false;
+      if (gstin === "no" && (c.gstin || !panExpected(c.confirmedDetails?.country ?? c.country))) return false;
       return true;
     });
-  }, [live, search, country, verified, engagedAs]);
+  }, [live, search, country, verified, engagedAs, gstin]);
 
   const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
   const current = Math.min(page, pageCount);
@@ -139,7 +145,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, verified, engagedAs, pageSize]);
+  }, [search, country, verified, engagedAs, gstin, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -162,7 +168,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   return (
     <>
       <div ref={tableTop} className="card mb-5 p-4 sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <label className="block">
             <span className="label">Search</span>
             <input
@@ -203,6 +209,20 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           </label>
 
           <label className="block">
+            <span className="label">GSTIN</span>
+            <select
+              id="gstin"
+              className="select"
+              value={gstin}
+              onChange={(e) => setGstin(e.target.value as typeof gstin)}
+            >
+              <option value="all">All</option>
+              <option value="yes">Provided</option>
+              <option value="no">Empty (India)</option>
+            </select>
+          </label>
+
+          <label className="block">
             <span className="label">Country</span>
             <select id="country" className="select" value={country} onChange={(e) => setCountry(e.target.value)}>
               <option value="all">All countries</option>
@@ -225,6 +245,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                 setCountry("all");
                 setVerified("all");
                 setEngagedAs("all");
+                setGstin("all");
               }}
               className="rounded-full px-3 py-1 text-xs font-semibold text-navy-600 transition hover:bg-navy-100"
             >
