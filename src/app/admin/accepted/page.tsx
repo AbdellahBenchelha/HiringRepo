@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { listCandidates } from "@/lib/store";
 import { requiredCountries } from "@/lib/verificationStore";
 import { toCandidateView } from "@/lib/candidateView";
+import { listSessions } from "@/lib/chatStore";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AcceptedTable } from "@/components/admin/AcceptedTable";
 
@@ -19,10 +20,11 @@ async function baseUrl(): Promise<string> {
 
 export default async function AdminAcceptedPage() {
   await requireAdmin();
-  const [all, required, base] = await Promise.all([
+  const [all, required, base, sessions] = await Promise.all([
     listCandidates(),
     requiredCountries(),
     baseUrl(),
+    listSessions(),
   ]);
 
   // Accepted is accepted, however it was recorded: through the link in the
@@ -31,7 +33,13 @@ export default async function AdminAcceptedPage() {
   // Most recently accepted first — the newest one is the one being acted on.
   accepted.sort((a, b) => (b.offerAcceptedAt || "").localeCompare(a.offerAcceptedAt || ""));
 
-  const rows = accepted.map((c) => toCandidateView(c, base, required));
+  // Which current chat links have opened a conversation, for the "Sent — not
+  // started" filter and the reminder. From the chat store's in-memory index.
+  const started = new Set(sessions.map((s) => `${s.candidateId}|${s.linkSentAt}`));
+  const rows = accepted.map((c) => ({
+    ...toCandidateView(c, base, required),
+    chatStarted: !!c.chatLinkSentAt && started.has(`${c.id}|${c.chatLinkSentAt}`),
+  }));
 
   return (
     <AdminShell>

@@ -12,6 +12,8 @@ import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal"
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
+import { useBulkEmail } from "@/components/admin/BulkEmailBar";
+import { ACCEPTED_ACTIONS } from "@/lib/bulkEmail";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { adminPost } from "@/lib/adminClient";
 import { formatRate } from "@/lib/offer";
@@ -56,7 +58,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   // without one — the people a Request GSTIN email is for — not everyone else.
   const [gstin, setGstin] = useState<"all" | "yes" | "no">("all");
   // The final interview is the live chat: has its link been emailed yet?
-  const [chatSent, setChatSent] = useState<"all" | "yes" | "no">("all");
+  const [chatSent, setChatSent] = useState<"all" | "yes" | "notStarted" | "no">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -100,6 +102,8 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       if (gstin === "no" && (c.gstin || !panExpected(c.confirmedDetails?.country ?? c.country))) return false;
       if (chatSent === "yes" && !c.chatLinkSentAt) return false;
       if (chatSent === "no" && c.chatLinkSentAt) return false;
+      // The people the "start your chat" reminder is for.
+      if (chatSent === "notStarted" && (!c.chatLinkSentAt || c.chatStarted)) return false;
       return true;
     });
   }, [live, search, country, verified, engagedAs, gstin, chatSent]);
@@ -110,6 +114,23 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
     () => shown.slice((current - 1) * pageSize, current * pageSize),
     [shown, current, pageSize],
   );
+
+  /**
+   * Who is ticked, for a paced batch of chat reminders. Ids, kept across pages;
+   * anything the filters drop falls out, so nobody unseen is emailed.
+   */
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectable = useMemo(() => new Set(shown.map((c) => c.id)), [shown]);
+  const chosen = useMemo(() => selected.filter((id) => selectable.has(id)), [selected, selectable]);
+  const toggleOne = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const pageIds = visible.map((c) => c.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => chosen.includes(id));
+  const togglePage = () =>
+    setSelected((prev) =>
+      allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])],
+    );
+  const bulkEmail = useBulkEmail(shown, chosen, () => setSelected([]), ACCEPTED_ACTIONS);
 
   const { profile, open: openProfile, close: closeProfile, nav } = useProfileNav(
     live,
@@ -236,6 +257,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
             >
               <option value="all">All</option>
               <option value="yes">Chat link sent</option>
+              <option value="notStarted">Sent — not started</option>
               <option value="no">Not sent</option>
             </select>
           </label>
@@ -326,11 +348,23 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       </div>
 
       {companyCheck.panel}
+      {bulkEmail.bar}
+      {bulkEmail.panel}
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[1150px] text-left text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50/50 text-xs uppercase tracking-wide text-navy-500">
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={allOnPage}
+                  onChange={togglePage}
+                  aria-label={allOnPage ? "Unselect this page" : "Select this page"}
+                  title={allOnPage ? "Unselect this page" : "Select this page"}
+                  className="h-4 w-4 rounded border-navy-300 text-brand-600"
+                />
+              </th>
               <th className="px-4 py-3 font-semibold">Candidate</th>
               <th className="px-4 py-3 font-semibold">Country</th>
               <th className="px-4 py-3 font-semibold">Position</th>
@@ -349,7 +383,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           <tbody className="divide-y divide-navy-50">
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-navy-400">
+                <td colSpan={10} className="px-4 py-10 text-center text-navy-400">
                   {rows.length === 0
                     ? "Nobody has accepted an offer yet."
                     : "No accepted candidates match your filters."}
@@ -367,9 +401,20 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                     className={`align-top ${
                       c.status === FULL_VERIFIED
                         ? "bg-emerald-50 shadow-[inset_4px_0_0_0_#059669] hover:bg-emerald-100/70"
-                        : "hover:bg-navy-50/40"
+                        : chosen.includes(c.id)
+                          ? "bg-brand-50/60"
+                          : "hover:bg-navy-50/40"
                     }`}
                   >
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={chosen.includes(c.id)}
+                        onChange={() => toggleOne(c.id)}
+                        aria-label={`Select ${c.fullName || c.email || c.id}`}
+                        className="mt-0.5 h-4 w-4 rounded border-navy-300 text-brand-600"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy-900">
                         {d ? `${d.firstName} ${d.lastName}`.trim() : c.fullName || "—"}
@@ -454,6 +499,12 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
         <CandidateProfileModal
           key={profile.id}
           candidate={profile}
+          // The row's own checkbox, reachable from inside the dialog.
+          selection={{
+            selected: chosen.includes(profile.id),
+            onToggle: () => toggleOne(profile.id),
+            count: chosen.length,
+          }}
           showOffer
           nav={nav}
           onClose={closeProfile}
@@ -462,6 +513,8 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           onChange={(p) => patch(profile.id, p)}
         />
       ) : null}
+
+      {bulkEmail.dialog}
 
       {viewing && profile ? (
         <DocumentViewer

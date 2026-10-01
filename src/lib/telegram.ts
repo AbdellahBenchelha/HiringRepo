@@ -166,8 +166,8 @@ export function buildChatStartedMessage(
 }
 
 /**
- * The candidate opened a "we're live" email and the chat page loaded. Sent once
- * per email. Whether they have pressed Start yet decides what to say next.
+ * The candidate opened a "we're live" email, or a "not started yet" reminder,
+ * and the chat page loaded. Sent once per email. Whether they have pressed Start yet decides what to say next.
  */
 export function buildLiveReminderOpenedMessage(
   name: string,
@@ -175,9 +175,12 @@ export function buildLiveReminderOpenedMessage(
   country: string | undefined,
   adminUrl: string,
   state: "not_started" | "waiting" | "active",
+  kind: "live" | "nudge" = "live",
 ): string {
   return [
-    "👋 <b>Candidate clicked your “We’re live” email</b>",
+    kind === "nudge"
+      ? "🔔 <b>Candidate clicked your chat reminder</b>"
+      : "👋 <b>Candidate clicked your “We’re live” email</b>",
     "",
     ...whoLines(name, email, country),
     "",

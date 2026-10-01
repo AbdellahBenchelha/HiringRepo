@@ -18,7 +18,7 @@ import { canOffer, type Offer } from "@/lib/offer";
 import type { CandidateDocument } from "@/lib/documents";
 
 export const BULK_ACTIONS = [
-  "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer",
+  "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer", "chatReminder",
 ] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
@@ -30,6 +30,7 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   voiceAck: "Tell them we have it",
   offerReminder: "Remind to answer",
   offer: "Send offers",
+  chatReminder: "Remind to start chat",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
@@ -41,6 +42,11 @@ export const OFFER_ACTIONS: readonly BulkAction[] = ["offerReminder"];
  * only offers the offer reminder here, with the offer editor beside it.
  */
 export const FAVORITE_ACTIONS: readonly BulkAction[] = ["offerReminder"];
+/** Accepted: chasing the final interview chat for those who never started it. */
+export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder"];
+
+/** Below this, a chat reminder sent again warns: two in a day read as spam. */
+const CHAT_REMINDER_WARN_MS = 24 * 60 * 60 * 1000;
 
 /** How long a batch may be. A misclick must not be able to email everybody. */
 export const MAX_BATCH = 100;
@@ -111,6 +117,10 @@ export interface BulkCandidate {
   offerAcceptedAt?: string;
   offerDeclinedAt?: string;
   offerReminderCount?: number;
+  /** For the chat reminder: a link out, whether its chat started, the last reminder. */
+  chatLinkSentAt?: string;
+  chatStarted?: boolean;
+  chatRemindedAt?: string;
 }
 
 export type Eligibility =
@@ -130,6 +140,17 @@ export type Eligibility =
 export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
   if (!c.email || !c.email.includes("@")) {
     return { include: false, reason: "no email address" };
+  }
+
+  // "You haven't started your final interview chat yet." Refused for anybody
+  // it would be untrue for: never sent the link, or already in the chat.
+  if (action === "chatReminder") {
+    if (!c.chatLinkSentAt) return { include: false, reason: "has not been sent a chat link" };
+    if (c.chatStarted) return { include: false, reason: "has already started the chat" };
+    const last = c.chatRemindedAt ? Date.parse(c.chatRemindedAt) : NaN;
+    return Date.now() - last < CHAT_REMINDER_WARN_MS
+      ? { include: true, warn: "already reminded in the last 24 hours — this sends another" }
+      : { include: true };
   }
 
   // A written offer, with its own terms per person. Refused for anybody who

@@ -171,6 +171,14 @@ export interface CandidateView {
   /** Final-interview chat links sent. The conversation is fetched on demand. */
   chatLinkSentAt?: string;
   chatLinks?: string[];
+  /**
+   * Whether the current chat link has opened a conversation. Not on the record
+   * itself — it lives in the chat store — so pages that need it (Accepted) set
+   * it after building the view.
+   */
+  chatStarted?: boolean;
+  /** When the last "not started yet" chat reminder went out. */
+  chatRemindedAt?: string;
   fullyVerifiedAt?: string;
   identityReminderCount?: number;
   /** Every identity reminder, oldest first. */
@@ -355,6 +363,7 @@ export function toCandidateView(
     identityReminderSentAt: c.identityReminderSentAt,
     chatLinkSentAt: c.chatLinkSentAt,
     chatLinks: c.chatLinks,
+    chatRemindedAt: (c.liveReminders ?? []).filter((r) => (r.kind ?? "live") === "nudge").at(-1)?.sentAt,
     fullyVerifiedAt: c.fullyVerifiedAt,
     submissionAckSentAt: c.submissionAckSentAt,
     submissionAckCount: c.submissionAckCount,

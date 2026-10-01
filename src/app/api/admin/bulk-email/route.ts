@@ -15,6 +15,8 @@ import {
 import { clearBatch, readBatch, startBatch } from "@/lib/bulkEmailStore";
 import { offerProblems, ENGAGEMENT_TYPES, type Offer } from "@/lib/offer";
 import { ensureWorker } from "@/lib/bulkEmailWorker";
+import { sessionForLink } from "@/lib/chatStore";
+import { reminderKind, type LiveReminder } from "@/lib/chat";
 import { checkAgainstCap } from "@/lib/warmup";
 import { currentAllowance } from "@/lib/warmupStore";
 
@@ -29,6 +31,11 @@ import { currentAllowance } from "@/lib/warmupStore";
  * GET is the panel's poll. It is deliberately cheap: one small file, no
  * candidate records, and no work started as a side effect of reading.
  */
+
+/** When the last "not started yet" chat reminder went out. */
+function lastNudgeAt(list?: LiveReminder[]): string | undefined {
+  return (list ?? []).filter((r) => reminderKind(r) === "nudge").at(-1)?.sentAt;
+}
 
 export const runtime = "nodejs";
 
@@ -134,6 +141,11 @@ export async function POST(req: NextRequest) {
       offerDeclinedAt: c.offerDeclinedAt,
       offerReminderCount: c.offerReminderCount,
       voiceStatusForOffer: c.voiceStatus,
+      chatLinkSentAt: c.chatLinkSentAt,
+      // Only looked up for the one action that asks: it reads the chat store.
+      chatStarted:
+        action === "chatReminder" && c.chatLinkSentAt ? !!(await sessionForLink(id, c.chatLinkSentAt)) : undefined,
+      chatRemindedAt: lastNudgeAt(c.liveReminders),
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });

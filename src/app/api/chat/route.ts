@@ -6,6 +6,7 @@ import {
   chatStatus,
   cleanMessage,
   isReminderId,
+  reminderKind,
   isValidClientId,
   type CandidateChatState,
   type ChatSession,
@@ -195,12 +196,13 @@ export async function POST(req: NextRequest) {
           candidate.confirmedDetails?.country || candidate.country || undefined,
           `${base}/admin/chat${s ? `?s=${s.id}` : ""}`,
           !s ? "not_started" : chatStatus(s) === "active" ? "active" : "waiting",
+          reminderKind(reminder),
         ),
       ).catch(() => {});
       if (s) touchCandidate(s.id);
       forgetCandidateStatuses(); // so the Live chat header shows "opened" at once
       // eslint-disable-next-line no-console
-      console.log(`[chat] ${candidate.id} opened "we're live" email ${reminder.id}`);
+      console.log(`[chat] ${candidate.id} opened ${reminderKind(reminder)} reminder ${reminder.id}`);
     }
     return NextResponse.json({ ok: true, notified: !!reminder });
   }

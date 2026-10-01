@@ -692,8 +692,8 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                       }`}
                     >
                       <Icon name="mail" className="mr-1 inline h-3 w-3 align-[-2px]" />
-                      &ldquo;We&rsquo;re live&rdquo; email sent {agoText(r.sentAt, now)}
-                      {view.reminders.length > 1 ? ` (${view.reminders.length} in total)` : ""}
+                      {r.kind === "nudge" ? "Reminder to start" : <>&ldquo;We&rsquo;re live&rdquo;</>} email sent {agoText(r.sentAt, now)}
+                      {view.reminders.length > 1 ? ` (${view.reminders.length} reminders in total)` : ""}
                       {r.openedAt
                         ? ` · opened ${agoText(r.openedAt, now)}`
                         : " · not opened yet"}

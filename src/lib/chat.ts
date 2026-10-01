@@ -110,6 +110,11 @@ export function isValidClientId(v: unknown): v is string {
  */
 export interface LiveReminder {
   id: string;
+  /**
+   * "live" — our team is online now, come now (absent on the first ones sent).
+   * "nudge" — a reminder for somebody who has not started the chat yet.
+   */
+  kind?: ReminderKind;
   sentAt: string;
   by?: string;
   /** The chat link it pointed at. */
@@ -118,10 +123,18 @@ export interface LiveReminder {
   openedAt?: string;
 }
 
-/** Below this, a second send is refused as a double click. */
+export type ReminderKind = "live" | "nudge";
+
+export function reminderKind(r: Pick<LiveReminder, "kind">): ReminderKind {
+  return r.kind ?? "live";
+}
+
+/** Below this, a second send of the same kind is refused as a double click. */
 export const REMINDER_MIN_GAP_MS = 60_000;
-/** Below this, the confirm step warns that one has just gone out. */
+/** Below this, the confirm step warns that a "we're live" email has just gone out. */
 export const REMINDER_WARN_MINUTES = 30;
+/** Below this, it warns that a "not started yet" reminder has just gone out. */
+export const NUDGE_WARN_HOURS = 24;
 
 export function isReminderId(v: unknown): v is string {
   return typeof v === "string" && /^[A-Za-z0-9]{8,32}$/.test(v);

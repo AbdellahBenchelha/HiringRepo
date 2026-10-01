@@ -52,6 +52,9 @@ import {
   chatLiveNowHtml,
   chatLiveNowSubject,
   chatLiveNowText,
+  chatReminderHtml,
+  chatReminderSubject,
+  chatReminderText,
   gstinRequestHtml,
   gstinRequestSubject,
   gstinRequestText,
@@ -438,6 +441,24 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     render: () => {
       const payload = { fullName: SAMPLE_NAME, chatUrl: link("/chat?t=EXAMPLE&r=EXAMPLE"), validDays: CHAT_LINK_TTL_DAYS };
       return { subject: chatLiveNowSubject(), html: chatLiveNowHtml(payload), text: chatLiveNowText(payload) };
+    },
+  },
+  {
+    id: "chat-reminder",
+    name: "Final interview — reminder to start the chat",
+    stage: "voice",
+    when:
+      "Sent by hand with Send reminder in View info → Assessment, or to many at once from the Accepted tab (Live interview: Sent — not started). For somebody sent the chat link who has not started. Same link (a fresh one if it has expired). When they open it you get a Telegram message.",
+    kind: "campaign",
+    source: "chatReminderHtml",
+    render: () => {
+      const payload = {
+        fullName: SAMPLE_NAME,
+        chatUrl: link("/chat?t=EXAMPLE&r=EXAMPLE"),
+        hours: DEFAULT_HOURS,
+        validUntil: "7 October",
+      };
+      return { subject: chatReminderSubject(), html: chatReminderHtml(payload), text: chatReminderText(payload) };
     },
   },
   {

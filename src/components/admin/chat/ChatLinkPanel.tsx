@@ -7,7 +7,7 @@ import { adminPost } from "@/lib/adminClient";
 import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ChatMessages } from "@/components/admin/chat/ChatMessages";
-import { LiveNowButton, LiveNowHistory } from "@/components/admin/chat/LiveNowButton";
+import { LiveNowButton, LiveNowHistory, type LiveNowResult } from "@/components/admin/chat/LiveNowButton";
 import type { ChatMessage, LiveReminder } from "@/lib/chat";
 
 /**
@@ -119,6 +119,17 @@ export function ChatLinkPanel({
   // and it has not ended. Hidden until the transcript has loaded, so an ended
   // chat never shows the button for a moment.
   const canRemind = !!candidate.chatLinkSentAt && sessions !== null && current?.status !== "ended";
+  // "You haven't started yet" — only true while the current link has opened nothing.
+  const canNudge = !!candidate.chatLinkSentAt && sessions !== null && !current;
+  const afterReminder = (r: LiveNowResult) => {
+    setReminders(r.reminders);
+    if (r.newLink) {
+      onChange({ chatLinkSentAt: r.chatLinkSentAt, chatLinks: r.chatLinks });
+      setLink(r.link);
+      setExpired(false);
+    }
+    void load();
+  };
   const lastAt = links[links.length - 1];
   const recent = !!lastAt && Date.now() - Date.parse(lastAt) < 24 * 60 * 60 * 1000;
 
@@ -200,15 +211,20 @@ export function ChatLinkPanel({
               email={candidate.email}
               reminders={reminders}
               linkExpired={expired && !current}
-              onSent={(r) => {
-                setReminders(r.reminders);
-                if (r.newLink) {
-                  onChange({ chatLinkSentAt: r.chatLinkSentAt, chatLinks: r.chatLinks });
-                  setLink(r.link);
-                  setExpired(false);
-                }
-                void load();
-              }}
+              onSent={afterReminder}
+            />
+          ) : null}
+          {canNudge ? (
+            <LiveNowButton
+              key={`${candidate.id}-nudge`}
+              kind="nudge"
+              size="sm"
+              candidateId={candidate.id}
+              candidateName={candidate.fullName}
+              email={candidate.email}
+              reminders={reminders}
+              linkExpired={expired}
+              onSent={afterReminder}
             />
           ) : null}
           <button
@@ -238,6 +254,7 @@ export function ChatLinkPanel({
               </li>
             ))}
           </ol>
+          <LiveNowHistory reminders={reminders} kind="nudge" className="mt-2" />
           <LiveNowHistory reminders={reminders} className="mt-2" />
           {link ? (
             <div className="mt-2 flex items-center gap-2">
