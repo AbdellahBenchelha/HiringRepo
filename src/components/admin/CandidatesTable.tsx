@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { InterviewBadge, IncompleteFormBadge, InviteHeldBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
+import { rowTone, stickyTone, rowEdge } from "@/components/admin/rowTone";
 import { siteConfig } from "@/config/site";
 import { adminPost } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
@@ -650,9 +651,10 @@ export function CandidatesTable({
               visible.map((c) => (
                 <tr
                   key={c.id}
-                  className={`group hover:bg-cream-100 ${chosen.includes(c.id) ? "bg-brand-50/60" : ""}`}
+                  data-rejected={c.status === "Rejected" ? "true" : undefined}
+                  className={`group ${c.status === "Rejected" ? "" : "hover:bg-cream-100"} ${rowTone(c.status, { selected: chosen.includes(c.id) })}`}
                 >
-                  <td className="px-3 py-3 align-top">
+                  <td className={`px-3 py-3 align-top ${rowEdge(c.status)}`}>
                     <input
                       type="checkbox"
                       checked={chosen.includes(c.id)}
@@ -723,7 +725,7 @@ export function CandidatesTable({
                       onOpenPhotos={() => setQuickView(c)}
                     />
                   </td>
-                  <td className="sticky right-0 bg-white px-4 py-3 transition-colors group-hover:bg-cream-100 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
+                  <td className={`sticky right-0 ${stickyTone(c.status)} px-4 py-3 transition-colors ${c.status === "Rejected" ? "group-hover:bg-red-100" : "group-hover:bg-cream-100"} shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]`}>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"

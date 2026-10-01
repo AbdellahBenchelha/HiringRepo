@@ -3,7 +3,8 @@
 import { panExpected } from "@/lib/pan";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
-import { FULL_VERIFIED } from "@/lib/candidateStatus";
+import { FULL_VERIFIED, REJECTED } from "@/lib/candidateStatus";
+import { rowTone, stickyTone, rowEdge } from "@/components/admin/rowTone";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { RefreshButton } from "@/components/admin/RefreshButton";
@@ -396,17 +397,15 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                   <tr
                     key={c.id}
                     data-full-verified={c.status === FULL_VERIFIED ? "true" : undefined}
+                    data-rejected={c.status === REJECTED ? "true" : undefined}
                     // Green for Full verified: the final interview is done and
                     // every check passed — the ones ready to go, at a glance.
+                    // Red for Rejected.
                     className={`align-top ${
-                      c.status === FULL_VERIFIED
-                        ? "bg-emerald-50 shadow-[inset_4px_0_0_0_#059669] hover:bg-emerald-100/70"
-                        : chosen.includes(c.id)
-                          ? "bg-brand-50/60"
-                          : "hover:bg-navy-50/40"
+                      rowTone(c.status, { selected: chosen.includes(c.id), greenVerified: true }) || "hover:bg-navy-50/40"
                     }`}
                   >
-                    <td className="px-3 py-3">
+                    <td className={`px-3 py-3 ${rowEdge(c.status, true)}`}>
                       <input
                         type="checkbox"
                         checked={chosen.includes(c.id)}
@@ -468,9 +467,10 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                       />
                     </td>
                     <td
-                      className={`sticky right-0 px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)] ${
-                        c.status === FULL_VERIFIED ? "bg-emerald-50" : "bg-white"
-                      }`}
+                      className={`sticky right-0 px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)] ${stickyTone(
+                        c.status,
+                        true,
+                      )}`}
                     >
                       <div className="flex items-center gap-2">
                         <CandidateInfoButton onOpen={() => openProfile(c)} />

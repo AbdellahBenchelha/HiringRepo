@@ -26,6 +26,7 @@ import { Pagination, DEFAULT_PAGE_SIZE } from "@/components/admin/Pagination";
 import { SortHeader } from "@/components/admin/SortHeader";
 import { agoInWords, lastActivityAt } from "@/lib/activity";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
+import { rowTone, stickyTone, rowEdge } from "@/components/admin/rowTone";
 import { VOICE_FILTERS, matchesVoiceFilter, type VoiceFilter } from "@/lib/voice";
 import {
   VERIFICATION_FILTERS,
@@ -660,11 +661,12 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                 return (
                   <tr
                     key={c.id}
-                    className={`align-top hover:bg-navy-50/40 ${
-                      chosen.includes(c.id) ? "bg-brand-50/60" : ""
-                    }`}
+                    data-rejected={c.status === "Rejected" ? "true" : undefined}
+                    className={`align-top ${c.status === "Rejected" ? "" : "hover:bg-navy-50/40"} ${rowTone(c.status, {
+                      selected: chosen.includes(c.id),
+                    })}`}
                   >
-                    <td className="px-3 py-3">
+                    <td className={`px-3 py-3 ${rowEdge(c.status)}`}>
                       <input
                         type="checkbox"
                         checked={chosen.includes(c.id)}
@@ -745,7 +747,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
                         onVoiceStatusChange={(voiceStatus) => patch(c.id, { voiceStatus })}
                       />
                     </td>
-                    <td className="sticky right-0 bg-white px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]">
+                    <td className={`sticky right-0 ${stickyTone(c.status)} px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]`}>
                       <div className="flex flex-col items-start gap-2 whitespace-nowrap">
                         {/* There is no answer sheet for an interview this
                             system did not run, and a link to an empty one is a

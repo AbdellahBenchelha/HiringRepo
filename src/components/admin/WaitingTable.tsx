@@ -1,5 +1,6 @@
 "use client";
 
+import { rowTone, rowEdge } from "@/components/admin/rowTone";
 import { useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -348,11 +349,12 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
                 return (
                   <tr
                     key={c.id}
-                    className={`align-top hover:bg-navy-50/40 ${
-                      chosen.includes(c.id) ? "bg-brand-50/60" : ""
-                    }`}
+                    data-rejected={c.status === "Rejected" ? "true" : undefined}
+                    className={`align-top ${c.status === "Rejected" ? "" : "hover:bg-navy-50/40"} ${rowTone(c.status, {
+                      selected: chosen.includes(c.id),
+                    })}`}
                   >
-                    <td className="px-3 py-3">
+                    <td className={`px-3 py-3 ${rowEdge(c.status)}`}>
                       <input
                         type="checkbox"
                         checked={chosen.includes(c.id)}

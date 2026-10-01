@@ -74,3 +74,5 @@ export function reachedInterviewStage(status?: string): boolean {
 
 /** The status the Live chat's "Full verified" label sets. */
 export const FULL_VERIFIED: CandidateStatus = "Full verified";
+
+export const REJECTED: CandidateStatus = "Rejected";
