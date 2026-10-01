@@ -55,6 +55,8 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   // GSTIN is only asked of people in India, so "empty" means somebody in India
   // without one — the people a Request GSTIN email is for — not everyone else.
   const [gstin, setGstin] = useState<"all" | "yes" | "no">("all");
+  // The final interview is the live chat: has its link been emailed yet?
+  const [chatSent, setChatSent] = useState<"all" | "yes" | "no">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -96,9 +98,11 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       if (engagedAs !== "all" && c.confirmedDetails?.engagedAs !== engagedAs) return false;
       if (gstin === "yes" && !c.gstin) return false;
       if (gstin === "no" && (c.gstin || !panExpected(c.confirmedDetails?.country ?? c.country))) return false;
+      if (chatSent === "yes" && !c.chatLinkSentAt) return false;
+      if (chatSent === "no" && c.chatLinkSentAt) return false;
       return true;
     });
-  }, [live, search, country, verified, engagedAs, gstin]);
+  }, [live, search, country, verified, engagedAs, gstin, chatSent]);
 
   const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
   const current = Math.min(page, pageCount);
@@ -145,7 +149,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, verified, engagedAs, gstin, pageSize]);
+  }, [search, country, verified, engagedAs, gstin, chatSent, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -168,7 +172,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   return (
     <>
       <div ref={tableTop} className="card mb-5 p-4 sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <label className="block">
             <span className="label">Search</span>
             <input
@@ -223,6 +227,20 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           </label>
 
           <label className="block">
+            <span className="label">Live interview</span>
+            <select
+              id="chatSent"
+              className="select"
+              value={chatSent}
+              onChange={(e) => setChatSent(e.target.value as typeof chatSent)}
+            >
+              <option value="all">All</option>
+              <option value="yes">Chat link sent</option>
+              <option value="no">Not sent</option>
+            </select>
+          </label>
+
+          <label className="block">
             <span className="label">Country</span>
             <select id="country" className="select" value={country} onChange={(e) => setCountry(e.target.value)}>
               <option value="all">All countries</option>
@@ -246,6 +264,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                 setVerified("all");
                 setEngagedAs("all");
                 setGstin("all");
+                setChatSent("all");
               }}
               className="rounded-full px-3 py-1 text-xs font-semibold text-navy-600 transition hover:bg-navy-100"
             >
