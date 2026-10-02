@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { prepareImage } from "@/components/verify/prepareImage";
 import { IMAGE_MIME, MAX_IMAGE_BYTES, type DocumentKind } from "@/lib/documents";
-import { MAX_EXPLANATION } from "@/lib/residence";
 
 /**
  * Proving you live where you said you live.
@@ -20,13 +19,9 @@ import { MAX_EXPLANATION } from "@/lib/residence";
  * driving licence issued by the country they live in. It does not have to
  * show an address: it only has to show they live in that country.
  *
- * And a way out, because the people who cannot answer are otherwise the people
- * who go silent. Plenty of legitimate residents hold no such card at all —
- * students, dependants, anyone mid-application, anyone in a country that does
- * not issue one — and for them the honest answer is a paragraph, not a
- * document. A recruiter reads it and decides. Without that box the only reply
- * available to an honest person with no card is nothing, which looks exactly
- * like evasion.
+ * Required: there is no way round it on this page. (Candidates asked before
+ * this could answer in writing instead; those answers stay on their record
+ * and in the Admin Panel.)
  */
 
 type SlotState = "empty" | "preparing" | "ready" | "uploading" | "done" | "error";
@@ -66,8 +61,6 @@ export function ResidenceUpload({
   const [files, setFiles] = useState<Partial<Record<DocumentKind, File>>>({});
   const [states, setStates] = useState<Partial<Record<DocumentKind, SlotState>>>({});
   const [errors, setErrors] = useState<Partial<Record<DocumentKind, string>>>({});
-  const [noPermit, setNoPermit] = useState(false);
-  const [explanation, setExplanation] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const previews = useRef<Partial<Record<DocumentKind, string>>>({});
@@ -172,34 +165,6 @@ export function ResidenceUpload({
     if (submitting) return;
     setFormError("");
 
-    /* -- the no-permit path: words instead of photographs ------------------ */
-    if (noPermit) {
-      if (explanation.trim().length < 20) {
-        setFormError(
-          "Please write a little more — a sentence or two about why you are living" +
-            `${where || " there"} is enough.`,
-        );
-        return;
-      }
-      setSubmitting(true);
-      try {
-        const res = await fetch("/api/applications/residence-explanation", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: candidateId, explanation: explanation.trim() }),
-        });
-        const data = (await res.json()) as { ok?: boolean };
-        if (data.ok) onDone();
-        else setFormError("That did not go through. Please try again.");
-      } catch {
-        setFormError("We could not reach the server. Please check your connection and try again.");
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    /* -- the ordinary path ------------------------------------------------- */
     if (SLOTS.some((s) => !files[s.kind])) return;
 
     setSubmitting(true);
@@ -217,18 +182,12 @@ export function ResidenceUpload({
     else setFormError("Some photos did not go through. Please fix the ones marked below and try again.");
   }
 
-  /**
-   * Enabled as soon as there is something to send.
-   *
-   * Deliberately not gated on the length the server wants. A button that
-   * greys itself out at nineteen characters and says nothing is a dead end:
-   * the candidate can see they have written something and cannot see why it
-   * is not enough. Letting the press happen and answering it in words is the
-   * only version where they find out.
-   */
-  const ready = noPermit
-    ? explanation.trim().length > 0 && !submitting
-    : SLOTS.every((s) => !!files[s.kind]) && !submitting;
+  /** Both sides chosen — the back is required as much as the front. */
+  const ready = SLOTS.every((s) => !!files[s.kind]) && !submitting;
+  // Named for their country, so nobody sends a document from the wrong one.
+  const accepted = ["residence permit", "national ID card", "driving licence"].map((d) =>
+    country ? `${country} ${d}` : d.charAt(0).toUpperCase() + d.slice(1),
+  );
 
   return (
     <div className="card p-6 sm:p-8">
@@ -243,11 +202,11 @@ export function ResidenceUpload({
           </h1>
           <p className="mt-2 leading-relaxed text-navy-600">
             We need to confirm that you live{where || " in the country you told us"}. Please upload
-            the front and back of one of these documents, issued by
-            {country ? ` ${country}` : " that country"}. This takes about a minute.
+            the front and back of one of these documents
+            {country ? "" : ", issued by the country you live in"}. This takes about a minute.
           </p>
           <ul className="mt-3 flex flex-wrap gap-2" aria-label="Documents we accept">
-            {["Residence permit", "National ID card", "Driving licence"].map((d) => (
+            {accepted.map((d) => (
               <li
                 key={d}
                 className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-white px-3 py-1 text-xs font-semibold text-navy-700"
@@ -270,63 +229,7 @@ export function ResidenceUpload({
         </div>
       ) : null}
 
-      {/* Offered before the photo boxes, not after. Somebody with no document
-          should not have to work out that the two upload boxes are not for
-          them by failing to fill them in. */}
-      <label
-        className={`mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition ${
-          noPermit
-            ? "border-brand-400 bg-brand-50/60"
-            : "border-navy-200 bg-white hover:border-brand-300 hover:bg-brand-50/30"
-        } ${submitting ? "pointer-events-none opacity-60" : ""}`}
-      >
-        <input
-          type="checkbox"
-          checked={noPermit}
-          disabled={submitting}
-          onChange={(e) => {
-            setNoPermit(e.target.checked);
-            setFormError("");
-          }}
-          className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
-        />
-        <span className="min-w-0">
-          <span className="block text-sm font-bold text-navy-900">
-            I do not have any of these documents
-          </span>
-          <span className="mt-0.5 block text-xs leading-relaxed text-navy-500">
-            Tick this and tell us why you are living{where || " there"} instead. Plenty of people
-            have none of these, and it does not count against you.
-          </span>
-        </span>
-      </label>
-
-      {noPermit ? (
-        <div className="mt-5">
-          <label htmlFor="residence-explanation" className="block text-sm font-bold text-navy-900">
-            Why are you living{where || " there"}?
-          </label>
-          <p className="mt-1 text-xs leading-relaxed text-navy-500">
-            A sentence or two is enough — for example that you are studying, that you are there
-            with family, that your permit application is still being processed, or that the
-            country does not issue one. A recruiter will read this.
-          </p>
-          <textarea
-            id="residence-explanation"
-            value={explanation}
-            disabled={submitting}
-            maxLength={MAX_EXPLANATION}
-            rows={5}
-            onChange={(e) => setExplanation(e.target.value)}
-            className="mt-3 w-full rounded-xl border-2 border-navy-200 px-4 py-3 text-sm leading-relaxed text-navy-900 focus:border-brand-400 focus:outline-none"
-            placeholder="I have been living here since 2023 on a student visa while I finish my degree…"
-          />
-          <p className="mt-1 text-right text-[11px] text-navy-400">
-            {explanation.trim().length} / {MAX_EXPLANATION}
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+      <div className="mt-6 grid gap-5 sm:grid-cols-2">
           {SLOTS.map((slot, index) => {
             const state = states[slot.kind] ?? "empty";
             const preview = previews.current[slot.kind];
@@ -427,8 +330,7 @@ export function ResidenceUpload({
               </div>
             );
           })}
-        </div>
-      )}
+      </div>
 
       <div className="mt-6 rounded-2xl border border-cream-300 bg-cream-100 p-4">
         <ul className="space-y-1.5 text-xs text-navy-600">
@@ -459,7 +361,7 @@ export function ResidenceUpload({
         onClick={submit}
         className="btn-primary mt-6 w-full justify-center disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {submitting ? "Sending…" : noPermit ? "Send my explanation" : "Send my documents"}
+        {submitting ? "Sending…" : "Send my documents"}
       </button>
     </div>
   );

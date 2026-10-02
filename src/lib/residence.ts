@@ -207,9 +207,6 @@ export function residenceMessage(value: string, custom?: string): string {
   return (custom ?? "").trim().slice(0, 400);
 }
 
-/** The most anybody needs to explain why they are living somewhere. */
-export const MAX_EXPLANATION = 1200;
-
 /* -------------------------------------------------------------------------- */
 /* The flag                                                                    */
 /* -------------------------------------------------------------------------- */

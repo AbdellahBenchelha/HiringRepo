@@ -31,7 +31,7 @@ import {
 } from "@/lib/documents";
 import { needsBack, type IdDocumentType } from "@/lib/identityDocuments";
 import { isVerificationKind } from "@/lib/verification";
-import { isResidenceKind, MAX_EXPLANATION } from "@/lib/residence";
+import { isResidenceKind } from "@/lib/residence";
 
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
@@ -1331,37 +1331,6 @@ export function setResidenceDecision(
       delete c.residenceVerifiedBy;
     }
     return { list, result: c };
-  });
-}
-
-/**
- * The candidate's own words, when they have no permit.
- *
- * Written only while the question is actually open. Someone returning to an
- * old link after a decision has been made must not be able to reopen it by
- * typing into a box, and a recruiter who has verified a permit should not
- * find the verdict quietly replaced by a paragraph.
- */
-export type ExplanationResult =
-  | { ok: true }
-  | { ok: false; reason: "not_found" | "not_asked" | "closed" };
-
-export function recordResidenceExplanation(
-  id: string,
-  text: string,
-): Promise<ExplanationResult> {
-  return withWrite((list) => {
-    const c = list.find((x) => x.id === id);
-    if (!c) return { list, result: { ok: false, reason: "not_found" } as ExplanationResult };
-    if (!c.residenceRequestedAt) {
-      return { list, result: { ok: false, reason: "not_asked" } as ExplanationResult };
-    }
-    if (c.residenceVerifiedAt || c.residenceRejectedAt) {
-      return { list, result: { ok: false, reason: "closed" } as ExplanationResult };
-    }
-    c.residenceExplanation = text.trim().slice(0, MAX_EXPLANATION) || undefined;
-    c.residenceExplainedAt = new Date().toISOString();
-    return { list, result: { ok: true } as ExplanationResult };
   });
 }
 

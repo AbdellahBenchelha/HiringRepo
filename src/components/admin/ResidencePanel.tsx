@@ -454,7 +454,7 @@ export function ResidencePanel({
           ordinary, and the agreement only needs this when the address on it has nothing behind
           it. Nothing is sent until you press the button. The candidate is asked for the front and back
           of a residence permit, national ID or driving licence from the country they live in
-          ({RESIDENCE_KINDS.length} photos), and can answer in writing instead if they have none.
+          ({RESIDENCE_KINDS.length} photos, both required).
         </p>
       ) : null}
     </section>

@@ -728,6 +728,13 @@ export interface ResidenceRequestEmail {
   country?: string;
 }
 
+/** "China residence permit", … — or plain names when the country is unknown. */
+function residenceDocNames(country?: string): string[] {
+  return ["residence permit", "national ID card", "driving licence"].map((d) =>
+    country ? `${country} ${d}` : d.charAt(0).toUpperCase() + d.slice(1),
+  );
+}
+
 /**
  * Asking somebody to prove they live where they say they live.
  *
@@ -746,8 +753,9 @@ export interface ResidenceRequestEmail {
  * driving licence issued by the country they live in. It does not have to
  * show an address — it only has to show they live in that country.
  *
- * And it says up front what to do if they have none of these, because those
- * are exactly the people who will otherwise go quiet.
+ * Required — there is no "I have none" route any more — and each document is
+ * named with their country ("China residence permit"), so nobody sends one
+ * from the wrong country.
  */
 export function residenceRequestSubject(): string {
   return `One more document before your agreement – ${siteConfig.company.name}`;
@@ -760,8 +768,7 @@ export function residenceRequestText({
   country,
 }: ResidenceRequestEmail): string {
   const name = firstNameOf(fullName);
-  const where = country ? ` in ${country}` : "";
-  const from = country ? ` issued by ${country}` : " issued by the country you live in";
+  const docs = residenceDocNames(country);
   return [
     `Hi ${name},`,
     ``,
@@ -770,19 +777,13 @@ export function residenceRequestText({
     ``,
     reason,
     ``,
-    `What we need — the front and the back of one of these, ${from.trim()}:`,
+    `What we need — the front and the back of one of these${country ? "" : ", issued by the country you live in"}:`,
     ``,
-    `  - Residence permit`,
-    `  - National ID card`,
-    `  - Driving licence`,
+    ...docs.map((d) => `  - ${d}`),
     ``,
     `Please open your link and send them:`,
     ``,
     url,
-    ``,
-    `If you do not have any of these, that is not a problem — tick the box`,
-    `on that page that says so, and write a short explanation of why you`,
-    `are living${where || " there"}. A recruiter will read it.`,
     ``,
     `This is a normal step and nothing has gone wrong with your application.`,
     `Your documents are stored privately, seen only by our recruitment team,`,
@@ -805,8 +806,7 @@ export function residenceRequestHtml({
   const name = esc(firstNameOf(fullName));
   const href = esc(url);
   const company = esc(siteConfig.company.name);
-  const where = country ? ` in ${esc(country)}` : "";
-  const from = country ? `issued by ${esc(country)}` : "issued by the country you live in";
+  const docs = residenceDocNames(country).map(esc);
 
   return `<!doctype html>
 <html lang="en">
@@ -864,12 +864,10 @@ export function residenceRequestHtml({
         </p>
         <p style="margin:0 0 10px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
           A photo of the <strong style="color:${NAVY};">front</strong> and the
-          <strong style="color:${NAVY};">back</strong> of one of these, ${from}:
+          <strong style="color:${NAVY};">back</strong> of one of these${country ? "" : ", issued by the country you live in"}:
         </p>
         <p style="margin:0 0 22px 0;font:400 16px/1.8 Arial,Helvetica,sans-serif;color:${MUTED};">
-          <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; Residence permit<br>
-          <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; National ID card<br>
-          <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; Driving licence
+          ${docs.map((d) => `<span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; ${d}`).join("<br>\n          ")}
         </p>
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
@@ -881,12 +879,6 @@ export function residenceRequestHtml({
             </td>
           </tr>
         </table>
-
-        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          <strong style="color:${NAVY};">None of these?</strong> That is not a problem.
-          Tick the box on that page that says so, and write a short explanation of why you are
-          living${where || " there"}. A recruiter will read it.
-        </p>
 
         <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
           This is a normal step and nothing has gone wrong with your application.
