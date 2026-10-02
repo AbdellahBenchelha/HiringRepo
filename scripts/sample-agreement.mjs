@@ -23,7 +23,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-10-02-wa.pdf');
+const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-10-02-b.pdf');
 
 /**
  * The one party that is not a placeholder.
@@ -39,7 +39,7 @@ const COMPANY = {
   name: 'WORK AGENCY LTD',
   tradingName: 'WorkRoute',
   country: 'England and Wales',
-  number: '11147807',
+  number: '13485913',
   address: 'Wac Platform, New Station Street, Leeds, England, LS1 4JB',
 };
 

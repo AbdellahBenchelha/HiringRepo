@@ -61,8 +61,8 @@ export const siteConfig = {
    * after acceptance, with their own details in it.
    */
   sampleAgreement: {
-    /** e.g. "sample-contractor-agreement-2026-10-02-wa.pdf". Empty = not published. */
-    file: "sample-contractor-agreement-2026-10-02-wa.pdf",
+    /** e.g. "sample-contractor-agreement-2026-10-02-b.pdf". Empty = not published. */
+    file: "sample-contractor-agreement-2026-10-02-b.pdf",
     version: "",
   },
 
@@ -193,7 +193,7 @@ export const siteConfig = {
     tradingName: "WorkRoute",
     businessType: "Private Limited Company",
     /** Companies House, England and Wales. */
-    registrationNumber: "11147807",
+    registrationNumber: "13485913",
     registeredIn: "England and Wales",
     registeredAddress: "Wac Platform, New Station Street, Leeds, England, LS1 4JB",
     websiteOwner: "WORK AGENCY LTD",

@@ -21,7 +21,7 @@ the accept form, and in the offer email. Both read one switch:
 
   src/config/site.ts → sampleAgreement { file, version }
 
-Currently published: sample-contractor-agreement-2026-10-02-wa.pdf
+Currently published: sample-contractor-agreement-2026-10-02-b.pdf
 
 `version` is deliberately empty. The document carries no version on its pages,
 and a revision date printed beside the link but nowhere inside the file it
