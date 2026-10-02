@@ -15,8 +15,9 @@ import { fileHasCameraExif } from "@/lib/cameraExif";
  * On a phone the box opens the camera. Whether each picture carries a
  * camera's details is checked here, before it is resized (which drops them),
  * and sent with the upload: a picture without them may be a scan or a
- * screenshot, and is flagged for the recruiter — never refused, because
- * WhatsApp strips the same details from real photos.
+ * screenshot, and is flagged for the recruiter in View info only — the
+ * candidate is not told, and never refused, because WhatsApp strips the same
+ * details from real photos.
  *
  * Controlled: the form owns the files and the number, because it uploads the
  * card before recording the acceptance — the server will not accept an offer
@@ -191,11 +192,6 @@ export function PanCardSection({
               <p className="mt-2 flex items-center justify-between gap-2 text-xs">
                 {error ? (
                   <span className="font-medium text-red-700">{error}</span>
-                ) : file && files.camera?.[side] === false ? (
-                  <span className="font-medium text-amber-800" data-pan-nocamera={side}>
-                    This doesn&rsquo;t look like a camera photo. If it&rsquo;s a scan, screenshot or
-                    e-PAN, please take a photo of the physical card instead.
-                  </span>
                 ) : file ? (
                   <span className="flex items-center gap-1 font-semibold text-green-700">
                     <Icon name="checkCircle" className="h-3.5 w-3.5" /> Ready
