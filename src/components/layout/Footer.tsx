@@ -92,10 +92,18 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row">
-          {/* The registered name. The company number is deliberately not shown
-              on the site — the owner's decision. */}
+          {/* The registered name, number and office on every page: the
+              disclosure UK company law asks of a company's website, and the
+              fastest way for somebody checking a recruiter to find us on the
+              register. */}
           <p className="text-xs text-navy-400">
-            © {year} {siteConfig.legal.registeredName}. All rights reserved.
+            © {year} {siteConfig.legal.registeredName}, trading as {siteConfig.legal.tradingName}. All
+            rights reserved.
+            <span className="mt-1 block">
+              Registered in {siteConfig.legal.registeredIn}, company no.{" "}
+              {siteConfig.legal.registrationNumber}. Registered office:{" "}
+              {siteConfig.legal.registeredAddress}.
+            </span>
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
             <CookiePreferencesLink className="text-navy-300 transition hover:text-white" />

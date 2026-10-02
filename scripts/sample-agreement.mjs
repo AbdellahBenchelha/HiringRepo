@@ -23,21 +23,24 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-10-02.pdf');
+const OUT = path.join(ROOT, 'public', 'sample-contractor-agreement-2026-10-02-wa.pdf');
 
 /**
- * The one party that is not a placeholder: name, country and registered
- * office. The company number is deliberately left out (the owner's decision).
- * Everything about *them* stays in brackets — this is a specimen, and nothing
- * in it should read as their terms.
+ * The one party that is not a placeholder.
+ *
+ * A candidate weighing up a remote offer can take these facts to the
+ * Companies House register and see for themselves that we exist. Everything
+ * about *them* stays in brackets — this is a specimen, and nothing in it
+ * should read as their terms.
  *
  * Keep in step with `legal` in src/config/site.ts.
  */
 const COMPANY = {
-  name: 'Routes to Work Limited',
+  name: 'WORK AGENCY LTD',
   tradingName: 'WorkRoute',
-  country: 'United Kingdom',
-  address: '168/170 Main Street, Bellshill, Lanarkshire, ML4 1AE, United Kingdom',
+  country: 'England and Wales',
+  number: '11147807',
+  address: 'Wac Platform, New Station Street, Leeds, England, LS1 4JB',
 };
 
 const NAVY = '#0f1035';
@@ -153,7 +156,7 @@ const html = `<!doctype html>
     <div class="parties">
       <p>
         <strong>(1) The Company.</strong> ${COMPANY.name}, a company registered in
-        ${COMPANY.country}, whose registered office is at
+        ${COMPANY.country} under company number ${COMPANY.number}, whose registered office is at
         ${COMPANY.address}, trading as ${COMPANY.tradingName} (&ldquo;the Company&rdquo;,
         &ldquo;we&rdquo;, &ldquo;us&rdquo;).
       </p>

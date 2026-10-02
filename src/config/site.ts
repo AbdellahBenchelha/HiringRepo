@@ -61,8 +61,8 @@ export const siteConfig = {
    * after acceptance, with their own details in it.
    */
   sampleAgreement: {
-    /** e.g. "sample-contractor-agreement-2026-10-02.pdf". Empty = not published. */
-    file: "sample-contractor-agreement-2026-10-02.pdf",
+    /** e.g. "sample-contractor-agreement-2026-10-02-wa.pdf". Empty = not published. */
+    file: "sample-contractor-agreement-2026-10-02-wa.pdf",
     version: "",
   },
 
@@ -141,11 +141,11 @@ export const siteConfig = {
      */
     phone: "+44 7451 272838",
     address: {
-      line1: "168/170 Main Street",
-      line2: "",
-      city: "Bellshill",
-      region: "Lanarkshire",
-      postalCode: "ML4 1AE",
+      line1: "Wac Platform",
+      line2: "New Station Street",
+      city: "Leeds",
+      region: "England",
+      postalCode: "LS1 4JB",
       country: "United Kingdom",
     },
     businessHours: "Monday – Friday, 9:00 AM – 6:00 PM (local time)", // PLACEHOLDER
@@ -184,18 +184,19 @@ export const siteConfig = {
      * The company that actually contracts, which is not the name on the door.
      *
      * WorkRoute is a trading name; agreements, invoices and anything a
-     * candidate could take to a court or a register are in the name of Routes
-     * to Work Limited. Keeping the two straight is the whole job of a legal
+     * candidate could take to a court or a register are in the name of WORK
+     * AGENCY LTD. Keeping the two straight is the whole job of a legal
      * notice — somebody checking us at Companies House searches the registered
      * name and finds nothing under the brand.
      */
-    registeredName: "Routes to Work Limited",
+    registeredName: "WORK AGENCY LTD",
     tradingName: "WorkRoute",
     businessType: "Private Limited Company",
-    // The company number is deliberately not kept here or shown anywhere on
-    // the site — the owner's decision.
-    registeredAddress: "168/170 Main Street, Bellshill, Lanarkshire, ML4 1AE, United Kingdom",
-    websiteOwner: "Routes to Work Limited",
+    /** Companies House, England and Wales. */
+    registrationNumber: "11147807",
+    registeredIn: "England and Wales",
+    registeredAddress: "Wac Platform, New Station Street, Leeds, England, LS1 4JB",
+    websiteOwner: "WORK AGENCY LTD",
     /**
      * Who runs the servers, in their own legal name.
      *
