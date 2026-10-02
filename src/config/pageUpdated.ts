@@ -27,7 +27,7 @@ export const PAGE_UPDATED: Record<string, string> = {
   "/applicant-privacy": "2026-06-25",
   "/cookie-policy": "2026-09-03",
   "/terms": "2026-06-25",
-  "/legal-notice": "2026-08-22",
+  "/legal-notice": "2026-10-02",
   "/equal-opportunity": "2026-06-25",
   "/accessibility": "2026-06-25",
   "/data-retention": "2026-06-25",

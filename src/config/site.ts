@@ -61,8 +61,8 @@ export const siteConfig = {
    * after acceptance, with their own details in it.
    */
   sampleAgreement: {
-    /** e.g. "sample-contractor-agreement-2026-09-09.pdf". Empty = not published. */
-    file: "sample-contractor-agreement-2026-09-09.pdf",
+    /** e.g. "sample-contractor-agreement-2026-10-02.pdf". Empty = not published. */
+    file: "sample-contractor-agreement-2026-10-02.pdf",
     version: "",
   },
 
@@ -192,8 +192,8 @@ export const siteConfig = {
     registeredName: "Routes to Work Limited",
     tradingName: "WorkRoute",
     businessType: "Private Limited Company",
-    /** Companies House, Scotland. Verified — not a placeholder. */
-    registrationNumber: "SC238030",
+    // The company number is deliberately not kept here or shown anywhere on
+    // the site — the owner's decision.
     registeredAddress: "168/170 Main Street, Bellshill, Lanarkshire, ML4 1AE, United Kingdom",
     websiteOwner: "Routes to Work Limited",
     /**

@@ -18,7 +18,6 @@ export default function LegalNoticePage() {
     // that dead end into a match.
     { label: "Trading name", value: legal.tradingName },
     { label: "Legal business type", value: legal.businessType },
-    { label: "Registration number", value: legal.registrationNumber },
     { label: "Registered address", value: legal.registeredAddress },
     { label: "Email", value: contact.recruitmentEmail },
     { label: "Phone number", value: contact.phone },
@@ -37,11 +36,7 @@ export default function LegalNoticePage() {
       lastUpdated={updatedLabel("/legal-notice")}
       intro="Company identification and legal information for this website."
     >
-      <p>
-        The details below identify the operator of this website. The company can be checked
-        independently on the Companies House register under registration number{" "}
-        {legal.registrationNumber}.
-      </p>
+      <p>The details below identify the operator of this website.</p>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-cream-300">
         <table className="w-full text-left text-sm">
