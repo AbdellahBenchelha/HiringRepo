@@ -61,8 +61,8 @@ export const siteConfig = {
    * after acceptance, with their own details in it.
    */
   sampleAgreement: {
-    /** e.g. "sample-contractor-agreement-2026-10-02-b.pdf". Empty = not published. */
-    file: "sample-contractor-agreement-2026-10-02-b.pdf",
+    /** e.g. "sample-contractor-agreement-2026-10-02-c.pdf". Empty = not published. */
+    file: "sample-contractor-agreement-2026-10-02-c.pdf",
     version: "",
   },
 
@@ -141,11 +141,11 @@ export const siteConfig = {
      */
     phone: "+44 7451 272838",
     address: {
-      line1: "Wac Platform",
-      line2: "New Station Street",
-      city: "Leeds",
+      line1: "86-90 Paul Street",
+      line2: "3rd Floor",
+      city: "London",
       region: "England",
-      postalCode: "LS1 4JB",
+      postalCode: "EC2A 4NE",
       country: "United Kingdom",
     },
     businessHours: "Monday – Friday, 9:00 AM – 6:00 PM (local time)", // PLACEHOLDER
@@ -195,7 +195,7 @@ export const siteConfig = {
     /** Companies House, England and Wales. */
     registrationNumber: "13485913",
     registeredIn: "England and Wales",
-    registeredAddress: "Wac Platform, New Station Street, Leeds, England, LS1 4JB",
+    registeredAddress: "86-90 Paul Street, 3rd Floor, London, England, EC2A 4NE",
     websiteOwner: "WORK AGENCY LTD",
     /**
      * Who runs the servers, in their own legal name.

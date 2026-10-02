@@ -118,22 +118,27 @@ const nextConfig = {
         // Offer emails already sent link to earlier copies of the specimen
         // agreement. They open the current one rather than a dead link.
         source: "/sample-contractor-agreement-2026-09-:rest.pdf",
-        destination: "/sample-contractor-agreement-2026-10-02-b.pdf",
+        destination: "/sample-contractor-agreement-2026-10-02-c.pdf",
+        permanent: false,
+      },
+      {
+        source: "/sample-contractor-agreement-2026-10-02-b.pdf",
+        destination: "/sample-contractor-agreement-2026-10-02-c.pdf",
         permanent: false,
       },
       {
         source: "/sample-contractor-agreement-2026-10-02-wa.pdf",
-        destination: "/sample-contractor-agreement-2026-10-02-b.pdf",
+        destination: "/sample-contractor-agreement-2026-10-02-c.pdf",
         permanent: false,
       },
       {
         source: "/sample-contractor-agreement-2026-10-02.pdf",
-        destination: "/sample-contractor-agreement-2026-10-02-b.pdf",
+        destination: "/sample-contractor-agreement-2026-10-02-c.pdf",
         permanent: false,
       },
       {
         source: "/sample-contractor-agreement-2026-09.pdf",
-        destination: "/sample-contractor-agreement-2026-10-02-b.pdf",
+        destination: "/sample-contractor-agreement-2026-10-02-c.pdf",
         permanent: false,
       },
     ];
