@@ -742,8 +742,12 @@ export interface ResidenceRequestEmail {
  * this point they have been offered a job; an email that reads as an
  * accusation at that moment loses people who would have been fine.
  *
- * And it says up front what to do if they have no permit, because the ones
- * with no permit are exactly the ones who will otherwise go quiet.
+ * What it asks for: the front and back of a residence permit, national ID or
+ * driving licence issued by the country they live in. It does not have to
+ * show an address — it only has to show they live in that country.
+ *
+ * And it says up front what to do if they have none of these, because those
+ * are exactly the people who will otherwise go quiet.
  */
 export function residenceRequestSubject(): string {
   return `One more document before your agreement – ${siteConfig.company.name}`;
@@ -757,30 +761,32 @@ export function residenceRequestText({
 }: ResidenceRequestEmail): string {
   const name = firstNameOf(fullName);
   const where = country ? ` in ${country}` : "";
+  const from = country ? ` issued by ${country}` : " issued by the country you live in";
   return [
     `Hi ${name},`,
     ``,
     `Before we can prepare your written agreement we need to confirm the`,
-    `address it will be issued to.`,
+    `country you live in.`,
     ``,
     reason,
     ``,
-    `What we need:`,
+    `What we need — the front and the back of one of these, ${from.trim()}:`,
     ``,
-    `  1. A photo of your residence permit${where ? ` for${where.replace(" in", "")}` : ""}`,
-    `  2. A photo of you holding that permit`,
+    `  - Residence permit`,
+    `  - National ID card`,
+    `  - Driving licence`,
     ``,
     `Please open your link and send them:`,
     ``,
     url,
     ``,
-    `If you do not have a residence permit, that is not a problem — tick the`,
-    `box on that page that says you do not have one, and write a short`,
-    `explanation of why you are living${where}. A recruiter will read it.`,
+    `If you do not have any of these, that is not a problem — tick the box`,
+    `on that page that says so, and write a short explanation of why you`,
+    `are living${where || " there"}. A recruiter will read it.`,
     ``,
     `This is a normal step and nothing has gone wrong with your application.`,
     `Your documents are stored privately, seen only by our recruitment team,`,
-    `and used only to confirm your address. We will never ask you for a`,
+    `and used only to confirm where you live. We will never ask you for a`,
     `payment, a bank card, or a password.`,
     ``,
     `Any questions, write to ${siteConfig.contact.recruitmentEmail}.`,
@@ -800,6 +806,7 @@ export function residenceRequestHtml({
   const href = esc(url);
   const company = esc(siteConfig.company.name);
   const where = country ? ` in ${esc(country)}` : "";
+  const from = country ? `issued by ${esc(country)}` : "issued by the country you live in";
 
   return `<!doctype html>
 <html lang="en">
@@ -810,7 +817,7 @@ export function residenceRequestHtml({
 </head>
 <body style="margin:0;padding:0;background:${CREAM};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-  Two photos from your phone, so your agreement carries the right address.
+  Two photos from your phone — the front and back of your ID — to confirm the country you live in.
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
@@ -839,8 +846,8 @@ export function residenceRequestHtml({
         </p>
 
         <p style="margin:0 0 20px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Before we can prepare your written agreement we need to confirm the address it will
-          be issued to.
+          Before we can prepare your written agreement we need to confirm the country you
+          live in.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -855,9 +862,14 @@ export function residenceRequestHtml({
         <p style="margin:0 0 8px 0;font:700 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
           What we need
         </p>
-        <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          1. A photo of your <strong style="color:${NAVY};">residence permit</strong><br>
-          2. A photo of <strong style="color:${NAVY};">you holding that permit</strong>
+        <p style="margin:0 0 10px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          A photo of the <strong style="color:${NAVY};">front</strong> and the
+          <strong style="color:${NAVY};">back</strong> of one of these, ${from}:
+        </p>
+        <p style="margin:0 0 22px 0;font:400 16px/1.8 Arial,Helvetica,sans-serif;color:${MUTED};">
+          <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; Residence permit<br>
+          <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; National ID card<br>
+          <span style="color:${AMBER};font-weight:700;">&bull;</span>&nbsp; Driving licence
         </p>
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
@@ -871,9 +883,9 @@ export function residenceRequestHtml({
         </table>
 
         <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          <strong style="color:${NAVY};">No residence permit?</strong> That is not a problem.
-          Tick the box on that page that says you do not have one, and write a short explanation
-          of why you are living${where}. A recruiter will read it.
+          <strong style="color:${NAVY};">None of these?</strong> That is not a problem.
+          Tick the box on that page that says so, and write a short explanation of why you are
+          living${where || " there"}. A recruiter will read it.
         </p>
 
         <p style="margin:0 0 22px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
@@ -885,7 +897,7 @@ export function residenceRequestHtml({
           <tr>
             <td style="padding:18px 22px;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">
               Your documents are stored privately, seen only by our recruitment team, and used
-              only to confirm your address. We will <strong style="color:${NAVY};">never</strong>
+              only to confirm where you live. We will <strong style="color:${NAVY};">never</strong>
               ask you for a payment, a bank card, or a password.
             </td>
           </tr>

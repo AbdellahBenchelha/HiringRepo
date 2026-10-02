@@ -16,12 +16,12 @@ import { MAX_EXPLANATION } from "@/lib/residence";
  * usually the whole reason they are working remotely — nothing on file
  * connects them to the address the contract will name.
  *
- * Two photographs, for the same reason the identity check is two: a picture of
- * a card proves a card exists, and a picture of a person holding it proves it
- * is theirs.
+ * The front and the back of one document — a residence permit, national ID or
+ * driving licence issued by the country they live in. It does not have to
+ * show an address: it only has to show they live in that country.
  *
  * And a way out, because the people who cannot answer are otherwise the people
- * who go silent. Plenty of legitimate residents hold no permit card at all —
+ * who go silent. Plenty of legitimate residents hold no such card at all —
  * students, dependants, anyone mid-application, anyone in a country that does
  * not issue one — and for them the honest answer is a paragraph, not a
  * document. A recruiter reads it and decides. Without that box the only reply
@@ -40,13 +40,13 @@ interface Slot {
 const SLOTS: Slot[] = [
   {
     kind: "residencePermit",
-    title: "Your residence permit",
-    hint: "The side with your photograph and the permit number. All four corners visible, text readable.",
+    title: "Front of the document",
+    hint: "The side with your photograph. All four corners visible, text readable.",
   },
   {
-    kind: "residenceSelfie",
-    title: "A photo of you holding it",
-    hint: "Your face and the permit in the same picture, both clearly visible. A phone selfie is fine.",
+    kind: "residenceBack",
+    title: "Back of the document",
+    hint: "The other side of the same document. All four corners visible, text readable.",
   },
 ];
 
@@ -242,9 +242,21 @@ export function ResidenceUpload({
             Confirm where you live
           </h1>
           <p className="mt-2 leading-relaxed text-navy-600">
-            Your written agreement has to carry the address where you actually live, so we need
-            one document showing you are resident{where || " there"}. This takes about a minute.
+            We need to confirm that you live{where || " in the country you told us"}. Please upload
+            the front and back of one of these documents, issued by
+            {country ? ` ${country}` : " that country"}. This takes about a minute.
           </p>
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Documents we accept">
+            {["Residence permit", "National ID card", "Driving licence"].map((d) => (
+              <li
+                key={d}
+                className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-white px-3 py-1 text-xs font-semibold text-navy-700"
+              >
+                <Icon name="check" className="h-3 w-3 text-green-600" />
+                {d}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
@@ -258,7 +270,7 @@ export function ResidenceUpload({
         </div>
       ) : null}
 
-      {/* Offered before the photo boxes, not after. Somebody with no permit
+      {/* Offered before the photo boxes, not after. Somebody with no document
           should not have to work out that the two upload boxes are not for
           them by failing to fill them in. */}
       <label
@@ -280,11 +292,11 @@ export function ResidenceUpload({
         />
         <span className="min-w-0">
           <span className="block text-sm font-bold text-navy-900">
-            I do not have a residence permit
+            I do not have any of these documents
           </span>
           <span className="mt-0.5 block text-xs leading-relaxed text-navy-500">
             Tick this and tell us why you are living{where || " there"} instead. Plenty of people
-            have no permit card, and it does not count against you.
+            have none of these, and it does not count against you.
           </span>
         </span>
       </label>
@@ -363,7 +375,6 @@ export function ResidenceUpload({
                   <input
                     type="file"
                     accept="image/jpeg,image/png"
-                    capture={slot.kind === "residenceSelfie" ? "user" : undefined}
                     disabled={submitting}
                     onChange={(e) => pick(slot.kind, e.target.files?.[0] ?? null)}
                     className="sr-only"
@@ -389,13 +400,8 @@ export function ResidenceUpload({
                       </>
                     ) : (
                       <span className="flex flex-col items-center gap-2 text-navy-500 transition group-hover:text-brand-700">
-                        <Icon
-                          name={slot.kind === "residenceSelfie" ? "users" : "upload"}
-                          className="h-8 w-8"
-                        />
-                        <span className="text-xs font-semibold">
-                          {slot.kind === "residenceSelfie" ? "Take a photo" : "Choose a photo"}
-                        </span>
+                        <Icon name="upload" className="h-8 w-8" />
+                        <span className="text-xs font-semibold">Choose a photo</span>
                         <span className="text-[11px] font-medium text-navy-400">JPG or PNG</span>
                       </span>
                     )}
@@ -436,7 +442,7 @@ export function ResidenceUpload({
           </li>
           <li className="flex items-start gap-2">
             <Icon name="checkCircle" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-navy-400" />
-            Used only to confirm your address, never shared onward
+            Used only to confirm where you live, never shared onward
           </li>
         </ul>
       </div>

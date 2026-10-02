@@ -111,7 +111,11 @@ export function ResidencePanel({
 
   const usable = (d: CandidateDocument) =>
     isResidenceKind(d.kind) && d.status !== "blocked" && !!d.key;
-  const images = (documents ?? []).filter((d) => usable(d) && !d.supersededAt);
+  // Front, back, then a photo holding it from before the back was asked for.
+  const ORDER = ["residencePermit", "residenceBack", "residenceSelfie"];
+  const images = (documents ?? [])
+    .filter((d) => usable(d) && !d.supersededAt)
+    .sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
   const previous = (documents ?? []).filter((d) => usable(d) && !!d.supersededAt);
 
   const viewUrl = (d: CandidateDocument) =>
@@ -209,7 +213,7 @@ export function ResidencePanel({
       {explainedAt ? (
         <div className="mt-4 rounded-xl border-2 border-blue-200 bg-blue-50/60 p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-blue-800">
-            They have no permit — their explanation, {fmt(explainedAt)}
+            They have no document — their explanation, {fmt(explainedAt)}
           </p>
           {/* Their own words, wrapped and whole. Truncating the one thing a
               recruiter has to judge would defeat the point of asking. */}
@@ -448,8 +452,9 @@ export function ResidencePanel({
         <p className="mt-3 text-xs leading-relaxed text-navy-400">
           Only ask when you need to. Holding a passport from one country and living in another is
           ordinary, and the agreement only needs this when the address on it has nothing behind
-          it. Nothing is sent until you press the button — {RESIDENCE_KINDS.length} photos are
-          requested, and the candidate can answer in writing instead if they have no permit.
+          it. Nothing is sent until you press the button. The candidate is asked for the front and back
+          of a residence permit, national ID or driving licence from the country they live in
+          ({RESIDENCE_KINDS.length} photos), and can answer in writing instead if they have none.
         </p>
       ) : null}
     </section>

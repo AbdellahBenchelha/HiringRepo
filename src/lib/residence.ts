@@ -18,13 +18,25 @@
  * innocent, and a rule that emailed everybody whose passport and address
  * disagreed would spend its time troubling expats.
  */
-import { currentDocument, type CandidateDocument } from "@/lib/documents";
+import { currentDocument, type CandidateDocument, type DocumentKind } from "@/lib/documents";
 
-/** The pair asked for: the permit, and the candidate holding it. */
-export const RESIDENCE_KINDS = ["residencePermit", "residenceSelfie"] as const;
+/**
+ * What is asked for: the front and the back of a residence permit, national ID
+ * or driving licence issued by the country they live in. Both required.
+ */
+export const RESIDENCE_KINDS = ["residencePermit", "residenceBack"] as const;
+
+/**
+ * Asked for before the front-and-back pair: a photo of the candidate holding
+ * the document. No longer requested; a candidate who sent the permit and this
+ * still counts as having sent their proof.
+ */
+export const LEGACY_RESIDENCE_KINDS = ["residenceSelfie"] as const;
+
+const ALL_RESIDENCE_KINDS: readonly DocumentKind[] = [...RESIDENCE_KINDS, ...LEGACY_RESIDENCE_KINDS];
 
 export function isResidenceKind(kind: string): boolean {
-  return (RESIDENCE_KINDS as readonly string[]).includes(kind);
+  return (ALL_RESIDENCE_KINDS as readonly string[]).includes(kind);
 }
 
 export type ResidenceStatus =
@@ -49,7 +61,7 @@ export const RESIDENCE_LABEL: Record<ResidenceStatus, string> = {
   not_asked: "Not asked",
   awaiting: "Awaiting proof",
   provided: "Ready to review",
-  explained: "Explained, no permit",
+  explained: "Explained, no document",
   verified: "Residence proven",
   rejected: "Rejected",
 };
@@ -75,15 +87,21 @@ export interface ResidenceInput {
   residenceImagesDeletedAt?: string;
 }
 
-/** Are both photographs present and not superseded? */
+/**
+ * Is the proof in? The front and the back — or, from before the back was
+ * asked for, the front and a photo holding it.
+ */
 export function hasResidenceImages(documents?: CandidateDocument[]): boolean {
-  return RESIDENCE_KINDS.every((kind) => !!currentDocument(documents, kind));
+  return (
+    !!currentDocument(documents, "residencePermit") &&
+    (!!currentDocument(documents, "residenceBack") || !!currentDocument(documents, "residenceSelfie"))
+  );
 }
 
 /** The newest residence photograph on file, as an ISO string. */
 function newestResidenceUpload(documents?: CandidateDocument[]): string {
   let newest = "";
-  for (const kind of RESIDENCE_KINDS) {
+  for (const kind of ALL_RESIDENCE_KINDS) {
     const doc = currentDocument(documents, kind);
     if (doc?.uploadedAt && doc.uploadedAt > newest) newest = doc.uploadedAt;
   }
@@ -158,25 +176,25 @@ export const RESIDENCE_REASONS = [
     value: "nationality-differs",
     label: "Nationality and country of residence differ",
     message:
-      "Your identity document was issued by a different country from the one you have told us you live in. That is perfectly normal, but your written agreement has to carry the address where you actually live, so we need one document that shows you are resident there.",
+      "Your identity document was issued by a different country from the one you have told us you live in. That is perfectly normal, but before we prepare your agreement we need to confirm the country you live in, so please send a residence permit, national ID or driving licence issued by that country.",
   },
   {
     value: "address-unproven",
-    label: "Residence address not proven",
+    label: "Country of residence not proven",
     message:
-      "Before we prepare your written agreement we need to confirm the address it will be issued to. Your identity document proves who you are but not where you live, so we need a residence permit as well.",
+      "Before we prepare your written agreement we need to confirm the country you live in. Your identity document proves who you are but not where you live, so please send a residence permit, national ID or driving licence issued by that country.",
   },
   {
     value: "id-no-address",
     label: "ID document shows no address",
     message:
-      "The identity document you sent does not show an address, so it cannot confirm which country you live in. Your agreement has to carry that address, so we need a residence permit as well.",
+      "The identity document you sent does not show which country you live in. Please send a residence permit, national ID or driving licence issued by the country you live in.",
   },
   {
     value: "address-mismatch",
     label: "Address does not match the application",
     message:
-      "The country on your identity document does not match the address on your application, and your agreement has to carry the address where you actually live. Please send your residence permit so we can confirm which is correct.",
+      "The country on your identity document does not match the address on your application. Please send a residence permit, national ID or driving licence issued by the country you live in, so we can confirm which is correct.",
   },
 ] as const;
 
@@ -242,7 +260,7 @@ export const RESIDENCE_FILTERS: { value: ResidenceFilter; label: string }[] = [
   { value: "unproven", label: "Countries differ, not asked" },
   { value: "awaiting", label: "Awaiting proof" },
   { value: "provided", label: "Ready to review" },
-  { value: "explained", label: "Explained, no permit" },
+  { value: "explained", label: "Explained, no document" },
   { value: "verified", label: "Residence proven" },
   { value: "rejected", label: "Rejected" },
 ];

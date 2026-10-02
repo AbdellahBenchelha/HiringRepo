@@ -33,11 +33,13 @@ export const DOCUMENT_KINDS = [
    * address, so for those candidates the address is the thing that needs
    * evidence, and a permit is the document that gives it.
    *
-   * A pair, for the same reason the identity check is a pair: a photograph of
-   * a card proves a card exists, and a photograph of a person holding it
-   * proves it is theirs.
+   * Front and back of a residence permit, national ID or driving licence
+   * issued by the country they live in. "residenceSelfie" (a photo holding
+   * it) was asked for before; it is no longer requested, and kept so earlier
+   * uploads still open.
    */
   "residencePermit",
+  "residenceBack",
   "residenceSelfie",
   /**
    * The spoken assessment, read aloud by the candidate.
@@ -84,8 +86,9 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   identity: "ID document",
   identityBack: "ID document — back",
   selfie: "Photo holding ID",
-  residencePermit: "Residence permit",
-  residenceSelfie: "Photo holding residence permit",
+  residencePermit: "Residence document — front",
+  residenceBack: "Residence document — back",
+  residenceSelfie: "Photo holding residence document (earlier upload)",
   voice: "Voice recording",
   w9: "Form W-9",
   formation: "Certificate of Formation",
@@ -102,8 +105,9 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   identity: "ID",
   identityBack: "ID back",
   selfie: "Photo",
-  residencePermit: "Permit",
-  residenceSelfie: "Permit photo",
+  residencePermit: "Residence",
+  residenceBack: "Res. back",
+  residenceSelfie: "Res. photo",
   voice: "Voice",
   w9: "W-9",
   formation: "Formation",
@@ -177,6 +181,7 @@ export function isImageKind(kind: DocumentKind): boolean {
     kind === "identityBack" ||
     kind === "selfie" ||
     kind === "residencePermit" ||
+    kind === "residenceBack" ||
     kind === "residenceSelfie"
   );
 }
