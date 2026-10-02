@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
   }
 
   /**
-   * India: the PAN card is required, the GSTIN optional.
+   * India: the PAN card is required, front and back; the GSTIN optional.
    *
    * The card is uploaded before this is called, so here it has to be on the
    * record already — the final agreement needs it, and an acceptance without
@@ -128,6 +128,9 @@ export async function POST(req: NextRequest) {
     const onFile = await getCandidate(id);
     if (onFile && !currentPanDocument(onFile.documents, "panFront")) {
       indiaProblems.push("Please upload the front of your PAN card — it is required for candidates living in India.");
+    }
+    if (onFile && !currentPanDocument(onFile.documents, "panBack")) {
+      indiaProblems.push("Please upload the back of your PAN card — it is required for candidates living in India.");
     }
     if (gstin && !isValidGstin(gstin)) {
       indiaProblems.push("This doesn't look like a valid GSTIN — please check it, or leave it empty.");

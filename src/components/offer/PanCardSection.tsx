@@ -3,36 +3,45 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { prepareImage } from "@/components/verify/prepareImage";
-import { COMPANY_MIME, MAX_IMAGE_BYTES } from "@/lib/documents";
+import { IMAGE_MIME, MAX_IMAGE_BYTES } from "@/lib/documents";
 import { isValidGstin, normaliseGstin } from "@/lib/pan";
+import { fileHasCameraExif } from "@/lib/cameraExif";
 
 /**
- * The PAN card (required) and GSTIN (optional), on the offer page of people
- * living in India. See lib/pan.
+ * The PAN card (required, front and back) and GSTIN (optional), on the offer
+ * page of people living in India. See lib/pan.
+ *
+ * Photos of the physical card only: no PDF, so no e-PAN and no scanned page.
+ * On a phone the box opens the camera. Whether each picture carries a
+ * camera's details is checked here, before it is resized (which drops them),
+ * and sent with the upload: a picture without them may be a scan or a
+ * screenshot, and is flagged for the recruiter — never refused, because
+ * WhatsApp strips the same details from real photos.
  *
  * Controlled: the form owns the files and the number, because it uploads the
  * card before recording the acceptance — the server will not accept an offer
  * from India without it.
  */
 
+export type Side = "front" | "back";
+
 export interface PanFiles {
   front?: File;
   back?: File;
+  /** Per side: did the picture as chosen carry camera details? */
+  camera?: Partial<Record<Side, boolean>>;
 }
 
-type Side = keyof PanFiles;
-
-const SIDES: { side: Side; title: string; hint: string; optional?: boolean }[] = [
+const SIDES: { side: Side; title: string; hint: string }[] = [
   {
     side: "front",
-    title: "PAN card — front (required)",
+    title: "PAN card — front",
     hint: "The side with your name, photo and PAN. All four corners visible, text readable.",
   },
   {
     side: "back",
     title: "PAN card — back",
-    hint: "Only if your card has one. An e-PAN has no back — skip this.",
-    optional: true,
+    hint: "The other side of the same card. All four corners visible.",
   },
 ];
 
@@ -70,13 +79,22 @@ export function PanCardSection({
   async function pick(side: Side, file: File | null) {
     setErrors((e) => ({ ...e, [side]: "" }));
     if (!file) return;
-    if (!(COMPANY_MIME as readonly string[]).includes(file.type)) {
-      setErrors((e) => ({ ...e, [side]: "Please choose a JPG, PNG or PDF file." }));
+    if (file.type === "application/pdf") {
+      setErrors((e) => ({
+        ...e,
+        [side]: "A PDF is not accepted — please take a photo of your physical PAN card.",
+      }));
+      return;
+    }
+    if (!(IMAGE_MIME as readonly string[]).includes(file.type)) {
+      setErrors((e) => ({ ...e, [side]: "Please choose a photo (JPG or PNG)." }));
       return;
     }
     setPreparing(side);
-    // Photos are shrunk and stripped of location data; a PDF goes as it is.
-    const ready = file.type === "application/pdf" ? file : await prepareImage(file);
+    // Read before resizing: resizing re-encodes the photo and drops these
+    // details, along with the location, which is the point of it.
+    const camera = await fileHasCameraExif(file);
+    const ready = await prepareImage(file);
     setPreparing(null);
     if (ready.size > MAX_IMAGE_BYTES) {
       setErrors((e) => ({ ...e, [side]: "That file is too large — the limit is 5 MB." }));
@@ -84,15 +102,15 @@ export function PanCardSection({
     }
     const old = previews.current[side];
     if (old) URL.revokeObjectURL(old);
-    previews.current[side] = ready.type === "application/pdf" ? undefined : URL.createObjectURL(ready);
-    onFiles({ ...files, [side]: ready });
+    previews.current[side] = URL.createObjectURL(ready);
+    onFiles({ ...files, [side]: ready, camera: { ...files.camera, [side]: camera } });
   }
 
   function remove(side: Side) {
     const old = previews.current[side];
     if (old) URL.revokeObjectURL(old);
     previews.current[side] = undefined;
-    onFiles({ ...files, [side]: undefined });
+    onFiles({ ...files, [side]: undefined, camera: { ...files.camera, [side]: undefined } });
   }
 
   return (
@@ -102,13 +120,18 @@ export function PanCardSection({
         <span className="text-sm font-medium text-red-600">(required)</span>
       </h2>
       <p className="mt-1 text-sm text-navy-500">
-        We need your PAN card for your tax details before we can send your final agreement. A
-        photo of the card or your e-PAN PDF is fine.
+        We need your PAN card for your tax details before we can send your final agreement.
+        Please take a clear photo of your <strong className="text-navy-800">physical PAN card</strong>,
+        front and back.
+      </p>
+      <p className="mt-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+        <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        A scan, a screenshot or an e-PAN is not accepted — only a real photo of the card.
       </p>
 
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        {SIDES.map(({ side, title, hint, optional }) => {
+        {SIDES.map(({ side, title, hint }) => {
           const file = files[side];
           const preview = previews.current[side];
           const error = errors[side];
@@ -124,8 +147,7 @@ export function PanCardSection({
               }`}
             >
               <p className="text-sm font-bold text-navy-900">
-                {title}{" "}
-                {optional ? <span className="text-xs font-medium text-navy-400">(optional)</span> : null}
+                {title} <span className="text-xs font-medium text-red-600">(required)</span>
               </p>
               <p className="mt-1 text-xs leading-relaxed text-navy-600">{hint}</p>
 
@@ -133,7 +155,9 @@ export function PanCardSection({
                 <span className="sr-only">{title}</span>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,application/pdf"
+                  accept="image/jpeg,image/png"
+                  // On a phone: straight to the back camera, for a photo of the card itself.
+                  capture="environment"
                   disabled={disabled}
                   onChange={(e) => {
                     void pick(side, e.target.files?.[0] ?? null);
@@ -149,18 +173,13 @@ export function PanCardSection({
                   {preview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={preview} alt={`${title} preview`} className="absolute inset-0 h-full w-full object-contain p-1" />
-                  ) : file ? (
-                    <span className="flex flex-col items-center gap-1.5 text-navy-600">
-                      <Icon name="document" className="h-7 w-7" />
-                      <span className="max-w-[12rem] truncate text-xs font-semibold">{file.name}</span>
-                    </span>
                   ) : (
                     <span className="flex flex-col items-center gap-2 text-navy-500 transition group-hover:text-brand-700">
                       <Icon name="upload" className="h-7 w-7" />
                       <span className="text-xs font-semibold">
-                        {preparing === side ? "Preparing…" : "Choose a photo or PDF"}
+                        {preparing === side ? "Preparing…" : "Take a photo"}
                       </span>
-                      <span className="text-[11px] font-medium text-navy-400">JPG, PNG or PDF</span>
+                      <span className="text-[11px] font-medium text-navy-400">Photo of the card · JPG or PNG</span>
                     </span>
                   )}
                 </span>
@@ -169,6 +188,11 @@ export function PanCardSection({
               <p className="mt-2 flex items-center justify-between gap-2 text-xs">
                 {error ? (
                   <span className="font-medium text-red-700">{error}</span>
+                ) : file && files.camera?.[side] === false ? (
+                  <span className="font-medium text-amber-800" data-pan-nocamera={side}>
+                    This doesn&rsquo;t look like a camera photo. If it&rsquo;s a scan, screenshot or
+                    e-PAN, please take a photo of the physical card instead.
+                  </span>
                 ) : file ? (
                   <span className="flex items-center gap-1 font-semibold text-green-700">
                     <Icon name="checkCircle" className="h-3.5 w-3.5" /> Ready

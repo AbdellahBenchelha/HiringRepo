@@ -14,8 +14,9 @@ import type { CandidateView } from "@/lib/candidateView";
  * The PAN card a candidate living in India chose to send at acceptance.
  *
  * On the Company tab, under the confirmed details, because it is paperwork for
- * the agreement and its payments rather than an identity check. Optional from
- * start to finish — "Doesn't have one" is an ordinary answer, not a warning.
+ * the agreement and its payments rather than an identity check. Front and back
+ * are required now; older acceptances may hold only a front, or an e-PAN PDF.
+ * A photo without camera details is marked, for a closer look.
  *
  * Photos open in the zoom viewer, where a sideways card can be turned; an
  * e-PAN arrives as a PDF and opens in the document reader instead.
@@ -156,12 +157,21 @@ export function PanCardPanel({
                     </span>
                   </div>
                   <p className="px-3 py-2 text-xs font-semibold text-navy-700">{DOCUMENT_LABEL[doc.kind]}</p>
+                  {doc.camera === false ? (
+                    <p
+                      data-pan-nocamera={doc.kind}
+                      title="The picture had no camera details (phone make, model, date taken). Scans, screenshots and e-PAN images have none — but WhatsApp also removes them from real photos."
+                      className="mx-3 mb-2 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800"
+                    >
+                      <Icon name="shield" className="h-3 w-3" /> No camera data — may be a scan or screenshot
+                    </p>
+                  ) : null}
                 </button>
               );
             })}
           </div>
           {!currentPanDocument(candidate.documents, "panBack") ? (
-            <p className="mt-2 text-xs text-navy-500">No back sent — optional, and an e-PAN has none.</p>
+            <p className="mt-2 text-xs text-navy-500">No back sent — this was before the back was required.</p>
           ) : null}
           <div className="mt-3 flex justify-end">
             <button

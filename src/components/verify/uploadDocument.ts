@@ -14,6 +14,8 @@ export async function uploadDocument(
   candidateId: string,
   kind: DocumentKind,
   file: File,
+  /** Extra facts about the file, for the record (PAN photos: camera details). */
+  extra: { camera?: boolean } = {},
 ): Promise<UploadResult> {
   try {
     const res = await fetch("/api/applications/documents/presign", {
@@ -43,7 +45,7 @@ export async function uploadDocument(
     const confirm = await fetch("/api/applications/documents/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: candidateId, kind, key: data.key, filename: file.name }),
+      body: JSON.stringify({ id: candidateId, kind, key: data.key, filename: file.name, ...extra }),
     });
     const result = (await confirm.json()) as { status?: string; reason?: string };
     if (result.status === "blocked") return { ok: false, message: result.reason ?? "That file was not accepted." };

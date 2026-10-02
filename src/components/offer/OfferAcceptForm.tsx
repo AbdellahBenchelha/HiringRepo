@@ -146,7 +146,8 @@ export function OfferAcceptForm({
       ] as const) {
         const file = panFiles[side];
         if (!file || uploaded.current[side] === file) continue;
-        const result = await uploadDocument(candidateId, kind, file);
+        const camera = panFiles.camera?.[side];
+        const result = await uploadDocument(candidateId, kind, file, camera === undefined ? {} : { camera });
         if (!result.ok) return `Your PAN card did not upload: ${result.message}`;
         uploaded.current[side] = file;
       }
@@ -181,6 +182,7 @@ export function OfferAcceptForm({
     }
     if (panWanted) {
       if (!panFiles.front) found.push("Please add the front of your PAN card — it is required.");
+      if (!panFiles.back) found.push("Please add the back of your PAN card — it is required.");
       const g = gstinProblem(gstin);
       if (g) found.push(g);
     }

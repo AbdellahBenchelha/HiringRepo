@@ -9,6 +9,7 @@ import {
   allowedExtensionsFor,
   isAllowedForKind,
   isDocumentKind,
+  isPanDocumentKind,
   isImageKind,
   maxBytesFor,
   safeFilename,
@@ -50,6 +51,8 @@ export async function POST(req: NextRequest) {
     kind?: string;
     key?: string;
     filename?: string;
+    /** PAN photos only: whether the picture as chosen had camera details. */
+    camera?: unknown;
   }>(req, 4 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
 
@@ -63,6 +66,10 @@ export async function POST(req: NextRequest) {
   if (typeof key !== "string" || typeof filename !== "string" || !isAllowedForKind(kind, filename)) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
+  // Said by the browser, so only a hint — recorded for PAN photos, where a
+  // recruiter wants to know whether to look twice.
+  const camera =
+    isPanDocumentKind(kind) && typeof parsed.data.camera === "boolean" ? parsed.data.camera : undefined;
 
   // The key must be exactly the shape presign issues for this candidate and
   // this kind. Without this, anyone could confirm another candidate's object
@@ -140,7 +147,7 @@ export async function POST(req: NextRequest) {
 
   const { replacedKey } = await addDocument(
     id,
-    record({ key, size: head.size, status: "clean", reason: undefined, sha256 }),
+    record({ key, size: head.size, status: "clean", reason: undefined, sha256, ...(camera === undefined ? {} : { camera }) }),
   );
   // Re-uploading replaces the record; the old object would otherwise sit in the
   // bucket forever, paid for and unreachable.

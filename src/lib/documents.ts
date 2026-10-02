@@ -200,8 +200,9 @@ export function isCompanyKind(kind: DocumentKind): boolean {
 }
 
 /**
- * The PAN card, which arrives the way company paperwork does: a phone photo of
- * the card, or the e-PAN PDF the tax department emails out.
+ * The PAN card: a photo of the physical card, front and back. A PDF (an e-PAN,
+ * or a scan) is not accepted — see allowedMimeFor. Older records may still
+ * hold an e-PAN PDF from before.
  */
 export function isPanDocumentKind(kind: DocumentKind): boolean {
   return kind === "panFront" || kind === "panBack";
@@ -225,13 +226,15 @@ export function maxBytesFor(kind: DocumentKind): number {
 
 export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_EXTENSIONS;
-  if (isCompanyKind(kind) || isPanDocumentKind(kind)) return COMPANY_EXTENSIONS;
+  if (isPanDocumentKind(kind)) return IMAGE_EXTENSIONS;
+  if (isCompanyKind(kind)) return COMPANY_EXTENSIONS;
   return isImageKind(kind) ? IMAGE_EXTENSIONS : ALLOWED_EXTENSIONS;
 }
 
 export function allowedMimeFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_MIME;
-  if (isCompanyKind(kind) || isPanDocumentKind(kind)) return COMPANY_MIME;
+  if (isPanDocumentKind(kind)) return IMAGE_MIME;
+  if (isCompanyKind(kind)) return COMPANY_MIME;
   return isImageKind(kind) ? IMAGE_MIME : ALLOWED_MIME;
 }
 
@@ -317,6 +320,13 @@ export interface CandidateDocument {
    * recruiter deletes it by hand.
    */
   supersededAt?: string;
+  /**
+   * PAN card photos: did the picture, as chosen, carry a camera's details
+   * (make, model, date taken)? false means none — possibly a scan or a
+   * screenshot, or a real photo sent through an app that strips them. A flag
+   * for a recruiter, never a refusal. Absent on uploads from before this.
+   */
+  camera?: boolean;
 }
 
 /**
