@@ -36,8 +36,15 @@ import { isResidenceKind } from "@/lib/residence";
 export { CANDIDATE_STATUSES, VOICE_STATUSES };
 export type { CandidateStatus, VoiceStatus };
 import { effectiveOffer, type Offer } from "@/lib/offer";
-import type { PanAnswer } from "@/lib/pan";
+import { panSentSince, type PanAnswer } from "@/lib/pan";
 import type { LiveReminder } from "@/lib/chat";
+
+/** One "please re-upload your PAN card" email. */
+export interface PanReuploadRequest {
+  at: string;
+  by?: string;
+  reason: string;
+}
 import { deadlineFrom } from "@/lib/offerReminder";
 import type { Availability } from "@/lib/availability";
 import type { ConfirmedDetails } from "@/lib/hiring";
@@ -291,8 +298,18 @@ export interface Candidate {
   /** Set when a recruiter typed it in from a reply, rather than the candidate on the offer page. */
   gstinAddedAt?: string;
   gstinAddedBy?: string;
+  /** Where a GSTIN added after acceptance came from: absent = a recruiter, from a reply. */
+  gstinAddedVia?: "pan-reupload";
   /** "GSTIN needed" emails sent from View info, oldest first. */
   gstinRequests?: string[];
+  /**
+   * PAN card re-upload: the newest request (and what the candidate was told),
+   * every request with who sent it, and when new photos came back. See lib/pan.
+   */
+  panReuploadRequestedAt?: string;
+  panReuploadReason?: string;
+  panReuploadRequests?: PanReuploadRequest[];
+  panReuploadedAt?: string;
   /**
    * The live identity check: a link created for this one candidate in Persona,
    * emailed to them by hand when photographs could not settle the question.
@@ -1406,6 +1423,62 @@ export function markLiveReminderOpened(
   });
 }
 
+/**
+ * A PAN re-upload request is about to be emailed. Recorded first — the link
+ * is checked against it, and a candidate who clicks at once must find it —
+ * and undone with revertPanReupload if the email does not go.
+ */
+export function recordPanReupload(id: string, request: PanReuploadRequest): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.panReuploadRequests = [...(c.panReuploadRequests ?? []), request];
+    c.panReuploadRequestedAt = request.at;
+    c.panReuploadReason = request.reason;
+    return { list, result: c };
+  });
+}
+
+export function revertPanReupload(id: string, at: string): Promise<boolean> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || c.panReuploadRequestedAt !== at) return { list, result: false };
+    c.panReuploadRequests = (c.panReuploadRequests ?? []).filter((r) => r.at !== at);
+    const prev = c.panReuploadRequests.at(-1);
+    c.panReuploadRequestedAt = prev?.at;
+    c.panReuploadReason = prev?.reason;
+    return { list, result: true };
+  });
+}
+
+/**
+ * New PAN photos arrived for the request sent at `requestedAt`. Only for that
+ * request, and only once both sides are on file since it — checked inside the
+ * write, so two quick presses cannot both count. A GSTIN is added only when
+ * there is none on record.
+ */
+export function completePanReupload(
+  id: string,
+  requestedAt: string,
+  gstin?: string,
+): Promise<{ ok: true; candidate: Candidate; first: boolean } | { ok: false; reason: "not_found" | "replaced" | "incomplete" }> {
+  type R = { ok: true; candidate: Candidate; first: boolean } | { ok: false; reason: "not_found" | "replaced" | "incomplete" };
+  return withWrite<R>((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: { ok: false, reason: "not_found" } };
+    if (c.panReuploadRequestedAt !== requestedAt) return { list, result: { ok: false, reason: "replaced" } };
+    if (!panSentSince(c.documents, requestedAt)) return { list, result: { ok: false, reason: "incomplete" } };
+    const first = !(c.panReuploadedAt && c.panReuploadedAt > requestedAt);
+    if (first) c.panReuploadedAt = new Date().toISOString();
+    if (gstin && !c.gstin) {
+      c.gstin = gstin;
+      c.gstinAddedAt = new Date().toISOString();
+      c.gstinAddedVia = "pan-reupload";
+    }
+    return { list, result: { ok: true, candidate: c, first } };
+  });
+}
+
 /** A "GSTIN needed" email went out. */
 export function recordGstinRequest(id: string): Promise<Candidate | null> {
   return withWrite((list) => {
@@ -1424,6 +1497,7 @@ export function setGstinByRecruiter(id: string, gstin: string, by?: string): Pro
     c.gstin = gstin;
     c.gstinAddedAt = new Date().toISOString();
     c.gstinAddedBy = by;
+    delete c.gstinAddedVia;
     return { list, result: c };
   });
 }

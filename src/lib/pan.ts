@@ -15,8 +15,9 @@
  * Indian nationals elsewhere, because PAN is a tax identifier and tax follows
  * residence. Only the card is asked for: no number typed in, and never Aadhaar.
  *
- * Front and back, with the back optional: the e-PAN most people are now issued
- * is a single-page PDF with nothing on the reverse.
+ * Front and back, both required, as photos of the physical card. (The back was
+ * optional and an e-PAN PDF accepted at first; those who sent one can be asked
+ * to re-upload — see "Re-upload" below.)
  */
 import type { CandidateDocument, DocumentKind } from "@/lib/documents";
 
@@ -45,6 +46,8 @@ export interface PanInput {
   documents?: CandidateDocument[];
   panAnswer?: PanAnswer;
   panDeletedAt?: string;
+  panReuploadRequestedAt?: string;
+  panReuploadedAt?: string;
 }
 
 export type PanStatus =
@@ -65,6 +68,49 @@ export function panStatus(c: PanInput): PanStatus {
   if (c.panAnswer === "no") return "no";
   if (c.panAnswer === "yes") return "missing";
   return "not_asked";
+}
+
+/* ------------------------------------------------------------------------ */
+/* Re-upload                                                                 */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Asking somebody who already accepted to send their PAN card again — the back
+ * was missing, it was a scan or an e-PAN, or the photo cannot be read. Sent by
+ * hand from View info, with a personal link valid for 14 days.
+ */
+export const PAN_REUPLOAD_REASONS = [
+  { value: "back-missing", label: "The back of the PAN card is missing", message: "The back of your PAN card is missing." },
+  {
+    value: "scan",
+    label: "A scan or e-PAN was sent — a photo of the physical card is needed",
+    message: "We received a scan or e-PAN. We need a photo of your physical PAN card.",
+  },
+  { value: "unclear", label: "The photo is not clear enough to read", message: "The photo you sent is not clear enough to read." },
+] as const;
+
+export const MAX_PAN_REASON = 300;
+
+/** The wording for a preset, or the recruiter's own words, trimmed and capped. */
+export function panReuploadMessage(value: string, custom?: string): string {
+  const preset = PAN_REUPLOAD_REASONS.find((r) => r.value === value);
+  if (preset) return preset.message;
+  return (custom ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_PAN_REASON);
+}
+
+/** Asked to re-upload, and nothing has come back since. */
+export function panReuploadPending(c: Pick<PanInput, "panReuploadRequestedAt" | "panReuploadedAt">): boolean {
+  const asked = c.panReuploadRequestedAt;
+  if (!asked) return false;
+  return !(c.panReuploadedAt && c.panReuploadedAt > asked);
+}
+
+/** Both sides on file, uploaded after `since` — what a re-upload must leave behind. */
+export function panSentSince(documents: CandidateDocument[] | undefined, since: string): boolean {
+  return PAN_KINDS.every((k) => {
+    const d = currentPanDocument(documents, k);
+    return !!d && d.uploadedAt > since;
+  });
 }
 
 /* ------------------------------------------------------------------------ */

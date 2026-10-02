@@ -193,6 +193,26 @@ export function buildLiveReminderOpenedMessage(
   ].join("\n");
 }
 
+/** A candidate sent new PAN card photos after being asked to re-upload. */
+export function buildPanReuploadedMessage(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+  adminUrl: string,
+  noCameraData: boolean,
+): string {
+  return [
+    "🪪 <b>PAN card re-uploaded</b>",
+    "",
+    ...whoLines(name, email, country),
+    "",
+    noCameraData
+      ? "New front and back received. ⚠️ At least one photo has no camera data — look closely."
+      : "New front and back received.",
+    `<a href="${escapeHtml(adminUrl).replace(/"/g, "&quot;")}">Open in the Admin Panel</a>`,
+  ].join("\n");
+}
+
 /** Build the "Personal information" message (sent after the first step). */
 export function buildPersonalMessage(fields: Record<string, unknown>): string | null {
   const lines = PERSONAL_FIELDS.flatMap(({ key, label }) => {

@@ -170,6 +170,61 @@ export function readLiveVerifyToken(token: string | undefined | null): LiveVerif
 }
 
 /**
+ * Link a candidate to the PAN card re-upload page.
+ *
+ * Its own marker, like the others, so no other link can open it. Tied to the
+ * request it was sent with: a newer request makes an older link say so.
+ */
+export interface PanReuploadLink {
+  id: string;
+  /** ISO timestamp of the request this link belongs to. */
+  sentAt: string;
+}
+
+export const PAN_REUPLOAD_TTL_DAYS = 14;
+
+export function createPanReuploadToken(link: PanReuploadLink): string {
+  const body = b64url(Buffer.from(JSON.stringify({ v: "pan", i: link.id, s: link.sentAt })));
+  return `${body}.${sign(body)}`;
+}
+
+export type PanReuploadTokenResult =
+  | { ok: true; link: PanReuploadLink }
+  | { ok: false; reason: "invalid" }
+  | { ok: false; reason: "expired"; link: PanReuploadLink };
+
+export function readPanReuploadToken(token: string | undefined | null): PanReuploadTokenResult {
+  if (!token || typeof token !== "string" || !token.includes(".") || token.length > 600) {
+    return { ok: false, reason: "invalid" };
+  }
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return { ok: false, reason: "invalid" };
+
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
+
+  try {
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as { v?: unknown; i?: unknown; s?: unknown };
+    if (obj.v !== "pan") return { ok: false, reason: "invalid" };
+    if (typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
+    if (typeof obj.s !== "string" || !obj.s) return { ok: false, reason: "invalid" };
+    const sentAt = Date.parse(obj.s);
+    if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
+    const link = { id: obj.i, sentAt: obj.s };
+    // Expired is reported with the link, so a page can still say "already
+    // received" to somebody who did it in time and comes back later.
+    if (Date.now() - sentAt > PAN_REUPLOAD_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      return { ok: false, reason: "expired", link };
+    }
+    return { ok: true, link };
+  } catch {
+    return { ok: false, reason: "invalid" };
+  }
+}
+
+/**
  * Link a candidate to their company-details form.
  *
  * Its own marker again, so a link that asks for an EIN and a signed W-9 cannot

@@ -52,7 +52,7 @@ export function GstinRow({
         ok?: boolean; error?: string; gstin?: string; gstinAddedAt?: string; gstinAddedBy?: string;
       };
       if (data.ok) {
-        onChange?.({ gstin: data.gstin, gstinAddedAt: data.gstinAddedAt, gstinAddedBy: data.gstinAddedBy });
+        onChange?.({ gstin: data.gstin, gstinAddedAt: data.gstinAddedAt, gstinAddedBy: data.gstinAddedBy, gstinAddedVia: undefined });
         setEditing(false);
         setMessage({ ok: true, text: "GSTIN saved." });
       } else {
@@ -184,7 +184,9 @@ export function GstinRow({
 
       {gstin && candidate.gstinAddedAt ? (
         <p className="mt-1 text-xs text-navy-400">
-          Added from a reply{candidate.gstinAddedBy ? ` by ${candidate.gstinAddedBy}` : ""} on {fmt(candidate.gstinAddedAt)}.
+          {candidate.gstinAddedVia === "pan-reupload"
+            ? `Given by the candidate on the PAN re-upload page on ${fmt(candidate.gstinAddedAt)}.`
+            : `Added from a reply${candidate.gstinAddedBy ? ` by ${candidate.gstinAddedBy}` : ""} on ${fmt(candidate.gstinAddedAt)}.`}
         </p>
       ) : null}
 

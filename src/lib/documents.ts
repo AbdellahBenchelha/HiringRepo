@@ -250,7 +250,9 @@ export function keepsHistory(kind: DocumentKind): boolean {
   // Company paperwork too: a corrected W-9 is a second version of a signed
   // declaration, and the first one is exactly what you would want to compare
   // it against.
-  return isImageKind(kind) || isAudioKind(kind) || isCompanyKind(kind);
+  // And the PAN card: when a re-upload is asked for, the first photos are
+  // what the recruiter compares the new ones against.
+  return isImageKind(kind) || isAudioKind(kind) || isCompanyKind(kind) || isPanDocumentKind(kind);
 }
 
 /**

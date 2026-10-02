@@ -58,12 +58,15 @@ export function PanCardSection({
   gstin,
   onGstin,
   disabled,
+  showGstin = true,
 }: {
   files: PanFiles;
   onFiles: (f: PanFiles) => void;
   gstin: string;
   onGstin: (v: string) => void;
   disabled?: boolean;
+  /** Off on the re-upload page for somebody who already gave one. */
+  showGstin?: boolean;
 }) {
   const [gstinTouched, setGstinTouched] = useState(false);
   const gstinError = gstinTouched ? gstinProblem(gstin) : "";
@@ -210,6 +213,7 @@ export function PanCardSection({
           );
         })}
       </div>
+      {showGstin ? (
       <div className="mt-6 border-t border-navy-100 pt-5">
         <label htmlFor="gstin" className="block text-sm font-bold text-navy-900">
           GSTIN (Goods and Services Tax Identification Number){" "}
@@ -241,6 +245,7 @@ export function PanCardSection({
           {gstinError || (gstin ? `${gstin.length} / 15` : "15 letters and numbers.")}
         </p>
       </div>
+      ) : null}
 
       <p className="mt-5 flex items-start gap-2 text-xs text-navy-500">
         <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-navy-400" />

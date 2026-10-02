@@ -1464,6 +1464,167 @@ export function chatReminderHtml(e: ChatReminderEmail): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* PAN card re-upload                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface PanReuploadEmail {
+  fullName: string;
+  /** Their personal re-upload link. */
+  url: string;
+  /** Why, in the recruiter's words or a preset — one sentence. */
+  reason: string;
+  /** How long the link lasts, in days. */
+  validDays: number;
+}
+
+/**
+ * Asking somebody who already accepted to send their PAN card again: the back
+ * was missing, a scan or an e-PAN was sent, or the photo cannot be read. Sent
+ * by hand from View info.
+ */
+export function panReuploadSubject(): string {
+  return "Action required: please re-upload your PAN card";
+}
+
+export function panReuploadText(e: PanReuploadEmail): string {
+  const name = firstNameOf(e.fullName);
+  return [
+    `Hi ${name},`,
+    ``,
+    `To prepare your final agreement we need a clear photo of your physical`,
+    `PAN card, front and back.`,
+    ``,
+    e.reason,
+    ``,
+    `A scan, a screenshot or an e-PAN is not accepted — please take a photo of`,
+    `the card itself. It takes about a minute.`,
+    ``,
+    `Upload my PAN card:`,
+    e.url,
+    ``,
+    `This link is personal to you and stays valid for ${e.validDays} days.`,
+    ``,
+    `We will never ask you for your Aadhaar, a payment of any kind, your bank`,
+    `card details or a password.`,
+    ``,
+    `Any questions, reply to this email or write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function panReuploadHtml(e: PanReuploadEmail): string {
+  const name = esc(firstNameOf(e.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(e.url);
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(panReuploadSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  A clear photo of your physical PAN card, front and back — about a minute from your phone.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Please re-upload your PAN card
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 20px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          To prepare your final agreement we need a clear photo of your
+          <strong style="color:${NAVY};">physical PAN card, front and back</strong>.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:0 0 20px 0;">
+          <tr>
+            <td style="padding:16px 20px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+              ${esc(e.reason)}
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          A scan, a screenshot or an e-PAN is not accepted &mdash; please take a photo of the card
+          itself. It takes about a minute.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 36px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Upload my PAN card
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 6px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          This link is personal to you and stays valid for ${e.validDays} days.
+        </p>
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:16px 20px;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+              <strong style="color:${NAVY};">We will never ask you for</strong> your Aadhaar, a payment
+              of any kind, your bank card details or a password.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+/* -------------------------------------------------------------------------- */
 /* GSTIN request                                                               */
 /* -------------------------------------------------------------------------- */
 

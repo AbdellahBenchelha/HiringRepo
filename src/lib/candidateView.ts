@@ -123,7 +123,12 @@ export interface CandidateView {
   gstin?: string;
   gstinAddedAt?: string;
   gstinAddedBy?: string;
+  gstinAddedVia?: "pan-reupload";
   gstinRequests?: string[];
+  panReuploadRequestedAt?: string;
+  panReuploadReason?: string;
+  panReuploadRequests?: { at: string; by?: string; reason: string }[];
+  panReuploadedAt?: string;
   panAnsweredAt?: string;
   panDeletedAt?: string;
   /** The live identity check: what was sent, and how far they got with it. */
@@ -334,7 +339,12 @@ export function toCandidateView(
     gstin: c.gstin,
     gstinAddedAt: c.gstinAddedAt,
     gstinAddedBy: c.gstinAddedBy,
+    gstinAddedVia: c.gstinAddedVia,
     gstinRequests: c.gstinRequests,
+    panReuploadRequestedAt: c.panReuploadRequestedAt,
+    panReuploadReason: c.panReuploadReason,
+    panReuploadRequests: c.panReuploadRequests,
+    panReuploadedAt: c.panReuploadedAt,
     panAnsweredAt: c.panAnsweredAt,
     panDeletedAt: c.panDeletedAt,
     liveVerificationUrl: c.liveVerificationUrl,

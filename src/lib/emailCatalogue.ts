@@ -58,6 +58,9 @@ import {
   gstinRequestHtml,
   gstinRequestSubject,
   gstinRequestText,
+  panReuploadHtml,
+  panReuploadSubject,
+  panReuploadText,
   submissionReceivedSubject,
   submissionReceivedText,
   verificationRequestHtml,
@@ -459,6 +462,24 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         validUntil: "7 October",
       };
       return { subject: chatReminderSubject(), html: chatReminderHtml(payload), text: chatReminderText(payload) };
+    },
+  },
+  {
+    id: "pan-reupload",
+    name: "PAN card re-upload",
+    stage: "identity",
+    when:
+      "Sent by hand from View info → Company (PAN card & GSTIN) with Ask to re-upload PAN, to a candidate in India who already accepted — the back was missing, a scan or e-PAN was sent, or the photo is unclear. Personal link valid for 14 days; you get a Telegram message when they re-upload.",
+    kind: "campaign",
+    source: "panReuploadHtml",
+    render: () => {
+      const payload = {
+        fullName: SAMPLE_NAME,
+        url: link("/pan?t=EXAMPLE"),
+        reason: "The back of your PAN card is missing.",
+        validDays: 14,
+      };
+      return { subject: panReuploadSubject(), html: panReuploadHtml(payload), text: panReuploadText(payload) };
     },
   },
   {

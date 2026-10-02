@@ -6,6 +6,7 @@ import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ImageZoom } from "@/components/admin/ImageZoom";
 import { GstinRow } from "@/components/admin/GstinRow";
+import { PanReuploadControl } from "@/components/admin/PanReuploadControl";
 import { DOCUMENT_LABEL, extensionOf, type CandidateDocument } from "@/lib/documents";
 import { PAN_KINDS, currentPanDocument, panExpected, panStatus, type PanStatus } from "@/lib/pan";
 import type { CandidateView } from "@/lib/candidateView";
@@ -61,6 +62,9 @@ export function PanCardPanel({
     (d): d is CandidateDocument => !!d,
   );
   const photos = docs.filter((d) => extensionOf(d.filename) !== ".pdf");
+  const earlier = (candidate.documents ?? []).filter(
+    (d) => (PAN_KINDS as readonly string[]).includes(d.kind) && !!d.supersededAt && !!d.key && d.status !== "blocked",
+  );
   const viewUrl = (d: CandidateDocument) => `/api/admin/documents/${candidate.id}/${d.kind}?mode=view`;
 
   async function clear() {
@@ -185,6 +189,33 @@ export function PanCardPanel({
           </div>
         </>
       )}
+
+      {/* Photos replaced by a re-upload, kept to compare against. */}
+      {earlier.length ? (
+        <p className="mt-2 text-xs text-navy-500" data-pan-earlier>
+          Earlier uploads:{" "}
+          {earlier.map((d, i) => (
+            <span key={d.key}>
+              {i ? ", " : ""}
+              <a
+                href={`/api/admin/documents/${candidate.id}/${d.kind}?mode=view&v=${encodeURIComponent(d.key ?? "")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-brand-700 underline"
+              >
+                {DOCUMENT_LABEL[d.kind]}
+                {extensionOf(d.filename) === ".pdf" ? " (PDF)" : ""}
+              </a>{" "}
+              ({fmt(d.uploadedAt)})
+            </span>
+          ))}
+        </p>
+      ) : null}
+
+      {/* Somebody who accepted from India can be asked for a better photo. */}
+      {candidate.offerAcceptedAt && livesInIndia ? (
+        <PanReuploadControl candidate={candidate} onChange={onChange} />
+      ) : null}
 
       {/* The GSTIN, optional: shown whenever the card is, so an empty one reads
           as "not given" rather than as missing from the page. */}
