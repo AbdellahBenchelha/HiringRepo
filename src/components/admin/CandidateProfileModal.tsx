@@ -153,7 +153,6 @@ export function CandidateProfileModal({
   onChange,
   onOpenDocument,
   onStatusChange,
-  onSendWhatsApp,
   selection,
 }: {
   candidate: CandidateView;
@@ -173,8 +172,6 @@ export function CandidateProfileModal({
   onChange: (patch: Partial<CandidateView>) => void;
   onOpenDocument: (doc: CandidateDocument) => void;
   onStatusChange: (id: string, status: CandidateStatus) => void;
-  /** Omitted where the tab has no WhatsApp action of its own. */
-  onSendWhatsApp?: (c: CandidateView) => void;
   selection?: ProfileSelection;
 }) {
   const verification = verificationStateOf(candidate);
@@ -486,18 +483,6 @@ export function CandidateProfileModal({
           />
         </div>
 
-        {onSendWhatsApp ? (
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => onSendWhatsApp(candidate)}
-              disabled={!candidate.phone}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-            >
-              <Icon name="chat" className="h-4 w-4" /> Send interview link via WhatsApp
-            </button>
-          </div>
-        ) : null}
         </div>
 
         <div hidden={tab !== "assessment"}>

@@ -125,14 +125,10 @@ export interface FollowUpState {
  * one that produced nothing after several days rises to the top.
  */
 export function followUpState(c: FollowUpInput, now = Date.now()): FollowUpState {
-  const emailCount = c.reminderEmailCount ?? 0;
-  const waCount = c.reminderWhatsAppCount ?? 0;
-  const reminderCount = emailCount + waCount;
-
-  const times = [c.reminderEmailSentAt, c.reminderWhatsAppSentAt].filter(Boolean) as string[];
-  const lastReminderAt = times.length
-    ? times.reduce((a, b) => (a > b ? a : b))
-    : undefined;
+  // Email reminders only. WhatsApp reminders were removed; any logged before
+  // stay on the record but are not counted here.
+  const reminderCount = c.reminderEmailCount ?? 0;
+  const lastReminderAt = c.reminderEmailSentAt || undefined;
 
   const base = { reminderCount, lastReminderAt, daysWaiting: daysSince(lastReminderAt, now) };
 
@@ -188,6 +184,35 @@ export const FOLLOW_UP_FILTERS = [
   { value: "needs", label: "Needs a reminder" },
   { value: "waiting", label: "Reminded, no response" },
   { value: "responded", label: "Opened after reminder" },
+  { value: "reminded1", label: "Reminded once" },
+  { value: "reminded2", label: "Reminded twice" },
+  { value: "reminded3", label: "Reminded 3 times or more" },
 ] as const;
 
 export type FollowUpFilter = (typeof FOLLOW_UP_FILTERS)[number]["value"];
+
+/**
+ * Does a row's follow-up state match the filter? The reminder counts leave out
+ * anybody who has finished the assessment — there is nothing left to chase.
+ */
+export function matchesFollowUp(filter: FollowUpFilter, s: FollowUpState): boolean {
+  if (filter === "all") return true;
+  if (filter === "reminded1" || filter === "reminded2" || filter === "reminded3") {
+    if (s.kind === "done") return false;
+    if (filter === "reminded1") return s.reminderCount === 1;
+    if (filter === "reminded2") return s.reminderCount === 2;
+    return s.reminderCount >= 3;
+  }
+  return s.kind === filter;
+}
+
+/** How many unanswered reminders turn a row amber. */
+export const REMINDERS_BEFORE_WARNING = 3;
+
+/**
+ * Reminded three times or more and nothing since: the row a recruiter should
+ * decide about rather than chase again.
+ */
+export function followUpWarning(s: FollowUpState): boolean {
+  return s.kind === "waiting" && s.reminderCount >= REMINDERS_BEFORE_WARNING;
+}

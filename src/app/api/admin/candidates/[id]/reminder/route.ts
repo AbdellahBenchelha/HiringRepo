@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { getCandidate, recordReminder } from "@/lib/store";
+import { getCandidate } from "@/lib/store";
 import { sendReminderEmail } from "@/lib/candidateEmails";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 
 /**
  * Chase a candidate who has not finished their assessment.
  *
- * channel "email"    — sends the reminder and logs it.
- * channel "whatsapp" — logs only; the browser opens wa.me itself, because
- *                      WhatsApp has no server-side send without the Business
- *                      API. Logging separately still lets the recruiter see
- *                      which channels a candidate has already been chased on.
+ * By email only: sends the reminder and logs it. (WhatsApp reminders were
+ * removed; older WhatsApp entries stay on the record but are not counted.)
  *
  * The link is the candidate's usual /interview?c=<id> — the same one in the
  * original invitation. One permanent link per candidate means a reminder never
@@ -34,7 +31,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const parsed = await readJsonBody<{ channel?: string }>(req, 2 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
-  const channel = parsed.data.channel === "whatsapp" ? "whatsapp" : "email";
+  // Email only. WhatsApp reminders were removed; one asked for is refused
+  // rather than quietly sent as an email nobody intended.
+  if (parsed.data.channel && parsed.data.channel !== "email") {
+    return NextResponse.json({ ok: false, error: "email_only" }, { status: 400 });
+  }
 
   const { id } = await ctx.params;
   const candidate = await getCandidate(id);
@@ -43,15 +44,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   // Nothing to chase once they have finished.
   if (candidate.interview) {
     return NextResponse.json({ ok: false, error: "already_completed" }, { status: 409 });
-  }
-
-  if (channel === "whatsapp") {
-    const updated = await recordReminder(id, "whatsapp");
-    return NextResponse.json({
-      ok: true,
-      reminderWhatsAppSentAt: updated?.reminderWhatsAppSentAt,
-      reminderWhatsAppCount: updated?.reminderWhatsAppCount,
-    });
   }
 
   const result = await sendReminderEmail(id, baseUrl(req));

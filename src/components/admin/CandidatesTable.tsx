@@ -6,7 +6,6 @@ import { Icon } from "@/components/Icon";
 import { InterviewBadge, IncompleteFormBadge, InviteHeldBadge } from "@/components/admin/StatusBadge";
 import { CANDIDATE_STATUSES, type CandidateStatus } from "@/lib/candidateStatus";
 import { rowTone, stickyTone, rowEdge } from "@/components/admin/rowTone";
-import { siteConfig } from "@/config/site";
 import { adminPost } from "@/lib/adminClient";
 import { SendAssessmentButton } from "@/components/admin/SendAssessmentButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
@@ -52,8 +51,9 @@ import { agoInWords, lastActivityAt } from "@/lib/activity";
 import { SortHeader } from "@/components/admin/SortHeader";
 import {
   followUpState,
-  withSource,
   FOLLOW_UP_FILTERS,
+  followUpWarning,
+  matchesFollowUp,
   type FollowUpFilter,
   type FollowUpState,
 } from "@/lib/followUp";
@@ -68,16 +68,6 @@ function fmt(iso?: string) {
   return new Date(iso).toLocaleString("en-GB", {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
-}
-
-function buildWhatsAppMessage(name: string, link: string): string {
-  return (
-    `Hello ${name},\n\n` +
-    `Thank you for applying to join ${siteConfig.company.name}. We have reviewed your application and would like to invite you to complete the next stage of our recruitment process.\n\n` +
-    `Please use the following link to complete your online interview:\n${link}\n\n` +
-    `Please answer all questions carefully and submit your interview when finished.\n\n` +
-    `Best regards,\nRecruitment Team`
-  );
 }
 
 /** This tab's own hidden list — see HiddenCountries for why it is per tab. */
@@ -127,7 +117,6 @@ export function CandidatesTable({
   const [dateFrom, setDateFrom] = useState("");
   /** The candidate whose photos are open in the quick view, if any. */
   const [quickView, setQuickView] = useState<CandidateView | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   /** Countries taken off this table entirely, remembered in the browser. */
   const hiddenCountries = useHiddenCountries(HIDDEN_COUNTRIES_KEY);
@@ -211,7 +200,7 @@ export function CandidatesTable({
       if (interviewFilter === "linksent" && !c.interviewEmailSentAt) return false;
       if (interviewFilter === "nolink" && c.interviewEmailSentAt) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
-      if (followUpFilter !== "all" && followUps.get(c.id)?.kind !== followUpFilter) return false;
+      if (followUpFilter !== "all" && !matchesFollowUp(followUpFilter, followUps.get(c.id)!)) return false;
       if (!matchesVerificationFilter(verifyFilter, c.verificationStatus, c.verificationRequestedAt)) {
         return false;
       }
@@ -367,33 +356,6 @@ export function CandidatesTable({
     } catch {
       /* optimistic; ignore */
     }
-  }
-
-  async function sendWhatsApp(c: CandidateView) {
-    setBusy(c.id);
-    const phone = c.phone.replace(/[^\d]/g, "");
-    const text = encodeURIComponent(
-      buildWhatsAppMessage(c.fullName || "there", withSource(c.interviewLink, "invite-whatsapp")),
-    );
-    // Record the invitation (and bump status) before opening WhatsApp.
-    try {
-      await adminPost(`/api/admin/candidates/${c.id}/invite`, {});
-      setRows((prev) =>
-        prev.map((x) =>
-          x.id === c.id
-            ? {
-                ...x,
-                invitationSentAt: new Date().toISOString(),
-                status: x.status === "New Application" ? "Interview Invitation Sent" : x.status,
-              }
-            : x,
-        ),
-      );
-    } catch {
-      /* ignore */
-    }
-    setBusy(null);
-    window.open(`https://wa.me/${phone}?text=${text}`, "_blank", "noopener,noreferrer");
   }
 
   /** The row is gone from the server; a list still showing it is lying. */
@@ -652,9 +614,14 @@ export function CandidatesTable({
                 <tr
                   key={c.id}
                   data-rejected={c.status === "Rejected" ? "true" : undefined}
-                  className={`group ${c.status === "Rejected" ? "" : "hover:bg-cream-100"} ${rowTone(c.status, { selected: chosen.includes(c.id) })}`}
+                  data-followup-warning={followUpWarning(followUps.get(c.id)!) ? "true" : undefined}
+                  className={`group ${c.status === "Rejected" || followUpWarning(followUps.get(c.id)!) ? "" : "hover:bg-cream-100"} ${rowTone(c.status, {
+                    selected: chosen.includes(c.id),
+                    // Three email reminders and nothing back: decide, don't chase.
+                    warning: followUpWarning(followUps.get(c.id)!),
+                  })}`}
                 >
-                  <td className={`px-3 py-3 align-top ${rowEdge(c.status)}`}>
+                  <td className={`px-3 py-3 align-top ${rowEdge(c.status, false, followUpWarning(followUps.get(c.id)!))}`}>
                     <input
                       type="checkbox"
                       checked={chosen.includes(c.id)}
@@ -666,6 +633,12 @@ export function CandidatesTable({
                   <td className="px-4 py-3">
                     <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                     <p className="text-xs text-navy-500">{c.email || "—"}</p>
+                    {followUpWarning(followUps.get(c.id)!) && c.status !== "Rejected" ? (
+                      <span className="mt-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                        <Icon name="clock" className="h-3 w-3" />
+                        {followUps.get(c.id)!.reminderCount} reminders — no response
+                      </span>
+                    ) : null}
                     {!c.formCompleted && !c.interviewCompleted && !c.interviewOpenedAt ? (
                       <div className="mt-1">
                         <IncompleteFormBadge />
@@ -725,17 +698,8 @@ export function CandidatesTable({
                       onOpenPhotos={() => setQuickView(c)}
                     />
                   </td>
-                  <td className={`sticky right-0 ${stickyTone(c.status)} px-4 py-3 transition-colors ${c.status === "Rejected" ? "group-hover:bg-red-100" : "group-hover:bg-cream-100"} shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]`}>
+                  <td className={`sticky right-0 ${stickyTone(c.status, false, followUpWarning(followUps.get(c.id)!))} px-4 py-3 transition-colors ${c.status === "Rejected" ? "group-hover:bg-red-100" : followUpWarning(followUps.get(c.id)!) ? "group-hover:bg-amber-100" : "group-hover:bg-cream-100"} shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)]`}>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => sendWhatsApp(c)}
-                        disabled={!c.phone || busy === c.id}
-                        title="Send interview link via WhatsApp"
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-                      >
-                        <Icon name="chat" className="h-4 w-4" /> WhatsApp
-                      </button>
                       <button
                         type="button"
                         onClick={() => openProfile(c)}
@@ -759,7 +723,6 @@ export function CandidatesTable({
                     <ReminderActions
                       id={c.id}
                       fullName={c.fullName}
-                      phone={c.phone}
                       position={c.position}
                       interviewLink={c.interviewLink}
                       interviewCompleted={c.interviewCompleted}
@@ -769,8 +732,6 @@ export function CandidatesTable({
                       email={c.email}
                       reminderEmailSentAt={c.reminderEmailSentAt}
                       reminderEmailCount={c.reminderEmailCount}
-                      reminderWhatsAppSentAt={c.reminderWhatsAppSentAt}
-                      reminderWhatsAppCount={c.reminderWhatsAppCount}
                     />
                   </td>
                 </tr>
@@ -813,7 +774,6 @@ export function CandidatesTable({
           onClose={closeProfile}
           onOpenDocument={(doc) => setViewing({ c: profile, doc })}
           onStatusChange={changeStatus}
-          onSendWhatsApp={sendWhatsApp}
           onChange={(patch) => applyPatch(profile.id, patch)}
         />
       ) : null}

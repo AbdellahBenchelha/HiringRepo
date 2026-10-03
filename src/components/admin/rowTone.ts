@@ -9,15 +9,20 @@ import { FULL_VERIFIED, REJECTED } from "@/lib/candidateStatus";
 /**
  * The colour a candidate's row wears in the admin tables: red once Rejected
  * (every list), green once Full verified (the Accepted list, which asks for
- * it), the selection tint when ticked, plain otherwise. One place, so the
- * lists agree.
+ * it), amber as a warning (Candidates: three reminders and no response), the
+ * selection tint when ticked, plain otherwise. One place, so the lists agree.
  */
 export function rowTone(
   status: string | undefined,
-  { selected = false, greenVerified = false }: { selected?: boolean; greenVerified?: boolean } = {},
+  {
+    selected = false,
+    greenVerified = false,
+    warning = false,
+  }: { selected?: boolean; greenVerified?: boolean; warning?: boolean } = {},
 ): string {
   if (status === REJECTED) return "bg-red-50 hover:bg-red-100/70";
   if (greenVerified && status === FULL_VERIFIED) return "bg-emerald-50 hover:bg-emerald-100/70";
+  if (warning) return "bg-amber-50 hover:bg-amber-100/70";
   return selected ? "bg-brand-50/60" : "";
 }
 
@@ -25,15 +30,17 @@ export function rowTone(
  * The coloured edge down the left of a red or green row. On the first cell,
  * not the row: browsers do not reliably paint a shadow on a table row.
  */
-export function rowEdge(status: string | undefined, greenVerified = false): string {
+export function rowEdge(status: string | undefined, greenVerified = false, warning = false): string {
   if (status === REJECTED) return "shadow-[inset_4px_0_0_0_#dc2626]";
   if (greenVerified && status === FULL_VERIFIED) return "shadow-[inset_4px_0_0_0_#059669]";
+  if (warning) return "shadow-[inset_4px_0_0_0_#d97706]";
   return "";
 }
 
 /** The background for a row's sticky Actions cell, so it matches the row. */
-export function stickyTone(status: string | undefined, greenVerified = false): string {
+export function stickyTone(status: string | undefined, greenVerified = false, warning = false): string {
   if (status === REJECTED) return "bg-red-50";
   if (greenVerified && status === FULL_VERIFIED) return "bg-emerald-50";
+  if (warning) return "bg-amber-50";
   return "bg-white";
 }
