@@ -6,7 +6,7 @@ import { requiredCountries } from "@/lib/verificationStore";
 import { toCandidateView } from "@/lib/candidateView";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { WaitingTable } from "@/components/admin/WaitingTable";
-import { awaitingDecision, daysWaiting, WAITING_TOO_LONG_DAYS } from "@/lib/voiceAck";
+import { awaitingDecision, daysWaiting, WAITING_TOO_LONG_DAYS, waitingSince } from "@/lib/voiceAck";
 
 export const metadata: Metadata = { title: "Waiting", robots: { index: false, follow: false } };
 
@@ -35,7 +35,7 @@ export default async function AdminWaitingPage() {
    */
   const waiting = all.filter(awaitingDecision);
   // Longest wait first, the same order the table keeps.
-  waiting.sort((a, b) => (a.voiceAckSentAt || "").localeCompare(b.voiceAckSentAt || ""));
+  waiting.sort((a, b) => (waitingSince(a) || "").localeCompare(waitingSince(b) || ""));
 
   const rows = waiting.map((c) => toCandidateView(c, base, required));
   const longest = waiting.length ? daysWaiting(waiting[0]) : 0;
@@ -49,8 +49,9 @@ export default async function AdminWaitingPage() {
             "Nobody is waiting on an answer from us."
           ) : (
             <>
-              {rows.length} {rows.length === 1 ? "person has" : "people have"} been told their
-              recording arrived and are waiting to hear back
+              {rows.length} {rows.length === 1 ? "person has" : "people have"} been told we will be
+              in touch — their recording arrived, or their information is verified — and are
+              waiting to hear back
               {longest > 0 ? (
                 <>
                   {" — the longest for "}

@@ -100,6 +100,7 @@ const VOICE_STYLES: Record<VoiceStatus, string> = {
   "Voice Recording Received": "bg-blue-50 text-blue-700 border-blue-200",
   "Voice Assessment Passed": "bg-green-50 text-green-700 border-green-200",
   "Voice Assessment Failed": "bg-red-50 text-red-700 border-red-200",
+  "Voice Skipped — Final Video Interview": "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 export function VoiceBadge({ status }: { status: VoiceStatus }) {

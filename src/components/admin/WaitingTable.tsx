@@ -26,7 +26,7 @@ import { useBulkEmail } from "@/components/admin/BulkEmailBar";
 import { useBulkOffer } from "@/components/admin/BulkOfferEditor";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { adminPost } from "@/lib/adminClient";
-import { daysWaiting, WAITING_TOO_LONG_DAYS } from "@/lib/voiceAck";
+import { daysWaiting, WAITING_TOO_LONG_DAYS, waitingSince } from "@/lib/voiceAck";
 import {
   ID_DOCUMENT_LABEL,
   ID_TYPE_FILTERS,
@@ -126,7 +126,7 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
 
   /** Longest wait first: the row most likely to have been forgotten. */
   const sorted = useMemo(
-    () => [...shown].sort((a, b) => (a.voiceAckSentAt || "").localeCompare(b.voiceAckSentAt || "")),
+    () => [...shown].sort((a, b) => (waitingSince(a) || "").localeCompare(waitingSince(b) || "")),
     [shown],
   );
 
@@ -338,7 +338,7 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
               <tr>
                 <td colSpan={9} className="px-4 py-10 text-center text-navy-400">
                   {live.length === 0
-                    ? "Nobody is waiting. Tell somebody their recording arrived and they appear here."
+                    ? "Nobody is waiting. Tell somebody their recording arrived, or that their information is verified, and they appear here."
                     : "Nobody matches your filters."}
                 </td>
               </tr>
@@ -366,13 +366,24 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy-900">{c.fullName || "—"}</p>
                       <p className="text-xs text-navy-500">{c.email || "no email"}</p>
+                      {/* Told they are verified, with no recording: the final
+                          video interview is their next step, not a decision on
+                          a recording. */}
+                      {c.verifiedAckSentAt && !c.voiceAckSentAt ? (
+                        <span
+                          data-waiting-novoice
+                          className="mt-1 inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-700"
+                        >
+                          Verified — no voice (final video interview)
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy-800">{c.country || "—"}</p>
                       <PhoneCountryFlag country={c.country} phone={c.phone} />
                     </td>
                     <td className="px-4 py-3 text-navy-600">{c.position || "—"}</td>
-                    <td className="px-4 py-3 text-navy-500">{fmt(c.voiceAckSentAt)}</td>
+                    <td className="px-4 py-3 text-navy-500">{fmt(waitingSince(c))}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${

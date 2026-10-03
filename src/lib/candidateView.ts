@@ -162,6 +162,8 @@ export interface CandidateView {
   voiceAckSentAt?: string;
   voiceAckCount?: number;
   voiceAcks?: string[];
+  verifiedAckSentAt?: string;
+  verifiedAcks?: string[];
   /**
    * Derived: told, and still waiting on us. The Waiting tab, in one field.
    */
@@ -368,6 +370,8 @@ export function toCandidateView(
     voiceAckSentAt: c.voiceAckSentAt,
     voiceAckCount: c.voiceAckCount,
     voiceAcks: c.voiceAcks,
+    verifiedAckSentAt: c.verifiedAckSentAt,
+    verifiedAcks: c.verifiedAcks,
     awaitingDecision: awaitingDecision(c),
     voiceNeeded: voiceRecordingNeeded(c),
     identityReminderSentAt: c.identityReminderSentAt,

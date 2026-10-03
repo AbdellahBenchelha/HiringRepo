@@ -27,6 +27,7 @@ import { PanCardPanel } from "@/components/admin/PanCardPanel";
 import { ChatLinkPanel } from "@/components/admin/chat/ChatLinkPanel";
 import { VoicePanel } from "@/components/admin/VoicePanel";
 import { VoiceAckButton } from "@/components/admin/VoiceAckButton";
+import { VerifiedAckButton } from "@/components/admin/VerifiedAckButton";
 import { currentVoiceRecording } from "@/lib/voice";
 import { IdentityReminderButton } from "@/components/admin/IdentityReminderButton";
 import { SubmissionReceivedButton } from "@/components/admin/SubmissionReceivedButton";
@@ -551,6 +552,10 @@ export function CandidateProfileModal({
             }}
             onSent={(patch) => onChange(patch)}
           />
+
+          {/* The same promise for somebody verified who sent no recording —
+              they would rather wait for the final video interview. */}
+          <VerifiedAckButton candidate={candidate} onSent={(patch) => onChange(patch)} />
 
           {/* The last step of the assessment: the final interview, held as a
               live chat. The link, whether they started, and the transcript. */}

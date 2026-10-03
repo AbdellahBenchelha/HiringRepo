@@ -31,6 +31,7 @@ export interface ActivityInput {
   voiceOpenedAt?: string;
   voiceReminderSentAt?: string;
   voiceAckSentAt?: string;
+  verifiedAckSentAt?: string;
   verificationConsentAt?: string;
   verificationRequestedAt?: string;
   verifiedAt?: string;
@@ -80,6 +81,7 @@ const FIELDS: readonly (keyof ActivityInput)[] = [
   "voiceOpenedAt",
   "voiceReminderSentAt",
   "voiceAckSentAt",
+  "verifiedAckSentAt",
   "verificationConsentAt",
   "verificationRequestedAt",
   "verifiedAt",

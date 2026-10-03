@@ -26,6 +26,8 @@ export interface VoiceAckState {
   voiceAcks?: string[];
   offerSentAt?: string;
   status?: string;
+  /** Told their ID is verified and to wait for a place, with no recording (lib/verifiedAck). */
+  verifiedAckSentAt?: string;
 }
 
 /** Why this cannot be sent, in the word the API answers with, or nothing. */
@@ -52,13 +54,23 @@ export function canAcknowledge(c: VoiceAckState): boolean {
  * failed their assessment is still waiting to be told so.
  */
 export function awaitingDecision(c: VoiceAckState): boolean {
-  return !!c.voiceAckSentAt && !c.offerSentAt && c.status !== "Rejected";
+  return !!waitingSince(c) && !c.offerSentAt && c.status !== "Rejected";
+}
+
+/**
+ * When we first told them we would come back to them: the recording receipt,
+ * or the "your information is verified" email for those who sent none.
+ */
+export function waitingSince(c: VoiceAckState): string | undefined {
+  const times = [c.voiceAckSentAt, c.verifiedAckSentAt].filter((t): t is string => !!t).sort();
+  return times[0];
 }
 
 /** Whole days since we told them we would be in touch. */
 export function daysWaiting(c: VoiceAckState, now: number = Date.now()): number {
-  if (!c.voiceAckSentAt) return 0;
-  const at = Date.parse(c.voiceAckSentAt);
+  const since = waitingSince(c);
+  if (!since) return 0;
+  const at = Date.parse(since);
   if (Number.isNaN(at)) return 0;
   return Math.max(0, Math.floor((now - at) / (24 * 60 * 60 * 1000)));
 }

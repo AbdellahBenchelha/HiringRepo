@@ -9,6 +9,7 @@
  * job listing at read time. A listing's advertised pay changes; what you
  * actually offered someone on a particular day must not change with it.
  */
+import { VOICE_SKIPPED } from "@/lib/candidateStatus";
 import { jobs, type Salary } from "@/config/jobs";
 import { MAX_HOURS_PER_DAY, MAX_HOURS_PER_WEEK, REQUIRED_DAYS } from "@/lib/availability";
 
@@ -97,7 +98,13 @@ export const OFFER_LABEL: Record<OfferStatus, string> = {
  */
 export function canOffer(voiceStatus: string | undefined, state: OfferState): boolean {
   if (state.offerSentAt) return true;
-  return voiceStatus === "Voice Recording Received" || voiceStatus === "Voice Assessment Passed";
+  return (
+    voiceStatus === "Voice Recording Received" ||
+    voiceStatus === "Voice Assessment Passed" ||
+    // Told they are verified and to wait for the final video interview: the
+    // offer follows that interview, with no recording.
+    voiceStatus === VOICE_SKIPPED
+  );
 }
 
 /** The advertised pay for a role, so the form can prefill and warn. */

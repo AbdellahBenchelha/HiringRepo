@@ -41,9 +41,16 @@ export const VOICE_STATUSES = [
   "Voice Recording Received",
   "Voice Assessment Passed",
   "Voice Assessment Failed",
+  // ID verified, no recording, told they are verified and to wait for a
+  // place: the final video interview takes the recording's place. See
+  // lib/verifiedAck.
+  "Voice Skipped — Final Video Interview",
 ] as const;
 
 export type VoiceStatus = (typeof VOICE_STATUSES)[number];
+
+/** Voice not sent; the final video interview stands in for it. */
+export const VOICE_SKIPPED: VoiceStatus = "Voice Skipped — Final Video Interview";
 
 /**
  * Statuses that mean the interview stage is behind this candidate.

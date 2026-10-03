@@ -18,7 +18,7 @@ import { sendVoiceReminderEmail } from "@/lib/candidateEmails";
 export const runtime = "nodejs";
 
 /** Refusals that are about the candidate, not about the mail server. */
-const CONFLICT = new Set(["not_requested", "already_received"]);
+const CONFLICT = new Set(["not_requested", "already_received", "voice_skipped"]);
 
 function baseUrl(req: NextRequest): string {
   if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, "");

@@ -16,6 +16,7 @@ import { writeFileAtomic } from "@/lib/atomicWrite";
 import {
   BEFORE_REVIEW,
   CANDIDATE_STATUSES,
+  VOICE_SKIPPED,
   VOICE_STATUSES,
   type CandidateStatus,
   type VoiceStatus,
@@ -387,6 +388,13 @@ export interface Candidate {
   voiceAckSentAt?: string;
   voiceAckCount?: number;
   voiceAcks?: string[];
+  /**
+   * "Your information is verified — we will be in touch about a place", for
+   * a verified candidate with no voice recording. Every send kept, like the
+   * recording receipt. See lib/verifiedAck.
+   */
+  verifiedAckSentAt?: string;
+  verifiedAcks?: string[];
   voiceReminderSentAt?: string;
   voiceReminderCount?: number;
   /**
@@ -967,6 +975,24 @@ export function recordVoiceAck(id: string): Promise<Candidate | null> {
     c.voiceAcks = [...(c.voiceAcks ?? []), now];
     c.voiceAckSentAt = now;
     c.voiceAckCount = c.voiceAcks.length;
+    if (BEFORE_REVIEW.includes(c.status)) c.status = "Under Review";
+    return { list, result: c };
+  });
+}
+
+/**
+ * The "your information is verified" email went out. Moves them on exactly as
+ * the email says: Under Review, the voice step skipped for the final video
+ * interview (no more voice reminders; an offer may follow), and onto Waiting.
+ */
+export function recordVerifiedAck(id: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    const now = new Date().toISOString();
+    c.verifiedAcks = [...(c.verifiedAcks ?? []), now];
+    c.verifiedAckSentAt = now;
+    c.voiceStatus = VOICE_SKIPPED;
     if (BEFORE_REVIEW.includes(c.status)) c.status = "Under Review";
     return { list, result: c };
   });

@@ -10,6 +10,7 @@
  * now land on the candidate's own record, so both of those stop being jobs
  * anybody does.
  */
+import { VOICE_SKIPPED } from "@/lib/candidateStatus";
 import { currentDocument, type CandidateDocument } from "@/lib/documents";
 import type { VoiceStatus } from "@/lib/candidateStatus";
 
@@ -36,6 +37,8 @@ export interface VoiceInput {
   documents?: CandidateDocument[];
   /** When a recruiter last asked for a recording. Absent = never asked. */
   voiceRequestedAt?: string;
+  /** Skipped for the final video interview: nothing is owed. */
+  voiceStatus?: string;
 }
 
 /** The recording under review, or null. Superseded ones are history. */
@@ -63,6 +66,9 @@ export function currentVoiceRecording(
 export function voiceRecordingNeeded(c: VoiceInput): boolean {
   const asked = c.voiceRequestedAt;
   if (!asked) return false;
+  // Told they are verified and to wait for the final video interview: no
+  // more reminders for a recording they chose not to send.
+  if (c.voiceStatus === VOICE_SKIPPED) return false;
   const newest = (c.documents ?? [])
     .filter((d) => d.kind === "voice" && !!d.key)
     .map((d) => d.uploadedAt)
@@ -102,6 +108,7 @@ export const VOICE_FILTERS: { value: VoiceFilter; label: string }[] = [
   { value: "Voice Recording Received", label: "Recording received" },
   { value: "Voice Assessment Passed", label: "Passed" },
   { value: "Voice Assessment Failed", label: "Failed" },
+  { value: "Voice Skipped — Final Video Interview", label: "Skipped — final video interview" },
 ];
 
 export interface VoiceFilterInput {

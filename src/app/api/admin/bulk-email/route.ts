@@ -146,6 +146,9 @@ export async function POST(req: NextRequest) {
       chatStarted:
         action === "chatReminder" && c.chatLinkSentAt ? !!(await sessionForLink(id, c.chatLinkSentAt)) : undefined,
       chatRemindedAt: lastNudgeAt(c.liveReminders),
+      verifiedAt: c.verifiedAt,
+      status: c.status,
+      verifiedAckSentAt: c.verifiedAckSentAt,
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });

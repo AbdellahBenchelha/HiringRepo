@@ -1,3 +1,4 @@
+import { VOICE_SKIPPED } from "@/lib/candidateStatus";
 import {
   getCandidate,
   claimInterviewEmail,
@@ -6,6 +7,7 @@ import {
   recordVoiceRequest,
   recordVoiceReminder,
   recordVoiceAck,
+  recordVerifiedAck,
   recordOfferReminder,
   recordOffer,
 } from "@/lib/store";
@@ -24,6 +26,9 @@ import {
   voiceReminderSubject,
   voiceReminderText,
   voiceAckHtml,
+  verifiedAckHtml,
+  verifiedAckSubject,
+  verifiedAckText,
   voiceAckSubject,
   voiceAckText,
   offerReminderHtml,
@@ -35,6 +40,7 @@ import {
 } from "@/lib/emailTemplates";
 import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
 import { ackRefusal } from "@/lib/voiceAck";
+import { verifiedAckRefusal } from "@/lib/verifiedAck";
 import { deadlineFrom, formatDeadline, offerAwaitingReply } from "@/lib/offerReminder";
 import {
   effectiveOffer,
@@ -393,6 +399,47 @@ export async function sendVoiceAckEmail(id: string, opts: SendOpts = {}): Promis
 }
 
 /**
+ * "Your information is verified — we will be in touch about a place", for a
+ * verified candidate with no voice recording. Recorded only once the message
+ * is away; the record skips the voice step, moves them to Under Review and
+ * onto the Waiting tab. See lib/verifiedAck.
+ */
+export async function sendVerifiedAckEmail(id: string, opts: SendOpts = {}): Promise<SendOutcome> {
+  const candidate = await getCandidate(id);
+  if (!candidate) return { ok: false, reason: "not_found" };
+
+  const refusal = verifiedAckRefusal(candidate);
+  if (refusal) return { ok: false, reason: refusal };
+
+  const email = (candidate.email || "").trim();
+  if (!email.includes("@")) return { ok: false, reason: "no_email" };
+
+  const payload = { fullName: candidate.fullName || "Candidate", position: candidate.position || undefined };
+  const result = await sendEmail({
+    to: email,
+    toName: candidate.fullName || undefined,
+    subject: verifiedAckSubject(),
+    html: verifiedAckHtml(payload),
+    text: verifiedAckText(payload),
+    replyTo: siteConfig.contact.recruitmentEmail,
+    kind: "campaign",
+    override: opts.override,
+  });
+
+  if (!result.ok) {
+    const reason = "skipped" in result ? result.skipped : result.error;
+    // eslint-disable-next-line no-console
+    console.warn(`[verified-ack] not sent to ${email}: ${reason}`);
+    return { ok: false, reason };
+  }
+
+  const updated = await recordVerifiedAck(id);
+  // eslint-disable-next-line no-console
+  console.log(`[verified-ack] sent to ${email}; status now ${updated?.status}, voice ${updated?.voiceStatus}`);
+  return { ok: true };
+}
+
+/**
  * Ask for the voice assessment: the script, the instructions and their link.
  *
  * The request is recorded first and kept even when the email fails. That
@@ -473,6 +520,7 @@ export async function sendVoiceReminderEmail(
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
   if (!candidate.voiceRequestedAt) return { ok: false, reason: "not_requested" };
+  if (candidate.voiceStatus === VOICE_SKIPPED) return { ok: false, reason: "voice_skipped" };
   if (!voiceRecordingNeeded(candidate)) return { ok: false, reason: "already_received" };
 
   const email = (candidate.email || "").trim();

@@ -2819,6 +2819,182 @@ export function voiceAckHtml(invite: VoiceAckEmail): string {
 </html>`;
 }
 
+/* -------------------------------------------------------------------------- */
+/* "Your information is verified" — no voice recording                         */
+/* -------------------------------------------------------------------------- */
+
+export interface VerifiedAckEmail {
+  fullName: string;
+  position?: string;
+}
+
+/**
+ * For a candidate whose identity is verified and who has not sent the voice
+ * assessment. It confirms the application is complete, says what happens next
+ * — a final video interview when a place opens — and that their place is kept
+ * while they wait. It does not mention the recording, and it asks for nothing.
+ */
+export function verifiedAckSubject(): string {
+  return "Your information is verified — we'll be in touch";
+}
+
+export function verifiedAckText(e: VerifiedAckEmail): string {
+  const name = firstNameOf(e.fullName);
+  return [
+    `Hi ${name},`,
+    ``,
+    `Thank you for completing every step of your application${e.position ? ` for the ${e.position} role` : ""}.`,
+    `We are pleased to confirm that your identity documents have been verified and`,
+    `your profile is now complete.`,
+    ``,
+    `WHAT HAPPENS NEXT`,
+    `- Your application is with our recruitment team and stays active. There is`,
+    `  nothing more you need to do right now.`,
+    `- New places open as our clients grow their customer support teams. When a`,
+    `  place that suits your profile becomes available, we will invite you to a`,
+    `  final video interview.`,
+    `- We will write to you at this email address, so please keep an eye on your`,
+    `  inbox — and your spam folder, just in case.`,
+    ``,
+    `We know waiting is not always easy, and we truly appreciate your patience.`,
+    `Your place is kept while you wait — nothing is lost.`,
+    ``,
+    `If your contact details or availability change in the meantime, simply reply`,
+    `to this email and let us know.`,
+    ``,
+    `We will never ask you for a payment of any kind, your bank card details or a password.`,
+    ``,
+    `Kind regards,`,
+    `${siteConfig.company.name} Recruitment Team`,
+    siteConfig.contact.recruitmentEmail,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function verifiedAckHtml(e: VerifiedAckEmail): string {
+  const name = esc(firstNameOf(e.fullName));
+  const company = esc(siteConfig.company.name);
+  const role = e.position ? ` for the <strong style="color:${NAVY};">${esc(e.position)}</strong> role` : "";
+
+  const step = (text: string) => `
+    <tr>
+      <td width="26" valign="top" style="padding:0 0 12px 0;">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:9px;background:${AMBER};color:${NAVY};font:700 12px/18px Arial,Helvetica,sans-serif;text-align:center;">&#10003;</span>
+      </td>
+      <td valign="top" style="padding:0 0 12px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">${text}</td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(verifiedAckSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your profile is complete and your place is kept — here is what happens next.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <p style="margin:0 0 14px 0;">
+          <span style="display:inline-block;padding:6px 12px;border-radius:999px;background:#e8f7ee;color:#166534;font:700 12px/1 Arial,Helvetica,sans-serif;letter-spacing:0.5px;">
+            &#10003;&nbsp; Verified
+          </span>
+        </p>
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Your application is complete
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Thank you for completing every step of your application${role}. We are pleased to
+          confirm that your <strong style="color:${NAVY};">identity documents have been verified</strong>
+          and your profile is now complete.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:20px 22px 8px 22px;">
+              <p style="margin:0 0 14px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                What happens next
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${step("Your application is with our recruitment team and <strong style=\"color:" + NAVY + ";\">stays active</strong>. There is nothing more you need to do right now.")}
+                ${step("New places open as our clients grow their customer support teams. When a place that suits your profile becomes available, we will invite you to a <strong style=\"color:" + NAVY + ";\">final video interview</strong>.")}
+                ${step("We will write to you at this email address, so please keep an eye on your inbox &mdash; and your spam folder, just in case.")}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          We know waiting is not always easy, and we truly appreciate your patience.
+          <strong style="color:${NAVY};">Your place is kept while you wait</strong> &mdash; nothing is lost.
+        </p>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          If your contact details or availability change in the meantime, simply reply to this
+          email and let us know.
+        </p>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Kind regards,<br>
+          <strong style="color:${NAVY};">${company} Recruitment Team</strong>
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
+          <tr>
+            <td style="padding:16px 20px;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+              <strong style="color:${NAVY};">We will never ask you for</strong> a payment of any kind,
+              your bank card details or a password.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export interface OfferReminderEmail {
   fullName: string;
   position?: string;

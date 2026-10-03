@@ -14,11 +14,13 @@
  */
 import { currentVoiceRecording, voiceRecordingNeeded } from "@/lib/voice";
 import { ackRefusal } from "@/lib/voiceAck";
+import { VOICE_SKIPPED } from "@/lib/candidateStatus";
+import { VERIFIED_ACK_REFUSAL, verifiedAckRefusal } from "@/lib/verifiedAck";
 import { canOffer, type Offer } from "@/lib/offer";
 import type { CandidateDocument } from "@/lib/documents";
 
 export const BULK_ACTIONS = [
-  "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer", "chatReminder",
+  "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer", "chatReminder", "verifiedAck",
 ] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
@@ -31,11 +33,12 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   offerReminder: "Remind to answer",
   offer: "Send offers",
   chatReminder: "Remind to start chat",
+  verifiedAck: "Tell them they’re verified",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
 export const CANDIDATE_ACTIONS: readonly BulkAction[] = ["assessment", "reminder"];
-export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder", "voiceAck"];
+export const INTERVIEW_ACTIONS: readonly BulkAction[] = ["voice", "voiceReminder", "voiceAck", "verifiedAck"];
 export const OFFER_ACTIONS: readonly BulkAction[] = ["offerReminder"];
 /**
  * Favorites cut across every stage, but they are starred to be hired: the tab
@@ -121,6 +124,10 @@ export interface BulkCandidate {
   chatLinkSentAt?: string;
   chatStarted?: boolean;
   chatRemindedAt?: string;
+  /** For "your information is verified": ID verified, status, and whether it went before. */
+  verifiedAt?: string;
+  status?: string;
+  verifiedAckSentAt?: string;
 }
 
 export type Eligibility =
@@ -140,6 +147,20 @@ export type Eligibility =
 export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
   if (!c.email || !c.email.includes("@")) {
     return { include: false, reason: "no email address" };
+  }
+
+  // "Your information is verified — we will be in touch about a place."
+  // Refused wherever it would be wrong; see lib/verifiedAck.
+  if (action === "verifiedAck") {
+    const refusal = verifiedAckRefusal({
+      documents: c.documents,
+      verifiedAt: c.verifiedAt,
+      offerSentAt: c.offerSentAt,
+      status: c.status,
+      voiceStatus: c.voiceStatus,
+    });
+    if (refusal) return { include: false, reason: VERIFIED_ACK_REFUSAL[refusal] ?? refusal };
+    return c.verifiedAckSentAt ? { include: true, warn: "already told — this tells them again" } : { include: true };
   }
 
   // "You haven't started your final interview chat yet." Refused for anybody
@@ -214,6 +235,9 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
     }
     if (!c.voiceRequestedAt) {
       return { include: false, reason: "has not been asked for a recording yet" };
+    }
+    if (c.voiceStatus === VOICE_SKIPPED) {
+      return { include: false, reason: "told they are verified — waiting for the final video interview" };
     }
     if (!voiceRecordingNeeded(c)) {
       return { include: false, reason: "has already sent their recording" };

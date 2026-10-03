@@ -53,6 +53,7 @@ const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCi
   offerReminder: "clock",
   offer: "handshake",
   chatReminder: "clock",
+  verifiedAck: "checkCircle",
 };
 
 export function useBulkEmail(
@@ -149,6 +150,9 @@ export function useBulkEmail(
         chatLinkSentAt: c.chatLinkSentAt,
         chatStarted: c.chatStarted,
         chatRemindedAt: c.chatRemindedAt,
+        verifiedAt: c.verifiedAt,
+        status: c.status,
+        verifiedAckSentAt: c.verifiedAckSentAt,
       });
       const name = c.fullName || c.email || c.id;
       if (!verdict.include) skip.push({ name, reason: verdict.reason });

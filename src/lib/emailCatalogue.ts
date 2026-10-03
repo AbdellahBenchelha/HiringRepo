@@ -67,6 +67,9 @@ import {
   verificationRequestSubject,
   verificationRequestText,
   voiceAckHtml,
+  verifiedAckHtml,
+  verifiedAckSubject,
+  verifiedAckText,
   voiceAckSubject,
   voiceAckText,
   voiceAssessmentHtml,
@@ -261,6 +264,19 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         html: voiceAckHtml(invite),
         text: voiceAckText(invite),
       };
+    },
+  },
+  {
+    id: "verified-ack",
+    name: "Information verified — waiting for a place",
+    stage: "voice",
+    when:
+      "Sent with “Tell them they’re verified” (View info → Assessment, or in bulk from the Interviews tab) to a candidate whose ID is verified and who has not sent a voice recording. Their voice step becomes “Skipped — final video interview” and they appear in the Waiting tab.",
+    kind: "campaign",
+    source: "verifiedAckHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME, position: SAMPLE_POSITION };
+      return { subject: verifiedAckSubject(), html: verifiedAckHtml(payload), text: verifiedAckText(payload) };
     },
   },
 

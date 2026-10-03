@@ -6,6 +6,7 @@ import {
   sendVoiceAckEmail,
   sendOfferReminderEmail,
   sendOfferEmail,
+  sendVerifiedAckEmail,
 } from "@/lib/candidateEmails";
 import { markItem, readBatch, setHeldUntil, setNextAt } from "@/lib/bulkEmailStore";
 import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
@@ -57,6 +58,8 @@ async function sendOne(batch: BatchState, id: string) {
       return sendVoiceAckEmail(id, opts);
     case "offerReminder":
       return sendOfferReminderEmail(id, baseUrl(), opts);
+    case "verifiedAck":
+      return sendVerifiedAckEmail(id, opts);
     case "chatReminder":
       // The same send as the button in View info, re-checked per person: a
       // candidate who starts the chat while the batch waits is not reminded.
