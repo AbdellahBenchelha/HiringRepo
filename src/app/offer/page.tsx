@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { readOfferToken, OFFER_LINK_TTL_DAYS } from "@/lib/token";
+import { readOfferToken } from "@/lib/token";
 import { getCandidate } from "@/lib/store";
 import { effectiveOffer, formatRate } from "@/lib/offer";
 import {
@@ -54,14 +54,7 @@ export default async function OfferPage({
 
   const read = readOfferToken(token);
   if (!read.ok) {
-    return read.reason === "expired" ? (
-      <Shell>
-        <Notice
-          title="This link has expired"
-          body={`Offer links stay valid for ${OFFER_LINK_TTL_DAYS} days. Contact our recruitment team and we will send you a fresh one straight away.`}
-        />
-      </Shell>
-    ) : (
+    return (
       <Shell>
         <Notice
           title="This link is not valid"

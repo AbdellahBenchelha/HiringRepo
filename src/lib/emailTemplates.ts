@@ -27,7 +27,6 @@ import {
   LIVE_REASON_SUBJECT,
   type LiveVerificationReason,
 } from "@/lib/liveVerification";
-import { OFFER_LINK_TTL_DAYS } from "@/lib/token";
 
 const NAVY = "#0f1035";
 const AMBER = "#f5a623";
@@ -3503,7 +3502,7 @@ export function offerText(o: OfferEmail): string {
           ``,
           o.acceptUrl,
           ``,
-          `This link is personal to you and remains valid for ${OFFER_LINK_TTL_DAYS} days.`,
+          `This link is personal to you.`,
           ``,
           ...(o.declineUrl
             ? [
@@ -3624,7 +3623,7 @@ export function offerHtml(o: OfferEmail): string {
         </table>
 
         <p style="margin:0 0 6px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
-          This link is personal to you and remains valid for ${OFFER_LINK_TTL_DAYS} days.
+          This link is personal to you.
         </p>
         ${
           o.declineUrl

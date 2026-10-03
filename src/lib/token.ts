@@ -67,20 +67,22 @@ export interface OfferLink {
   offerSentAt: string;
 }
 
-/** How long an acceptance link stays usable. */
-export const OFFER_LINK_TTL_DAYS = 14;
-
 export function createOfferToken(link: OfferLink): string {
   const body = b64url(Buffer.from(JSON.stringify({ i: link.id, s: link.offerSentAt })));
   return `${body}.${sign(body)}`;
 }
 
+/**
+ * No expiry. The same link is reused by every email that follows the offer —
+ * the ID check, its reminders, proof of residence — so a limit counted from
+ * the offer date made a residence email sent today open on "expired". A link
+ * still stops working when a new offer is sent (offerSentAt changes), which
+ * the offer page checks.
+ */
 export type OfferTokenResult =
   | { ok: true; link: OfferLink }
   /** Missing, malformed, or the signature does not match. */
-  | { ok: false; reason: "invalid" }
-  /** Signed correctly, but issued more than OFFER_LINK_TTL_DAYS ago. */
-  | { ok: false; reason: "expired" };
+  | { ok: false; reason: "invalid" };
 
 export function readOfferToken(token: string | undefined | null): OfferTokenResult {
   if (!token || !token.includes(".")) return { ok: false, reason: "invalid" };
@@ -97,13 +99,7 @@ export function readOfferToken(token: string | undefined | null): OfferTokenResu
     if (typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
     if (typeof obj.s !== "string" || !obj.s) return { ok: false, reason: "invalid" };
 
-    const sentAt = Date.parse(obj.s);
-    if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
-    // Expiry is read from the signed payload, so it cannot be extended by
-    // editing the URL — a tampered timestamp fails the signature check above.
-    if (Date.now() - sentAt > OFFER_LINK_TTL_DAYS * 24 * 60 * 60 * 1000) {
-      return { ok: false, reason: "expired" };
-    }
+    if (Number.isNaN(Date.parse(obj.s))) return { ok: false, reason: "invalid" };
     return { ok: true, link: { id: obj.i, offerSentAt: obj.s } };
   } catch {
     return { ok: false, reason: "invalid" };

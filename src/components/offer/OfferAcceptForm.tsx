@@ -604,8 +604,6 @@ function messageFor(error?: string): string {
       return "This offer has already been answered. If that was not you, please contact our recruitment team.";
     case "superseded":
       return "This link belongs to an earlier version of your offer. Please use the link in the most recent email we sent you.";
-    case "expired":
-      return "This link has expired. Please contact our recruitment team and we will send you a new one.";
     case "invalid":
       return "This link is not valid. Please use the link exactly as it appears in your offer email.";
     case "no_offer":
