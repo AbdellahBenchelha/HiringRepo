@@ -12,6 +12,11 @@ import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
+import {
+  HideCountryPicker,
+  HiddenCountryChips,
+  useHiddenCountries,
+} from "@/components/admin/HiddenCountries";
 import { useBulkCompanyCheck } from "@/components/admin/BulkCompanyCheck";
 import { useBulkEmail } from "@/components/admin/BulkEmailBar";
 import { ACCEPTED_ACTIONS } from "@/lib/bulkEmail";
@@ -34,6 +39,9 @@ import type { CandidateView } from "@/lib/candidateView";
  * behind it, and that is exactly the data you cannot write an agreement from.
  */
 
+/** This tab's own hidden list — see HiddenCountries for why it is per tab. */
+const HIDDEN_COUNTRIES_KEY = "wr.accepted.hiddenCountries";
+
 function fmt(iso?: string) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("en-GB", {
@@ -51,6 +59,7 @@ function fmtDate(iso?: string) {
 export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
+  const hiddenCountries = useHiddenCountries(HIDDEN_COUNTRIES_KEY);
   // Replaces the old "Details confirmed" filter: the question asked of this
   // list now is whether somebody is Full verified.
   const [verified, setVerified] = useState<"all" | "yes" | "no">("all");
@@ -89,9 +98,16 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
     [rows],
   );
 
+  function hideCountry(name: string) {
+    if (!name) return;
+    hiddenCountries.hide(name);
+    setCountry((prev) => (prev === name ? "all" : prev));
+  }
+
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
     return live.filter((c) => {
+      if (hiddenCountries.isHidden(c.country)) return false;
       if (q && ![c.fullName, c.email, c.phone, c.country, c.city, c.position].some((v) =>
         (v || "").toLowerCase().includes(q),
       )) return false;
@@ -107,7 +123,13 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       if (chatSent === "notStarted" && (!c.chatLinkSentAt || c.chatStarted)) return false;
       return true;
     });
-  }, [live, search, country, verified, engagedAs, gstin, chatSent]);
+  }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent]);
+
+  /** How many rows the hidden countries are keeping off the table. */
+  const hiddenCount = useMemo(
+    () => live.filter((c) => hiddenCountries.isHidden(c.country)).length,
+    [live, hiddenCountries],
+  );
 
   const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
   const current = Math.min(page, pageCount);
@@ -171,7 +193,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, verified, engagedAs, gstin, chatSent, pageSize]);
+  }, [search, country, hiddenCountries.hidden, verified, engagedAs, gstin, chatSent, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -194,7 +216,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   return (
     <>
       <div ref={tableTop} className="card mb-5 p-4 sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           <label className="block">
             <span className="label">Search</span>
             <input
@@ -267,12 +289,29 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
             <span className="label">Country</span>
             <select id="country" className="select" value={country} onChange={(e) => setCountry(e.target.value)}>
               <option value="all">All countries</option>
-              {countries.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {countries
+                .filter((c) => !hiddenCountries.isHidden(c))
+                .map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
             </select>
           </label>
+
+          <HideCountryPicker
+            countries={countries}
+            hidden={hiddenCountries.hidden}
+            onHide={hideCountry}
+          />
         </div>
+
+        <HiddenCountryChips
+          hidden={hiddenCountries.hidden}
+          count={hiddenCount}
+          noun="person"
+          plural="people"
+          onShow={hiddenCountries.show}
+          onShowAll={hiddenCountries.showAll}
+        />
 
         {shown.length !== rows.length ? (
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-navy-100 pt-3">

@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
  * the browser rather than on the record — it is one recruiter's view of a
  * table, not a fact about the candidates, and nobody is rejected by it.
  *
- * Shared by the Candidates and Interviews tabs, which keep their own lists
+ * Shared by the Candidates, Interviews, Offers, Waiting and Accepted tabs, which keep their own lists
  * under their own keys. The same countries are rarely wanted on both: one tab
  * is about who has applied, the other about who is being taken through the
  * steps after an interview.
