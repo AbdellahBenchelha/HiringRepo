@@ -1800,7 +1800,7 @@ export function submissionReceivedText({ fullName }: SubmissionReceivedEmail): s
     `Thank you — we have successfully received the information you submitted,`,
     `and it is now with our team for review.`,
     ``,
-    `Verification usually takes 1–3 business days to complete.`,
+    `Verification usually takes 3–5 business days to complete.`,
     ``,
     `What happens next`,
     ``,
@@ -1832,7 +1832,7 @@ export function submissionReceivedHtml({ fullName }: SubmissionReceivedEmail): s
 </head>
 <body style="margin:0;padding:0;background:${CREAM};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-  Your information is under review — usually 1–3 business days.
+  Your information is under review — usually 3–5 business days.
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
@@ -1870,7 +1870,7 @@ export function submissionReceivedHtml({ fullName }: SubmissionReceivedEmail): s
           <tr>
             <td style="padding:18px 22px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
               Verification usually takes
-              <strong style="color:${NAVY};">1&ndash;3 business days</strong> to complete.
+              <strong style="color:${NAVY};">3&ndash;5 business days</strong> to complete.
             </td>
           </tr>
         </table>

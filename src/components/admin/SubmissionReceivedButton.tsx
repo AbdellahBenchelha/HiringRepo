@@ -185,7 +185,7 @@ export function SubmissionReceivedButton({
               </>
             ) : null}
             , confirming we have received the information they submitted, that it is under review,
-            and that verification usually takes 1&ndash;3 business days. It tells them they will
+            and that verification usually takes 3&ndash;5 business days. It tells them they will
             get another email once it is verified.
           </>
         }
