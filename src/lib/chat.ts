@@ -201,7 +201,13 @@ export const MAX_QUESTIONS = 40;
 export const MAX_QUESTION = 500;
 export const MAX_HOURS_TEXT = 160;
 
-export const DEFAULT_HOURS = "We reply Monday–Friday, 9:00–01:00 UK time";
+export const DEFAULT_HOURS = "We reply every day, 9:00–01:00 UK time";
+
+/**
+ * Hours lines that were once the default. A settings file saved with one of
+ * these still holding was never really chosen, so it follows the new default.
+ */
+export const OLD_DEFAULT_HOURS = ["We reply Monday–Friday, 9:00–01:00 UK time"];
 
 /** A starting set for a remote customer-support final interview. Editable in Settings. */
 export const DEFAULT_QUESTIONS: string[] = [

@@ -32,6 +32,7 @@ import {
   DEFAULT_HOURS,
   DEFAULT_QUESTIONS,
   MAX_MESSAGES,
+  OLD_DEFAULT_HOURS,
   chatStatus,
   isChatSession,
   isSessionId,
@@ -608,7 +609,7 @@ export async function getChatSettings(): Promise<ChatSettings & { isDefault: boo
     const s = JSON.parse(raw) as Partial<ChatSettings>;
     return {
       questions: Array.isArray(s.questions) ? s.questions.filter((q): q is string => typeof q === "string") : DEFAULT_QUESTIONS,
-      hours: typeof s.hours === "string" ? s.hours : DEFAULT_HOURS,
+      hours: typeof s.hours === "string" && !OLD_DEFAULT_HOURS.includes(s.hours) ? s.hours : DEFAULT_HOURS,
       updatedAt: typeof s.updatedAt === "string" ? s.updatedAt : undefined,
       isDefault: false,
     };
