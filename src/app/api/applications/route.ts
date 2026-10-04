@@ -18,6 +18,8 @@ import {
 import { siteConfig } from "@/config/site";
 import { withSource } from "@/lib/followUp";
 import { manualInviteApplies, manualInviteCountries } from "@/lib/manualInviteStore";
+import { emailAddressProblem } from "@/lib/emailCheck";
+import { allowExampleEmails } from "@/lib/emailMx";
 
 /**
  * Saves the full application for the Admin Panel when a candidate submits the
@@ -71,6 +73,12 @@ export async function POST(req: NextRequest) {
   const application = body.application && typeof body.application === "object" ? body.application : {};
   if (!id) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
+  }
+
+  // The form refuses these on step one; this is for anything that skipped it.
+  const problem = emailAddressProblem(str(application.email), { allowExample: allowExampleEmails() });
+  if (problem) {
+    return NextResponse.json({ ok: false, error: "bad_email", problem }, { status: 400 });
   }
 
   try {

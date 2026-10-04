@@ -17,6 +17,7 @@
 import { siteConfig } from "@/config/site";
 import type { EmailKind } from "@/lib/warmup";
 import { currentAllowance, recordOverride, recordSend } from "@/lib/warmupStore";
+import { emailAddressProblem } from "@/lib/emailCheck";
 
 export type EmailResult =
   | { ok: true }
@@ -80,6 +81,11 @@ export async function sendEmail(opts: {
   if (!rawToken || !from) return { ok: false, skipped: "not_configured" };
   const { token, hadPrefix } = normaliseToken(rawToken);
   if (!opts.to || !opts.to.includes("@")) return { ok: false, error: "invalid_recipient" };
+  // The last line against a bounce: a test or throwaway address that got in
+  // before the application form checked for them, or was typed in by hand.
+  if (emailAddressProblem(opts.to, { allowExample: process.env.EMAIL_ALLOW_EXAMPLE_DOMAINS === "1" })) {
+    return { ok: false, error: "fake_recipient" };
+  }
 
   // Checked after the cheap rejections above, so a malformed address never
   // spends part of the day's allowance, and before the network call, so a

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findDuplicates } from "@/lib/store";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
+import { applicantEmailProblem } from "@/lib/emailMx";
 
 /**
  * Duplicate check run when the applicant finishes Personal Information.
@@ -11,7 +12,9 @@ import { readJsonBody, badBodyResponse } from "@/lib/http";
  * answer a question. The form awaits this one before letting the applicant
  * continue.
  *
- * Two outcomes matter to the caller:
+ * Three outcomes matter to the caller:
+ *   emailProblem — a test, throwaway or undeliverable address; the applicant
+ *                is stopped here and asked for a real one.
  *   emailTaken — the applicant is stopped here; one application per person.
  *   flagged    — the phone matches an earlier application. The applicant
  *                continues normally and notices nothing; the assessment email
@@ -33,6 +36,13 @@ export async function POST(req: NextRequest) {
   const id = typeof parsed.data.id === "string" ? parsed.data.id : "";
   const email = typeof parsed.data.email === "string" ? parsed.data.email : "";
   const phone = typeof parsed.data.phone === "string" ? parsed.data.phone : "";
+
+  // Asked first, and apart from the duplicate check: a fake address is the
+  // applicant's to fix, and it needs no storage to answer.
+  const emailProblem = email ? await applicantEmailProblem(email).catch(() => null) : null;
+  if (emailProblem) {
+    return NextResponse.json({ ok: true, emailProblem, emailTaken: false, flagged: false, resumeId: null });
+  }
 
   try {
     const { emailTaken, phoneMatch, resumeId } = await findDuplicates(email, phone, id);

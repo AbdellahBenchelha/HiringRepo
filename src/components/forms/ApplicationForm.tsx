@@ -6,6 +6,7 @@ import { siteConfig } from "@/config/site";
 import type { DocumentKind } from "@/lib/documents";
 import { jobs } from "@/config/jobs";
 import { isValidEmail, isValidPhone, isValidUrl } from "@/lib/validation";
+import { EMAIL_PROBLEM_MESSAGE, emailAddressProblem, type EmailProblem } from "@/lib/emailCheck";
 import { notifyTelegram } from "@/lib/notify";
 import { detectCountry } from "@/lib/geo";
 import { newId } from "@/lib/id";
@@ -424,6 +425,12 @@ export function ApplicationForm({
         if (!dob.trim()) e.dob = "Date of birth is required.";
         if (!email.trim()) e.email = "Email address is required.";
         else if (!isValidEmail(email)) e.email = "Please enter a valid email address.";
+        else {
+          // Test and throwaway addresses, said while they are still on this
+          // step. Whether the domain receives mail is asked of the server below.
+          const problem = emailAddressProblem(email);
+          if (problem) e.email = EMAIL_PROBLEM_MESSAGE[problem];
+        }
         if (!phone.trim()) e.phone = "Phone number is required.";
         else if (!isValidPhone(phone)) e.phone = "Please enter a valid phone number with country code.";
         if (!country.trim()) e.country = "Country is required.";
@@ -486,6 +493,7 @@ export function ApplicationForm({
           body: JSON.stringify({ id: candidateIdRef.current, email, phone }),
         });
         const data = (await res.json()) as {
+          emailProblem?: EmailProblem | null;
           emailTaken?: boolean;
           flagged?: boolean;
           matchedId?: string | null;
@@ -497,6 +505,16 @@ export function ApplicationForm({
         // restart updates that record rather than leaving a second one behind.
         // Done before the Telegram notification so the interview link in the
         // message points at the record that actually exists.
+        // An address nothing can be delivered to. Stopped before step one is
+        // recorded, so no record and no notification exist for it.
+        if (data.emailProblem && EMAIL_PROBLEM_MESSAGE[data.emailProblem]) {
+          setChecking(false);
+          setErrors({ email: EMAIL_PROBLEM_MESSAGE[data.emailProblem] });
+          setStepError("Please check your email address before continuing.");
+          scrollToTop();
+          return;
+        }
+
         if (data.resumeId) candidateIdRef.current = data.resumeId;
 
         if (data.emailTaken) {
