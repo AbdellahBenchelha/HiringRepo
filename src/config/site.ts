@@ -172,7 +172,6 @@ export const siteConfig = {
   jobValidityDays: 90,
 
   social: [
-    { label: "LinkedIn", href: "https://www.linkedin.com/company/workroute-services-private-limited/", icon: "linkedin" },
     { label: "Facebook", href: "https://www.facebook.com/WorkRouteService/", icon: "facebook" },
   ],
 
