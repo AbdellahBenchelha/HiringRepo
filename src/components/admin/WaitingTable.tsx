@@ -183,6 +183,7 @@ export function WaitingTable({ rows }: { rows: CandidateView[] }) {
    */
   const companyCheck = useBulkCompanyCheck(visible, (id, check) =>
     patch(id, { companyCheck: check }),
+    (c) => openProfile(c),
   );
 
   // Stepping through the list follows the same order the table shows, and

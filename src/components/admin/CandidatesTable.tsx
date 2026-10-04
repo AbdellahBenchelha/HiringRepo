@@ -284,6 +284,7 @@ export function CandidatesTable({
   // Scoped to `visible` — the current page — not to `sorted` or `rows`.
   const companyCheck = useBulkCompanyCheck(visible, (id, check) =>
     applyPatch(id, { companyCheck: check }),
+    openProfile,
   );
 
   /**

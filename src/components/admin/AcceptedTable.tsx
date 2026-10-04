@@ -183,6 +183,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   // Scoped to the current page, not to everyone the filters left.
   const companyCheck = useBulkCompanyCheck(visible, (id, check) =>
     patch(id, { companyCheck: check }),
+    openProfile,
   );
 
   // A document reader belongs to the candidate it was opened from, so stepping

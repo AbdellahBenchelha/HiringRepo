@@ -64,6 +64,8 @@ export function useBulkCompanyCheck(
   candidates: CandidateView[],
   /** Reported per row so the table's own copy stays in step. */
   onResult: (id: string, check: CompanyCheck) => void,
+  /** Opens View info for a candidate named in the results. */
+  onOpen?: (candidate: CandidateView) => void,
 ): { control: React.ReactNode; panel: React.ReactNode } {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [done, setDone] = useState(0);
@@ -188,7 +190,7 @@ export function useBulkCompanyCheck(
             {fatal}
           </p>
         ) : (
-          <Results groups={groups} total={total} stopped={stopped} />
+          <Results groups={groups} total={total} stopped={stopped} onOpen={onOpen} />
         )}
       </div>
     ) : null;
@@ -245,7 +247,17 @@ function group(rows: Row[]): Groups {
   return out;
 }
 
-function Results({ groups, total, stopped }: { groups: Groups; total: number; stopped: boolean }) {
+function Results({
+  groups,
+  total,
+  stopped,
+  onOpen,
+}: {
+  groups: Groups;
+  total: number;
+  stopped: boolean;
+  onOpen?: (candidate: CandidateView) => void;
+}) {
   const { confirmed, nameOnly, none, failed, reasons, skipped, cached } = groups;
 
   return (
@@ -282,7 +294,7 @@ function Results({ groups, total, stopped }: { groups: Groups; total: number; st
           </p>
           <ul className="mt-2 space-y-2">
             {confirmed.map((r) => (
-              <PersonRow key={r.candidate.id} row={r} />
+              <PersonRow key={r.candidate.id} row={r} onOpen={onOpen} />
             ))}
           </ul>
         </div>
@@ -302,7 +314,7 @@ function Results({ groups, total, stopped }: { groups: Groups; total: number; st
           </p>
           <ul className="mt-2 space-y-2">
             {nameOnly.map((r) => (
-              <PersonRow key={r.candidate.id} row={r} />
+              <PersonRow key={r.candidate.id} row={r} onOpen={onOpen} />
             ))}
           </ul>
         </div>
@@ -318,35 +330,91 @@ function Results({ groups, total, stopped }: { groups: Groups; total: number; st
   );
 }
 
-function PersonRow({ row }: { row: Row }) {
+const REGISTER = "https://find-and-update.company-information.service.gov.uk";
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "llp-designated-member" → "LLP designated member", "director" → "Director". */
+function roleLabel(role: string): string {
+  const words = role.replace(/-/g, " ").trim();
+  const out = words.replace(/\bllp\b/gi, "LLP");
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
+/**
+ * One candidate and what the register holds under their name.
+ *
+ * Each officer profile gets its own block: the name exactly as Companies House
+ * writes it and a link to that person's page there, then every company under
+ * it with its own link. The candidate's name opens View info, so the person
+ * and the register can be read side by side.
+ */
+function PersonRow({ row, onOpen }: { row: Row; onOpen?: (candidate: CandidateView) => void }) {
   const matches = row.check?.matches ?? [];
   const active = matches.flatMap(activeAppointments);
   const all = matches.flatMap((m) => m.appointments);
+  const name = row.candidate.fullName || "Unnamed";
 
   return (
-    <li className="text-sm">
-      <span className="font-semibold text-navy-900">{row.candidate.fullName || "Unnamed"}</span>
-      <span className="ml-2 text-xs text-navy-400">
-        {active.length} active of {all.length} appointment{all.length === 1 ? "" : "s"}
-      </span>
-      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-        {all.map((a) => (
-          <a
-            key={`${row.candidate.id}-${a.companyNumber}-${a.appointedOn ?? ""}`}
-            href={`https://find-and-update.company-information.service.gov.uk/company/${a.companyNumber}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`text-xs underline ${
-              a.companyStatus === "active" && !a.resignedOn
-                ? "font-semibold text-brand-700"
-                : "text-navy-400"
-            }`}
-            title={`${a.companyNumber} · ${a.companyStatus}${a.resignedOn ? " · resigned" : ""}`}
+    <li className="rounded-lg border border-navy-100 bg-white p-3 text-sm" data-company-person={row.candidate.id}>
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        {onOpen ? (
+          <button
+            type="button"
+            onClick={() => onOpen(row.candidate)}
+            title="Open View info"
+            className="font-semibold text-navy-900 underline decoration-navy-300 underline-offset-2 transition hover:text-brand-700 hover:decoration-brand-400"
           >
-            {a.companyName}
-          </a>
-        ))}
-      </span>
+            {name}
+          </button>
+        ) : (
+          <span className="font-semibold text-navy-900">{name}</span>
+        )}
+        <span className="text-xs text-navy-400">
+          {active.length} active of {all.length} appointment{all.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {matches.map((m) => (
+        <div key={m.officerId} className="mt-2 border-l-2 border-navy-100 pl-3" data-company-profile={m.officerId}>
+          <p className="text-xs text-navy-600">
+            <span className="font-semibold text-navy-500">Profile:</span>{" "}
+            <span className="font-semibold text-navy-800">{m.officerName}</span>
+            {m.dob ? ` — born ${MONTHS[m.dob.month - 1] ?? ""} ${m.dob.year}` : ""}
+            {" · "}
+            <a
+              href={`${REGISTER}/officers/${encodeURIComponent(m.officerId)}/appointments`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand-700 underline"
+            >
+              Open profile ↗
+            </a>
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {m.appointments.map((a) => {
+              const current = a.companyStatus === "active" && !a.resignedOn;
+              return (
+                <li key={`${a.companyNumber}-${a.appointedOn ?? ""}-${a.role}`} className="text-xs">
+                  •{" "}
+                  <a
+                    href={`${REGISTER}/company/${encodeURIComponent(a.companyNumber)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`underline ${current ? "font-bold text-navy-900" : "text-navy-400"}`}
+                  >
+                    {a.companyName}
+                  </a>
+                  <span className={current ? "text-navy-600" : "text-navy-400"}>
+                    {" "}
+                    ({a.companyNumber}) · {a.companyStatus || "unknown"}
+                    {a.resignedOn ? " · resigned" : ""} · {roleLabel(a.role)} ↗
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </li>
   );
 }

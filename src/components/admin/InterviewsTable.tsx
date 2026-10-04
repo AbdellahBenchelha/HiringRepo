@@ -385,6 +385,7 @@ export function InterviewsTable({ rows }: { rows: InterviewRow[] }) {
   const companyCheck = useBulkCompanyCheck(
     useMemo(() => visible.map((r) => r.view), [visible]),
     (id, check) => patch(id, { companyCheck: check }),
+    openProfile,
   );
 
   // A document reader belongs to the candidate it was opened from, so stepping
