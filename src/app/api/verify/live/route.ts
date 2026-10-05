@@ -124,7 +124,10 @@ export async function POST(req: NextRequest) {
     // A *re-sent* check is a different link with a different token. Theirs is
     // no longer the current one, and handing it the new session would quietly
     // undo a decision to start again.
-    if (!candidate || candidate.liveVerificationSentAt !== token.link.sentAt) {
+    if (candidate?.liveVerificationPassedAt) {
+      // Already done. Reloading draws the "completed" page.
+      stale = true;
+    } else if (!candidate || candidate.liveVerificationSentAt !== token.link.sentAt) {
       stale = true;
     } else if (candidate.liveVerificationHeldAt) {
       // Somebody with the page already open, pressing a button that was drawn

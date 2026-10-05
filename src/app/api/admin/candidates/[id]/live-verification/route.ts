@@ -5,6 +5,7 @@ import {
   recordLiveVerificationSent,
   replaceLiveVerificationLink,
   setLiveVerificationHold,
+  setLiveVerificationPassed,
 } from "@/lib/store";
 import { sendEmail } from "@/lib/email";
 import {
@@ -13,6 +14,7 @@ import {
   liveVerificationText,
 } from "@/lib/emailTemplates";
 import {
+  MAX_PASSED_NOTE,
   checkVerificationLink,
   isLiveReason,
   type LiveVerificationReason,
@@ -59,11 +61,34 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const { id } = await ctx.params;
-  let body: { url?: unknown; action?: unknown; reason?: unknown };
+  let body: { url?: unknown; action?: unknown; reason?: unknown; note?: unknown };
   try {
-    body = (await req.json()) as { url?: unknown; action?: unknown; reason?: unknown };
+    body = (await req.json()) as { url?: unknown; action?: unknown; reason?: unknown; note?: unknown };
   } catch {
     return NextResponse.json({ ok: false, error: "bad_body" }, { status: 400 });
+  }
+
+  // The provider said all was correct, so the recruiter marks it — or takes
+  // that back. No email either way; the candidate's own link says so.
+  if (body.action === "pass" || body.action === "unpass") {
+    const note =
+      typeof body.note === "string" ? body.note.replace(/\s+/g, " ").trim().slice(0, MAX_PASSED_NOTE) : "";
+    const saved = await setLiveVerificationPassed(id, body.action === "pass" ? { note } : null);
+    if (!saved) {
+      const exists = await getCandidate(id);
+      return exists
+        ? NextResponse.json({ ok: false, error: "never_sent" }, { status: 409 })
+        : NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[live-verify] ${id} ${body.action === "pass" ? "marked passed" : "pass removed"}`);
+    return NextResponse.json({
+      ok: true,
+      liveVerificationPassedAt: saved.liveVerificationPassedAt,
+      liveVerificationPassedNote: saved.liveVerificationPassedNote,
+      liveVerificationHeldAt: saved.liveVerificationHeldAt,
+      liveVerificationWaitingSince: saved.liveVerificationWaitingSince,
+    });
   }
 
   // Holding somebody needs no link — the whole point is that there is not a

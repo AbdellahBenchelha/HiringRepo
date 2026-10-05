@@ -360,6 +360,14 @@ export interface Candidate {
   /** Which of the two live-check emails this candidate was sent. */
   liveVerificationReason?: LiveVerificationReason;
   /**
+   * When the recruiter marked the live check passed, after the provider said
+   * all was correct. From then on their link shows a "completed" page instead
+   * of sending them to the provider again.
+   */
+  liveVerificationPassedAt?: string;
+  /** What the recruiter wrote when marking it, e.g. the provider's reference. */
+  liveVerificationPassedNote?: string;
+  /**
    * Whether the candidate has actually opened the voice-assessment page, and
    * how often.
    *
@@ -771,6 +779,32 @@ export function replaceLiveVerificationLink(id: string, url: string): Promise<Ca
  * Refuses when nothing has been sent, for the same reason replacing does:
  * there is no page for anybody to be held on.
  */
+/**
+ * Mark the live check passed, or take that back.
+ *
+ * Only for somebody who was actually sent one. Passing also ends any hold:
+ * a candidate who has finished is not waiting for a new link.
+ */
+export function setLiveVerificationPassed(
+  id: string,
+  passed: { note?: string } | null,
+): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c || !c.liveVerificationSentAt) return { list, result: null };
+    if (passed) {
+      c.liveVerificationPassedAt = new Date().toISOString();
+      c.liveVerificationPassedNote = passed.note || undefined;
+      c.liveVerificationHeldAt = undefined;
+      c.liveVerificationWaitingSince = undefined;
+    } else {
+      c.liveVerificationPassedAt = undefined;
+      c.liveVerificationPassedNote = undefined;
+    }
+    return { list, result: c };
+  });
+}
+
 export function setLiveVerificationHold(
   id: string,
   held: boolean,

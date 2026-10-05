@@ -43,6 +43,8 @@ export async function GET(req: NextRequest) {
   try {
     const candidate = await getCandidate(token.link.id);
     if (!candidate) return NextResponse.json({ ok: true, held: true });
+    // Marked passed while they were waiting: reload into the "completed" page.
+    if (candidate.liveVerificationPassedAt) return NextResponse.json({ ok: true, held: false });
     // A newer check has been emailed, so this link is not the current one.
     // Reloading is still the right move: the page will explain that.
     if (candidate.liveVerificationSentAt !== token.link.sentAt) {

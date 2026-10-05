@@ -136,7 +136,13 @@ export interface LiveVerificationState {
   liveVerificationWaitingSince?: string;
   /** Which of the two stories their email told. See LIVE_REASONS. */
   liveVerificationReason?: string;
+  /** Marked passed by the recruiter once the provider said all was correct. */
+  liveVerificationPassedAt?: string;
+  liveVerificationPassedNote?: string;
 }
+
+/** Longest note kept with a passed live check. */
+export const MAX_PASSED_NOTE = 300;
 
 /**
  * The live-check fields of a candidate, as one object.
@@ -161,6 +167,8 @@ export function liveStateOf(c: LiveVerificationState): LiveVerificationState {
     liveVerificationHeldAt: c.liveVerificationHeldAt,
     liveVerificationWaitingSince: c.liveVerificationWaitingSince,
     liveVerificationReason: c.liveVerificationReason,
+    liveVerificationPassedAt: c.liveVerificationPassedAt,
+    liveVerificationPassedNote: c.liveVerificationPassedNote,
   };
 }
 

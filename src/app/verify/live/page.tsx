@@ -63,6 +63,17 @@ export default async function LiveVerifyPage({
   const token = one(params.t);
   const read = readLiveVerifyToken(token);
 
+  // Finished already: whichever of their links this is, and even once it has
+  // run out, it says so rather than sending them to the provider again.
+  const owner = read.ok || read.reason === "expired" ? await getCandidate(read.link.id) : null;
+  if (owner?.liveVerificationPassedAt) {
+    return (
+      <Shell>
+        <Completed firstName={owner.firstName} />
+      </Shell>
+    );
+  }
+
   if (!read.ok) {
     return (
       <Shell>
@@ -227,6 +238,24 @@ function Shell({ children }: { children: React.ReactNode }) {
         </p>
       </div>
     </main>
+  );
+}
+
+function Completed({ firstName }: { firstName?: string }) {
+  return (
+    <div className="card p-8 text-center" data-live-completed>
+      <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700">
+        <Icon name="checkCircle" className="h-7 w-7" />
+      </span>
+      <h1 className="mt-4 text-xl font-bold text-navy-900">
+        You have already completed the live verification
+      </h1>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-navy-600">
+        Thank you{firstName ? `, ${firstName}` : ""}. Our team will check your information and send
+        you your final agreement as soon as possible.
+      </p>
+      <p className="mt-6 text-xs text-navy-400">You can close this page.</p>
+    </div>
   );
 }
 

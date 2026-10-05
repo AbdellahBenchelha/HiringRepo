@@ -10,6 +10,7 @@ import {
   LIVE_REASON_LABEL,
   LIVE_REASON_SUBJECT,
   LIVE_STAGE_LABEL,
+  MAX_PASSED_NOTE,
   defaultLiveReason,
   liveReasonOf,
   type LiveVerificationReason,
@@ -107,6 +108,46 @@ export function LiveVerificationButton({
    * it.
    */
   const [reason, setReason] = useState<LiveVerificationReason>(defaultLiveReason(initial));
+  /** The "provider said all is correct" dialog, and taking it back. */
+  const [passing, setPassing] = useState<"pass" | "unpass" | null>(null);
+  const [passNote, setPassNote] = useState("");
+  const [passProblem, setPassProblem] = useState("");
+  const passed = !!state.liveVerificationPassedAt;
+
+  async function savePassed(action: "pass" | "unpass") {
+    if (busy) return;
+    setBusy(true);
+    setPassProblem("");
+    try {
+      const res = await adminPost(`/api/admin/candidates/${id}/live-verification`, {
+        action,
+        ...(action === "pass" ? { note: passNote } : {}),
+      });
+      const data = (await res.json()) as LiveVerificationState & { ok?: boolean; error?: string };
+      if (data.ok) {
+        const next: LiveVerificationState = {
+          ...state,
+          liveVerificationPassedAt: data.liveVerificationPassedAt,
+          liveVerificationPassedNote: data.liveVerificationPassedNote,
+          liveVerificationHeldAt: data.liveVerificationHeldAt,
+          liveVerificationWaitingSince: data.liveVerificationWaitingSince,
+        };
+        setState(next);
+        setSent("");
+        setPassing(null);
+        onChange?.(next);
+      } else {
+        setPassProblem(
+          data.error === "never_sent"
+            ? "No live check has been sent to them yet."
+            : `Could not save (${data.error ?? "unknown"}).`,
+        );
+      }
+    } catch {
+      setPassProblem("Could not save. Please try again.");
+    }
+    setBusy(false);
+  }
 
   // Recognised on sight, or not. Either way the link can be sent — this only
   // decides whether the dialog nods at it or raises an eyebrow.
@@ -318,6 +359,96 @@ export function LiveVerificationButton({
         </p>
       ) : null}
 
+      {/* The provider's answer, recorded by hand. Passed, their link shows a
+          "completed" page instead of sending them to the provider again. */}
+      {count && passed ? (
+        <p
+          className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800"
+          data-live-passed
+        >
+          <Icon name="checkCircle" className="h-3.5 w-3.5 shrink-0" />
+          <strong className="font-bold">Live check passed — {fmt(state.liveVerificationPassedAt)}</strong>
+          {state.liveVerificationPassedNote ? (
+            <span className="text-green-900">· {state.liveVerificationPassedNote}</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setPassProblem("");
+              setPassing("unpass");
+            }}
+            className="ml-auto font-semibold text-green-800 underline underline-offset-2 hover:text-green-950"
+          >
+            Undo
+          </button>
+        </p>
+      ) : count ? (
+        <button
+          type="button"
+          onClick={() => {
+            setPassNote("");
+            setPassProblem("");
+            setPassing("pass");
+          }}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-full border border-green-300 bg-green-50 px-3.5 py-1.5 text-xs font-bold text-green-800 transition hover:bg-green-100 disabled:opacity-40"
+        >
+          <Icon name="checkCircle" className="h-3.5 w-3.5" />
+          Mark live check passed
+        </button>
+      ) : null}
+
+      <ConfirmDialog
+        open={passing !== null}
+        icon="checkCircle"
+        title={passing === "unpass" ? "Remove “live check passed”?" : "Mark the live check passed?"}
+        confirmLabel={passing === "unpass" ? "Remove it" : "Mark passed"}
+        busy={busy}
+        onCancel={() => setPassing(null)}
+        onConfirm={() => passing && void savePassed(passing)}
+        body={
+          passing === "unpass" ? (
+            <div>
+              <p>
+                Their link will show the live verification page again, with the button to the
+                provider. Nothing is emailed.
+              </p>
+              {passProblem ? (
+                <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                  {passProblem}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div>
+              <p>
+                Do this once your provider says everything is correct for{" "}
+                <strong className="text-navy-900">{fullName || "this candidate"}</strong>. When they
+                open their link again they will see that they have already completed the live
+                verification and that we will send their final agreement as soon as possible.{" "}
+                <span className="font-medium text-navy-800">Nothing is emailed</span>, and their
+                status does not change.
+              </p>
+              <label className="mt-3 block text-xs font-bold text-navy-700">
+                Note <span className="font-normal text-navy-400">(optional)</span>
+                <input
+                  value={passNote}
+                  maxLength={MAX_PASSED_NOTE}
+                  onChange={(e) => setPassNote(e.target.value)}
+                  placeholder="e.g. Veriff: approved, ref 12345"
+                  className="input mt-1.5 !py-2 text-sm font-normal"
+                />
+              </label>
+              {passProblem ? (
+                <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                  {passProblem}
+                </p>
+              ) : null}
+            </div>
+          )
+        }
+      />
+
       {/* Somebody is sitting in front of a holding message right now. The one
           state on this panel that is costing a real person their time, so it
           is a line of its own rather than a word in the status above — and
@@ -386,11 +517,13 @@ export function LiveVerificationButton({
         }
         busy={busy}
         warning={
-          !replacing && count
-            ? `${count === 1 ? "One has" : `${count} have`} already been sent, the last on ${fmt(
-                state.liveVerificationSentAt,
-              )}. This sends another email.`
-            : undefined
+          passed
+            ? "This candidate already passed the live check. Their link shows a “completed” page until you undo that."
+            : !replacing && count
+              ? `${count === 1 ? "One has" : `${count} have`} already been sent, the last on ${fmt(
+                  state.liveVerificationSentAt,
+                )}. This sends another email.`
+              : undefined
         }
         onCancel={() => setAsking(false)}
         onConfirm={() => void submit()}

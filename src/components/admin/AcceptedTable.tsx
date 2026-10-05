@@ -500,11 +500,23 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                       )}
                     </td>
                     <td className="px-4 py-3">
+                      <div className="flex flex-col items-start gap-1">
                       <VerificationBadge
                         status={c.verificationStatus}
                         requestedAt={c.verificationRequestedAt}
                         onOpenPhotos={() => openProfile(c)}
                       />
+                      {c.liveVerificationPassedAt ? (
+                        <span
+                          data-live-passed-tag
+                          title={c.liveVerificationPassedNote || "Marked passed in View info → ID check"}
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-800"
+                        >
+                          <Icon name="checkCircle" className="h-3 w-3" />
+                          Live check passed
+                        </span>
+                      ) : null}
+                      </div>
                     </td>
                     <td
                       className={`sticky right-0 px-4 py-3 shadow-[-8px_0_8px_-8px_rgba(15,16,53,0.12)] ${stickyTone(

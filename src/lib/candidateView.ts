@@ -146,6 +146,8 @@ export interface CandidateView {
   liveVerificationHeldAt?: string;
   liveVerificationWaitingSince?: string;
   liveVerificationReason?: string;
+  liveVerificationPassedAt?: string;
+  liveVerificationPassedNote?: string;
   /**
    * Derived, not stored: a request for new photographs that has not been
    * answered yet. Computed here so the tables and the panel cannot disagree
@@ -361,6 +363,8 @@ export function toCandidateView(
     liveVerificationHeldAt: c.liveVerificationHeldAt,
     liveVerificationWaitingSince: c.liveVerificationWaitingSince,
     liveVerificationReason: c.liveVerificationReason,
+    liveVerificationPassedAt: c.liveVerificationPassedAt,
+    liveVerificationPassedNote: c.liveVerificationPassedNote,
     identityReuploadPending: identityReuploadPending(c),
     voiceStatus: c.voiceStatus,
     voiceOpenedAt: c.voiceOpenedAt,

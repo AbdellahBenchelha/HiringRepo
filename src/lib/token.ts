@@ -132,7 +132,8 @@ export function createLiveVerifyToken(link: LiveVerifyLink): string {
 export type LiveVerifyTokenResult =
   | { ok: true; link: LiveVerifyLink }
   | { ok: false; reason: "invalid" }
-  | { ok: false; reason: "expired" };
+  /** Still says whose it was, so a finished check can say so after the link has run out. */
+  | { ok: false; reason: "expired"; link: LiveVerifyLink };
 
 export function readLiveVerifyToken(token: string | undefined | null): LiveVerifyTokenResult {
   if (!token || !token.includes(".")) return { ok: false, reason: "invalid" };
@@ -157,7 +158,7 @@ export function readLiveVerifyToken(token: string | undefined | null): LiveVerif
     const sentAt = Date.parse(obj.s);
     if (Number.isNaN(sentAt)) return { ok: false, reason: "invalid" };
     if (Date.now() - sentAt > LIVE_VERIFY_TTL_DAYS * 24 * 60 * 60 * 1000) {
-      return { ok: false, reason: "expired" };
+      return { ok: false, reason: "expired", link: { id: obj.i, sentAt: obj.s } };
     }
     return { ok: true, link: { id: obj.i, sentAt: obj.s } };
   } catch {
