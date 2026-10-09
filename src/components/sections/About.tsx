@@ -27,7 +27,7 @@ export function About() {
     <section
       id="about"
       aria-labelledby="about-title"
-      className="section-pad relative overflow-hidden bg-gradient-to-b from-[#FBF6EC] to-cream-100"
+      className="section-pad relative overflow-hidden border-y border-cream-300 bg-gradient-to-b from-cream-200 to-[#EEEADD]"
     >
       <Glow className="-right-40 top-10 h-[36rem] w-[36rem]" />
       <Arc className="-right-64 -top-40 hidden h-[34rem] w-[34rem] lg:block" opacity={0.4} />
