@@ -2,8 +2,8 @@
  * PEOPLE PHOTOGRAPHY
  * ------------------
  * Every photo of a person on the public site is a crop of the approved
- * design assets — the character sheet, and the team photo from the approved
- * Life at WorkRoute design — never stock and never generated. Each section
+ * design assets — the character sheet, and the photos in the approved Life
+ * at WorkRoute and FAQ designs — never stock and never generated. Each section
  * uses different people so the page does not repeat itself.
  *
  * Each crop is published at its own size and at twice that size (upscaled
@@ -56,7 +56,12 @@ export const images = {
     200,
     "A friendly support agent with a headset smiling at a computer",
   ),
-  faq: image("faq-agent", 376, 200, "A support agent smiling while working on a laptop"),
+  faq: image(
+    "faq-agent",
+    536,
+    284,
+    "A smiling support agent in a headset and blazer, talking with a customer",
+  ),
   lifeTeam: image(
     "life-team",
     650,

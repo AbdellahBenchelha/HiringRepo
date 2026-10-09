@@ -45,8 +45,8 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
             key={i}
             className={`overflow-hidden rounded-2xl transition duration-300 ${
               isOpen
-                ? "bg-gradient-to-br from-brand-50 to-white shadow-lift ring-1 ring-brand-200"
-                : "bg-white shadow-soft ring-1 ring-cream-300/80 hover:ring-brand-200"
+                ? "bg-gradient-to-br from-[#FFF4E4] to-[#FFFAF2] shadow-lift ring-1 ring-brand-200"
+                : "bg-white shadow-[0_1px_2px_rgba(15,16,53,0.04),0_8px_20px_-14px_rgba(15,16,53,0.18)] ring-1 ring-white hover:ring-brand-200"
             }`}
           >
             <h3>
@@ -60,15 +60,13 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
                 aria-controls={panelId}
                 onClick={() => setOpen(isOpen ? null : i)}
                 onKeyDown={(e) => onKeyDown(e, i)}
-                className="flex min-h-[56px] w-full items-center gap-3.5 px-4 py-3.5 text-left sm:px-5"
+                className="flex min-h-[56px] w-full items-center gap-3.5 px-3.5 py-2.5 text-left sm:px-4"
               >
                 <span
                   aria-hidden="true"
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition duration-300 ${
-                    isOpen ? "bg-brand-500 text-white" : "bg-brand-50 text-brand-500"
-                  }`}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF1DC] text-brand-500"
                 >
-                  <Icon name="question" className="h-[18px] w-[18px]" />
+                  <Icon name="question" className="h-6 w-6" />
                 </span>
                 <span className="flex-1 text-[15px] font-bold leading-snug text-navy-900">
                   {item.question}
@@ -91,7 +89,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
               }`}
             >
               <div className="overflow-hidden">
-                <p className="pb-5 pl-[3.875rem] pr-6 text-sm leading-relaxed text-navy-600 sm:pl-[4.125rem]">
+                <p className="mb-4 ml-[4.25rem] mr-5 border-t border-brand-200/70 pt-3 text-[15px] leading-relaxed text-navy-600 sm:ml-[4.5rem]">
                   {item.answer}
                 </p>
               </div>
