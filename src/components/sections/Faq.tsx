@@ -3,7 +3,14 @@ import { faqs } from "@/config/content";
 import { images } from "@/config/images";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { Icon } from "@/components/Icon";
-import { Accent, DotGrid, ResponsiveImage, SectionLabel } from "@/components/ui/marketing";
+import {
+  Accent,
+  DotGrid,
+  PEACH_BG,
+  PeachBackdrop,
+  ResponsiveImage,
+  SectionLabel,
+} from "@/components/ui/marketing";
 
 /**
  * Frequently asked questions.
@@ -18,31 +25,9 @@ export function Faq() {
     <section
       id="faq"
       aria-labelledby="faq-title"
-      className="section-pad relative isolate overflow-hidden bg-gradient-to-br from-[#FDEBD3] via-[#FEF3E4] to-[#FCE6C8]"
+      className={`section-pad relative isolate overflow-hidden ${PEACH_BG}`}
     >
-      {/* Background: lighter organic shapes and amber arcs */}
-      <span
-        aria-hidden="true"
-        className="absolute -left-40 -top-32 -z-10 h-[30rem] w-[40rem] rounded-[50%] bg-[#FFF8EE]/80 blur-[2px]"
-      />
-      <span
-        aria-hidden="true"
-        className="absolute -bottom-48 left-1/4 -z-10 h-[26rem] w-[50rem] rounded-[50%] bg-[#FFF6EA]/70"
-      />
-      <span
-        aria-hidden="true"
-        className="absolute -right-32 -top-40 -z-10 h-[28rem] w-[28rem] rounded-full bg-[#FFF4E6]/80"
-      />
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 1440 900"
-        preserveAspectRatio="none"
-        fill="none"
-        className="absolute inset-0 -z-10 hidden h-full w-full md:block"
-      >
-        <path d="M1150 -20c90 120 190 190 310 210" stroke="#F5A623" strokeOpacity="0.55" strokeWidth="1.5" />
-        <path d="M-20 640c160 60 330 210 560 280" stroke="#F5A623" strokeOpacity="0.45" strokeWidth="1.5" />
-      </svg>
+      <PeachBackdrop />
       <DotGrid className="left-10 top-32 hidden lg:block" cols={3} rows={4} />
 
       <div className="container-page relative">

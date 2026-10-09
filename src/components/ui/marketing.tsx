@@ -230,3 +230,31 @@ export function Arc({ className = "", opacity = 0.5 }: { className?: string; opa
     </svg>
   );
 }
+
+/**
+ * The warm peach wash that sets a section apart from the cream ones around
+ * it: lighter organic shapes and two fine amber arcs, as in the approved FAQ
+ * design. Put PEACH_BG on the section (with `relative isolate
+ * overflow-hidden`) and this inside it. `flip` mirrors the shapes so two peach
+ * sections on one page do not look stamped from the same mould.
+ */
+export const PEACH_BG = "bg-gradient-to-br from-[#FDEBD3] via-[#FEF3E4] to-[#FCE6C8]";
+
+export function PeachBackdrop({ flip = false }: { flip?: boolean }) {
+  return (
+    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 -z-10 ${flip ? "-scale-x-100" : ""}`}>
+      <span className="absolute -left-40 -top-32 h-[30rem] w-[40rem] rounded-[50%] bg-[#FFF8EE]/80" />
+      <span className="absolute -bottom-48 left-1/4 h-[26rem] w-[50rem] rounded-[50%] bg-[#FFF6EA]/70" />
+      <span className="absolute -right-32 -top-40 h-[28rem] w-[28rem] rounded-full bg-[#FFF4E6]/80" />
+      <svg
+        viewBox="0 0 1440 900"
+        preserveAspectRatio="none"
+        fill="none"
+        className="absolute inset-0 hidden h-full w-full md:block"
+      >
+        <path d="M1150 -20c90 120 190 190 310 210" stroke="#F5A623" strokeOpacity="0.55" strokeWidth="1.5" />
+        <path d="M-20 640c160 60 330 210 560 280" stroke="#F5A623" strokeOpacity="0.45" strokeWidth="1.5" />
+      </svg>
+    </div>
+  );
+}

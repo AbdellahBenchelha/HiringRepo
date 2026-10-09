@@ -5,9 +5,9 @@ import { Logo } from "@/components/layout/Logo";
 import { Reveal } from "@/components/Reveal";
 import {
   Accent,
-  Arc,
   DotGrid,
-  Glow,
+  PEACH_BG,
+  PeachBackdrop,
   ResponsiveImage,
   SectionLabel,
 } from "@/components/ui/marketing";
@@ -27,10 +27,9 @@ export function About() {
     <section
       id="about"
       aria-labelledby="about-title"
-      className="section-pad relative overflow-hidden border-y border-cream-300 bg-gradient-to-b from-cream-200 to-[#EEEADD]"
+      className={`section-pad relative isolate overflow-hidden ${PEACH_BG}`}
     >
-      <Glow className="-right-40 top-10 h-[36rem] w-[36rem]" />
-      <Arc className="-right-64 -top-40 hidden h-[34rem] w-[34rem] lg:block" opacity={0.4} />
+      <PeachBackdrop />
 
       <div className="container-page relative grid items-center gap-12 lg:grid-cols-2 lg:gap-14 xl:gap-20">
         {/* Copy */}
