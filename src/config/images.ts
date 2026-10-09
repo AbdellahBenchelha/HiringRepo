@@ -1,9 +1,10 @@
 /**
  * PEOPLE PHOTOGRAPHY
  * ------------------
- * Every photo of a person on the public site is a crop of the one approved
- * character sheet, never stock and never generated. Each section uses a
- * different person so the page does not repeat itself.
+ * Every photo of a person on the public site is a crop of the approved
+ * design assets — the character sheet, and the team photo from the approved
+ * Life at WorkRoute design — never stock and never generated. Each section
+ * uses different people so the page does not repeat itself.
  *
  * Each crop is published at its own size and at twice that size (upscaled
  * with a sharpening filter, for high-density screens). `width` and `height`
@@ -56,10 +57,10 @@ export const images = {
     "A friendly support agent with a headset smiling at a computer",
   ),
   faq: image("faq-agent", 376, 200, "A support agent smiling while working on a laptop"),
-  life: [
-    image("life-1", 280, 162, "A support agent with a headset smiling during a call"),
-    image("life-2", 326, 162, "A support agent in a headset smiling in a bright office"),
-    image("life-3", 368, 204, "A support agent explaining something on a call"),
-    image("life-4", 350, 204, "A support agent smiling while typing on a laptop"),
-  ],
+  lifeTeam: image(
+    "life-team",
+    650,
+    508,
+    "Four WorkRoute team members laughing together around a laptop",
+  ),
 } as const;

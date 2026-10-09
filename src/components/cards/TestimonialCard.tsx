@@ -11,43 +11,47 @@ const avatarGradients = [
 
 function Stars() {
   return (
-    <div className="flex gap-0.5 text-brand-500" role="img" aria-label="Rated 5 out of 5">
+    <div className="flex gap-1 text-brand-500" role="img" aria-label="Rated 5 out of 5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Icon key={i} name="star" className="h-4 w-4" />
+        <Icon key={i} name="star" className="h-[18px] w-[18px]" />
       ))}
     </div>
   );
 }
 
 /**
- * One team member's words, as in the approved design: the quote mark, the
- * quote, five stars, and who said it. Initials rather than a photo — a face
- * beside a quote is a claim that this is that person.
+ * One team member's words, as in the approved design: the quote mark beside
+ * the quote, five stars, and who said it. Initials rather than a photo — a
+ * face beside a quote is a claim that this is that person.
  */
 export function TestimonialCard({ testimonial, index = 0 }: { testimonial: Testimonial; index?: number }) {
   return (
-    <figure className="card-soft flex h-full flex-col p-5 sm:p-6">
-      <Icon name="quote" className="h-7 w-7 text-brand-300" />
-      <blockquote className="mt-3 flex-1 text-[15px] leading-relaxed text-navy-700">
-        &ldquo;{testimonial.quote}&rdquo;
-      </blockquote>
-      <div className="mt-4">
-        <Stars />
+    <figure className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(15,16,53,0.04),0_18px_44px_-24px_rgba(15,16,53,0.2)] ring-1 ring-cream-300/50 sm:p-6">
+      <div className="flex flex-1 gap-3.5">
+        <Icon name="quote" className="mt-0.5 h-7 w-7 shrink-0 text-brand-200" />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <blockquote className="flex-1 text-[15px] leading-relaxed text-navy-700">
+            &ldquo;{testimonial.quote}&rdquo;
+          </blockquote>
+          <div className="mt-3">
+            <Stars />
+          </div>
+        </div>
       </div>
-      <figcaption className="mt-4 flex items-center gap-3 border-t border-cream-300 pt-4">
+      <figcaption className="mt-5 flex items-center gap-3.5">
         <span
           aria-hidden="true"
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-soft ${
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-soft ring-2 ring-white ${
             avatarGradients[index % avatarGradients.length]
           }`}
         >
           {testimonial.initials}
         </span>
         <span className="min-w-0">
-          <span className="block font-display text-[15px] font-bold text-navy-900">
+          <span className="block font-display text-base font-extrabold text-navy-900">
             {testimonial.name}
           </span>
-          <span className="block truncate text-[13px] text-navy-500">{testimonial.role}</span>
+          <span className="block truncate text-sm text-navy-500">{testimonial.role}</span>
         </span>
       </figcaption>
     </figure>
