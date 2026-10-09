@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { jobs } from "@/config/jobs";
 import { JobCard } from "@/components/cards/JobCard";
 import { Icon } from "@/components/Icon";
-import { ApplyButton } from "@/components/apply/ApplyButton";
+import { Accent, Glow, PrimaryButton, SectionLabel } from "@/components/ui/marketing";
 
 const categories = [
   { label: "All roles", match: () => true },
@@ -21,113 +21,106 @@ export function OpenPositions() {
   // Stable per-category counts for the filter chips.
   const counts = useMemo(
     () => categories.map((c) => jobs.filter((j) => c.match(j.slug)).length),
-    []
+    [],
   );
 
-  const filtered = useMemo(
-    () => jobs.filter((job) => categories[active].match(job.slug)),
-    [active]
-  );
+  const filtered = useMemo(() => jobs.filter((job) => categories[active].match(job.slug)), [active]);
 
   return (
-    <section id="open-positions" className="section bg-white">
-      <div className="container-page">
-        {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
-            <span className="pill uppercase tracking-wider">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-              Open Positions
-            </span>
-            <h2 className="mt-4 text-balance text-3xl font-bold leading-[1.1] tracking-tight text-navy-900 sm:text-4xl lg:text-[2.75rem]">
-              Find the role that fits you
-            </h2>
-            <p className="mt-4 text-pretty text-base leading-relaxed text-navy-600 sm:text-lg">
-              Explore our current openings across phone, chat, email, technical,
-              and sales support. New opportunities open regularly.
-            </p>
-          </div>
+    <section
+      id="open-positions"
+      aria-labelledby="positions-title"
+      className="section-pad relative overflow-hidden bg-gradient-to-b from-cream-100 via-white/40 to-cream-100"
+    >
+      <Glow className="-right-40 -top-24 h-[28rem] w-[28rem] opacity-70" />
 
-          <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-cream-300 bg-cream-200/70 px-5 py-4">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-brand-600 shadow-soft ring-1 ring-inset ring-navy-100">
-              <Icon name="briefcase" className="h-5 w-5" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-2xl font-bold tabular-nums text-navy-900">{jobs.length}</p>
-              <p className="text-xs font-medium text-navy-500">open roles right now</p>
-            </div>
-          </div>
+      <div className="container-page relative">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionLabel>Open Positions</SectionLabel>
+          <h2 id="positions-title" className="h-section mt-4 text-balance">
+            Find the role that <Accent>fits you</Accent>
+          </h2>
+          <p className="lead mx-auto mt-4 max-w-2xl text-pretty">
+            Explore our current openings across phone, chat, email, technical, and sales support.
+            New opportunities open regularly.
+          </p>
         </div>
 
-        {/* Filter toolbar */}
-        <div className="sticky top-20 z-20 mt-10">
-          <div className="flex flex-col gap-3 rounded-2xl border border-cream-300 bg-white/95 p-3 shadow-soft backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
-              <span className="hidden shrink-0 px-2 text-xs font-semibold uppercase tracking-wider text-navy-400 sm:inline">
-                Filter
-              </span>
-              {categories.map((cat, i) => {
-                const isActive = active === i;
-                return (
-                  <button
-                    key={cat.label}
-                    type="button"
-                    onClick={() => setActive(i)}
-                    aria-pressed={isActive}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-                      isActive
-                        ? "bg-brand-600 text-white shadow-soft"
-                        : "bg-cream-200 text-navy-700 hover:bg-cream-300"
+        {/* Filter */}
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <div
+            role="group"
+            aria-label="Filter roles by type"
+            className="no-scrollbar -mx-4 flex max-w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 py-1 sm:mx-0 sm:max-w-full sm:flex-wrap sm:justify-center sm:px-0"
+          >
+            {categories.map((cat, i) => {
+              const isActive = active === i;
+              return (
+                <button
+                  key={cat.label}
+                  type="button"
+                  onClick={() => setActive(i)}
+                  aria-pressed={isActive}
+                  className={`inline-flex min-h-[40px] shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${
+                    isActive
+                      ? "bg-navy-900 text-white shadow-lift"
+                      : "bg-white text-navy-700 ring-1 ring-inset ring-cream-300 hover:ring-brand-300"
+                  }`}
+                >
+                  {cat.label}
+                  <span
+                    className={`rounded-full px-1.5 text-xs font-bold tabular-nums ${
+                      isActive ? "bg-white/15 text-white" : "bg-cream-200 text-navy-500"
                     }`}
                   >
-                    {cat.label}
-                    <span
-                      className={`rounded-full px-1.5 text-xs font-semibold tabular-nums ${
-                        isActive ? "bg-white/20 text-white" : "bg-white text-navy-400"
-                      }`}
-                    >
-                      {counts[i]}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <p
-              className="shrink-0 px-2 text-sm font-medium text-navy-500"
-              aria-live="polite"
-            >
-              <span className="font-semibold text-navy-900">{filtered.length}</span>{" "}
-              {filtered.length === 1 ? "role" : "roles"} shown
-            </p>
+                    {counts[i]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+          <p className="text-sm font-medium text-navy-500" aria-live="polite">
+            <span className="font-bold text-navy-900">{filtered.length}</span>{" "}
+            {filtered.length === 1 ? "role" : "roles"} shown
+          </p>
         </div>
 
         {/* Results */}
-        <div
-          key={active}
-          className="mt-8 grid animate-fade-in gap-6 md:grid-cols-2 lg:grid-cols-3"
-        >
+        <ul key={active} className="mt-8 grid animate-fade-in gap-5 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((job) => (
-            <JobCard key={job.slug} job={job} />
+            <li key={job.slug}>
+              <JobCard job={job} />
+            </li>
           ))}
-        </div>
+        </ul>
 
-        {/* Open application CTA */}
-        <div className="mt-10 flex flex-col items-center justify-between gap-5 rounded-2xl border border-cream-300 bg-cream-200/60 px-6 py-6 text-center sm:flex-row sm:text-left">
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-soft ring-1 ring-inset ring-navy-100">
-              <Icon name="sparkles" className="h-6 w-6" />
-            </span>
-            <div>
-              <p className="font-semibold text-navy-900">Don&apos;t see the right role?</p>
-              <p className="mt-0.5 text-sm text-navy-600">
-                Send a general application and we&apos;ll reach out when something
-                fits your skills.
-              </p>
+        {/* Open application */}
+        <div className="relative mt-8 overflow-hidden rounded-2xl bg-gradient-to-r from-brand-50 via-[#FFF4DC] to-brand-100/80 p-5 ring-1 ring-inset ring-brand-200/70 sm:p-7">
+          <span
+            aria-hidden="true"
+            className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-brand-200/40 blur-2xl"
+          />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4 sm:items-center">
+              <span
+                aria-hidden="true"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-500 shadow-lift sm:h-14 sm:w-14"
+              >
+                <Icon name="fileEdit" className="h-6 w-6 sm:h-7 sm:w-7" />
+              </span>
+              <div>
+                <p className="font-display text-lg font-extrabold tracking-[-0.02em] text-navy-900 sm:text-xl">
+                  Don&apos;t see the right role?
+                </p>
+                <p className="mt-1 text-sm text-navy-600 sm:text-[15px]">
+                  Send a general application and we&apos;ll reach out when something fits your skills.
+                </p>
+              </div>
             </div>
+            <PrimaryButton href="/apply" className="w-full shrink-0 sm:w-auto sm:px-8">
+              Submit your CV
+            </PrimaryButton>
           </div>
-          <ApplyButton label="Submit your CV" className="shrink-0" />
         </div>
       </div>
     </section>

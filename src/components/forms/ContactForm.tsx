@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { isValidEmail } from "@/lib/validation";
 import { submitContact } from "@/lib/submit";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import { Field, TextInput, Textarea } from "./fields";
 
 export function ContactForm({ bare = false }: { bare?: boolean }) {
@@ -71,25 +71,75 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className={`${bare ? "" : "card"} space-y-4`}>
-      <h3 className="text-lg font-semibold text-navy-900">Send us a message</h3>
+    <form onSubmit={handleSubmit} noValidate className={`${bare ? "" : "card"} space-y-5`}>
+      <div>
+        <h3 className="font-display text-xl font-extrabold tracking-[-0.02em] text-navy-900 sm:text-2xl">
+          Send us a message
+        </h3>
+      </div>
 
       <div aria-hidden="true" className="absolute left-[-9999px] h-px w-px overflow-hidden">
         <label htmlFor="contact_hp">Leave empty</label>
         <input ref={honeypotRef} id="contact_hp" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
-      <Field label="Name" htmlFor="contact-name" required error={errors.name}>
-        <TextInput id="contact-name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
-      </Field>
-      <Field label="Email" htmlFor="contact-email" required error={errors.email}>
-        <TextInput id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
-      </Field>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Name" htmlFor="contact-name" required error={errors.name}>
+          <WithIcon icon="user">
+            <TextInput
+              id="contact-name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              error={errors.name}
+              className={inputClass(errors.name)}
+            />
+          </WithIcon>
+        </Field>
+        <Field label="Email" htmlFor="contact-email" required error={errors.email}>
+          <WithIcon icon="mail">
+            <TextInput
+              id="contact-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={errors.email}
+              className={inputClass(errors.email)}
+            />
+          </WithIcon>
+        </Field>
+      </div>
       <Field label="Subject" htmlFor="contact-subject" required error={errors.subject}>
-        <TextInput id="contact-subject" value={subject} onChange={(e) => setSubject(e.target.value)} error={errors.subject} />
+        <WithIcon icon="list">
+          <TextInput
+            id="contact-subject"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            error={errors.subject}
+            className={inputClass(errors.subject)}
+          />
+        </WithIcon>
       </Field>
       <Field label="Message" htmlFor="contact-message" required error={errors.message}>
-        <Textarea id="contact-message" value={message} onChange={(e) => setMessage(e.target.value)} error={errors.message} />
+        <WithIcon icon="chat" top>
+          <Textarea
+            id="contact-message"
+            value={message}
+            maxLength={MAX_MESSAGE}
+            onChange={(e) => setMessage(e.target.value)}
+            error={errors.message}
+            aria-describedby={[errors.message ? "contact-message-error" : null, "contact-message-count"]
+              .filter(Boolean)
+              .join(" ")}
+            className={`textarea min-h-[8.5rem] !rounded-xl bg-cream-50 pl-11 ${
+              errors.message ? "input-invalid" : ""
+            }`}
+          />
+        </WithIcon>
+        <p id="contact-message-count" className="mt-1.5 text-right text-xs tabular-nums text-navy-400">
+          {message.length}/{MAX_MESSAGE}
+        </p>
       </Field>
 
       {status === "error" ? (
@@ -98,9 +148,45 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
         </p>
       ) : null}
 
-      <button type="submit" disabled={status === "submitting"} className="btn-primary w-full">
+      <button type="submit" disabled={status === "submitting"} className="btn-brand group w-full">
         {status === "submitting" ? "Sending…" : "Send Message"}
+        {status === "submitting" ? null : (
+          <Icon
+            name="arrowRight"
+            className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+          />
+        )}
       </button>
     </form>
+  );
+}
+
+/** The server keeps this much of a message, so the box allows no more. */
+const MAX_MESSAGE = 4000;
+
+function inputClass(error?: string): string {
+  return `input !rounded-xl bg-cream-50 pl-11 ${error ? "input-invalid" : ""}`;
+}
+
+/** A field with a small icon inside its left edge, as in the approved design. */
+function WithIcon({
+  icon,
+  top = false,
+  children,
+}: {
+  icon: IconName;
+  top?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <Icon
+        name={icon}
+        className={`pointer-events-none absolute left-4 h-[18px] w-[18px] text-navy-400 ${
+          top ? "top-3.5" : "top-1/2 -translate-y-1/2"
+        }`}
+      />
+      {children}
+    </div>
   );
 }

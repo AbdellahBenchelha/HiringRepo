@@ -51,7 +51,22 @@ export type IconName =
   | "microphone"
   | "star"
   | "send"
-  | "pencil";
+  | "pencil"
+  | "home"
+  | "laptop"
+  | "chartBar"
+  | "gift"
+  | "calendar"
+  | "heart"
+  | "megaphone"
+  | "quote"
+  | "question"
+  | "user"
+  | "fileEdit"
+  | "fileSearch"
+  | "fileCheck"
+  | "monitorUser"
+  | "list";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -131,6 +146,45 @@ const paths: Record<IconName, React.ReactNode> = {
   ),
   chevronLeft: <path d="M14.5 5.5 8 12l6.5 6.5L16 17l-5-5 5-5-1.5-1.5Z" />,
   chevronRight: <path d="M9.5 5.5 16 12l-6.5 6.5L8 17l5-5-5-5 1.5-1.5Z" />,
+  // Added for the redesigned home page. Compound shapes use evenodd so their
+  // inner outlines read as holes.
+  home: <path d="M12 3 2 11.2l1.3 1.5L5 11.3V20a1 1 0 0 0 1 1h4.5v-6h3v6H18a1 1 0 0 0 1-1v-8.7l1.7 1.4 1.3-1.5L12 3Z" />,
+  laptop: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M5 4a1 1 0 0 0-1 1v10h16V5a1 1 0 0 0-1-1H5Zm1 2h12v7H6V6ZM2 17h20v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1Z" />
+  ),
+  chartBar: <path d="M4 13h4v7H4v-7Zm6-5h4v12h-4V8Zm6-5h4v17h-4V3Z" />,
+  gift: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M9 3a3 3 0 0 0-2.83 4H4a1 1 0 0 0-1 1v3h8V7.5h2V11h8V8a1 1 0 0 0-1-1h-2.17A3 3 0 0 0 12 4.4 3 3 0 0 0 9 3Zm0 2a1 1 0 0 1 1 1v1H9a1 1 0 1 1 0-2Zm6 0a1 1 0 1 1 0 2h-1V6a1 1 0 0 1 1-1ZM4 13v6a1 1 0 0 0 1 1h6v-7H4Zm9 0v7h6a1 1 0 0 0 1-1v-6h-7Z" />
+  ),
+  calendar: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M7 2h2v2h6V2h2v2h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2Zm-2 8v9h14v-9H5Zm2 2h3v3H7v-3Z" />
+  ),
+  heart: (
+    <path d="M12 21s-7.4-4.5-9.5-9C1 8.6 3.1 4.5 6.8 4.5c2 0 3.4 1 5.2 3 1.8-2 3.2-3 5.2-3 3.7 0 5.8 4.1 4.3 7.5-2.1 4.5-9.5 9-9.5 9Z" />
+  ),
+  megaphone: (
+    <path d="M18 3v18l-6-4H9.3l1 4H7l-1.2-4.2A3.5 3.5 0 0 1 2 13.4v-2.8A3.5 3.5 0 0 1 5.5 7H12l6-4Zm2 6.2a3 3 0 0 1 0 5.6V9.2Z" />
+  ),
+  quote: (
+    <path d="M7.4 5C4.7 6.5 3 9.2 3 12.6V19h7v-7H6.2c.3-1.8 1.4-3.2 3.1-4L7.4 5Zm10 0c-2.7 1.5-4.4 4.2-4.4 7.6V19h7v-7h-3.8c.3-1.8 1.4-3.2 3.1-4L17.4 5Z" />
+  ),
+  question: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.8h2.3V19h-2.3v-2.2ZM12 5.5a4 4 0 0 1 2.3 7.3c-.9.6-1.2 1-1.2 2.1h-2.3c0-1.9.8-2.8 2-3.6a1.8 1.8 0 1 0-2.6-1.6H8a4 4 0 0 1 4-4.2Z" />
+  ),
+  user: <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm-8 9a8 8 0 0 1 16 0H4Z" />,
+  fileEdit: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M6 2h8l5 5v5.2l-2 2V8h-4V4H6v16h5.5l-.5 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm14.3 11.3 1.4 1.4-6.6 6.6-2.4.7.7-2.4 6.9-6.3ZM8 11h7v2H8v-2Zm0 4h4v2H8v-2Z" />
+  ),
+  fileSearch: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M6 2h8l5 5v3.6a5.5 5.5 0 0 0-2-.6V8h-4V4H6v16h5.4c.3.7.8 1.4 1.3 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm10.5 10a3.5 3.5 0 0 1 2.9 5.5l2.3 2.3-1.4 1.4-2.3-2.3a3.5 3.5 0 1 1-1.5-6.9Zm0 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
+  ),
+  fileCheck: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M6 2h8l5 5v5h-2V8h-4V4H6v16h6.5v2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm10.4 17.2 4.6-4.7 1.4 1.4-6 6.1-3.4-3.4 1.4-1.4 2 2ZM8 11h7v2H8v-2Zm0 4h4v2H8v-2Z" />
+  ),
+  monitorUser: (
+    <path fillRule="evenodd" clipRule="evenodd" d="M3 3h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-7v2h3v2H7v-2h3v-2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm1 2v10h16V5H4Zm8 1.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6Zm-4 7.5c.4-1.7 2-2.6 4-2.6s3.6.9 4 2.6H8Z" />
+  ),
+  list: <path d="M4 5h2v2H4V5Zm4 0h12v2H8V5ZM4 11h2v2H4v-2Zm4 0h12v2H8v-2Zm-4 6h2v2H4v-2Zm4 0h12v2H8v-2Z" />,
   expand: (
     <path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z" />
   ),

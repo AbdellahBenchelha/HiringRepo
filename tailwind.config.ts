@@ -58,11 +58,16 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-inter)", "system-ui", "sans-serif"],
       },
       boxShadow: {
         soft: "0 1px 3px rgba(15, 16, 53, 0.04), 0 8px 24px -14px rgba(15, 16, 53, 0.10)",
         card: "0 2px 8px rgba(15, 16, 53, 0.04), 0 24px 56px -28px rgba(15, 16, 53, 0.18)",
         glow: "0 10px 28px -10px rgba(245, 166, 35, 0.55)",
+        // The approved design's cards: a hairline lift and a long, soft fall.
+        lift: "0 1px 2px rgba(15, 16, 53, 0.04), 0 14px 34px -18px rgba(15, 16, 53, 0.20)",
+        "lift-lg": "0 2px 6px rgba(15, 16, 53, 0.05), 0 28px 60px -24px rgba(15, 16, 53, 0.28)",
+        amber: "0 12px 26px -12px rgba(245, 166, 35, 0.75)",
       },
       borderRadius: {
         xl: "0.875rem",

@@ -1,172 +1,132 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import { testimonials } from "@/config/content";
+import { images } from "@/config/images";
 import { TestimonialCard } from "@/components/cards/TestimonialCard";
-import { Icon } from "@/components/Icon";
-import { ApplyButton } from "@/components/apply/ApplyButton";
+import { Icon, type IconName } from "@/components/Icon";
+import { CarouselButtons } from "@/components/ui/CarouselButtons";
+import { useCarousel } from "@/components/ui/useCarousel";
+import {
+  Accent,
+  DotGrid,
+  ResponsiveImage,
+  SectionLabel,
+} from "@/components/ui/marketing";
 
+const highlights: { icon: IconName; label: string }[] = [
+  { icon: "home", label: "100% remote" },
+  { icon: "graduation", label: "Paid training" },
+  { icon: "chartBar", label: "Promote from within" },
+];
+
+/**
+ * "Life at WorkRoute" — the team's own words.
+ *
+ * The photos are a mosaic of four people from the character sheet, none of
+ * whom appears anywhere else on the page. The quotes slide: three at a time on
+ * a wide screen, two on a tablet, one (with the next peeking in) on a phone.
+ */
 export function Testimonials() {
-  const [featured, ...rest] = testimonials;
-
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
-  const [grabbing, setGrabbing] = useState(false);
-
-  const dragging = useRef(false);
-  const dragMoved = useRef(false);
-  const start = useRef({ x: 0, left: 0 });
-
-  const update = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setAtStart(el.scrollLeft <= 4);
-    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    update();
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      el.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, [update]);
-
-  const scrollByPage = (dir: 1 | -1) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
-  };
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType !== "mouse") return;
-    const el = scrollerRef.current;
-    if (!el) return;
-    dragging.current = true;
-    dragMoved.current = false;
-    start.current = { x: e.clientX, left: el.scrollLeft };
-    setGrabbing(true);
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const el = scrollerRef.current;
-    if (!el) return;
-    const dx = e.clientX - start.current.x;
-    if (Math.abs(dx) > 3) dragMoved.current = true;
-    el.scrollLeft = start.current.left - dx;
-  };
-
-  const endDrag = () => {
-    dragging.current = false;
-    setGrabbing(false);
-  };
-
-  const onClickCapture = (e: React.MouseEvent) => {
-    if (dragMoved.current) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
+  const { ref, atStart, atEnd, grabbing, step, handlers } = useCarousel();
 
   return (
-    <section id="testimonials" className="section bg-white">
-      <div className="container-page">
-        {/* Header */}
-        <div className="max-w-2xl">
-          <span className="pill uppercase tracking-wider">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-            Life at WorkRoute
-          </span>
-          <h2 className="mt-4 text-balance text-3xl font-bold leading-[1.1] tracking-tight text-navy-900 sm:text-4xl lg:text-[2.75rem]">
-            What our team says
-          </h2>
-          <p className="mt-4 text-pretty text-base leading-relaxed text-navy-600 sm:text-lg">
-            Hear directly from the people who have built their careers with us.
-          </p>
-        </div>
+    <section
+      id="testimonials"
+      aria-labelledby="life-title"
+      className="section-pad relative overflow-hidden bg-cream-100"
+    >
+      <span
+        aria-hidden="true"
+        className="absolute -right-24 -top-16 h-[28rem] w-[34rem] rounded-[48%_52%_40%_60%/55%_45%_55%_45%] bg-gradient-to-br from-brand-100/80 to-brand-50/30"
+      />
 
-        {/* Featured + rating panel */}
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <TestimonialCard testimonial={featured} index={0} featured />
+      <div className="container-page relative">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-14">
+          {/* Copy */}
+          <div>
+            <SectionLabel>Life at WorkRoute</SectionLabel>
+            <h2 id="life-title" className="h-section mt-4 text-balance">
+              What our <Accent>team says</Accent>
+            </h2>
+            <p className="lead mt-4 text-pretty">
+              Hear directly from the people who have built their careers with us.
+            </p>
+            <ul className="mt-8 grid grid-cols-3 gap-3">
+              {highlights.map((h) => (
+                <li
+                  key={h.label}
+                  className="card-soft flex flex-col items-center gap-2 px-2 py-4 text-center sm:flex-row sm:px-4 sm:text-left lg:flex-col lg:px-2 lg:text-center xl:flex-row xl:px-4 xl:text-left"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-500"
+                  >
+                    <Icon name={h.icon} className="h-5 w-5" />
+                  </span>
+                  <span className="text-[13px] font-bold leading-tight text-navy-900 sm:text-sm">
+                    {h.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <div className="flex flex-col justify-between gap-6 rounded-3xl border border-cream-300 bg-cream-200/60 p-8">
-            <div>
-              <div className="flex gap-0.5 text-amber-400" aria-hidden="true">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Icon key={i} name="star" className="h-6 w-6" />
-                ))}
-              </div>
-              <p className="mt-4 text-2xl font-bold tracking-tight text-navy-900">
-                Loved by our team
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-navy-600">
-                {testimonials.length} team members have shared their experience of
-                building a career at WorkRoute.
-              </p>
-            </div>
-            <ApplyButton label="Join the team" className="w-full sm:w-auto" />
-          </div>
-        </div>
-
-        {/* More reviews — manual-scroll wall */}
-        <div className="mt-16">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-bold tracking-tight text-navy-900 sm:text-2xl">
-                More from the team
-              </h3>
-              <p className="mt-1 text-sm text-navy-500">Drag, or use the arrows, to read more</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => scrollByPage(-1)}
-                disabled={atStart}
-                aria-label="Previous reviews"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream-400 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-cream-400 disabled:hover:text-navy-700"
-              >
-                <Icon name="arrowRight" className="h-5 w-5 rotate-180" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollByPage(1)}
-                disabled={atEnd}
-                aria-label="More reviews"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream-400 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-cream-400 disabled:hover:text-navy-700"
-              >
-                <Icon name="arrowRight" className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="relative mt-6 [mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]">
-            <div
-              ref={scrollerRef}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={endDrag}
-              onPointerLeave={endDrag}
-              onClickCapture={onClickCapture}
-              className={`no-scrollbar flex gap-4 overflow-x-auto pb-3 ${
-                grabbing ? "cursor-grabbing select-none" : "cursor-grab"
-              }`}
-              role="group"
-              aria-label="Team reviews — drag or use arrows to explore"
-            >
-              {rest.map((t, i) => (
-                <div key={t.name} className="w-[19rem] shrink-0 sm:w-[21rem]">
-                  <TestimonialCard testimonial={t} index={i + 1} compact />
+          {/* Photo mosaic */}
+          <div className="relative">
+            <DotGrid className="-bottom-6 -right-2 hidden sm:block" cols={8} rows={5} tone="navy" />
+            <div className="relative grid grid-cols-2 gap-3 sm:gap-4">
+              {images.life.map((img, i) => (
+                <div
+                  key={img.src}
+                  className={`overflow-hidden rounded-2xl shadow-lift ring-1 ring-white/70 ${
+                    i % 2 === 1 ? "translate-y-5 sm:translate-y-8" : ""
+                  }`}
+                >
+                  <div className="aspect-[1.55]">
+                    <ResponsiveImage image={img} sizes="(min-width: 1024px) 290px, 46vw" />
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* The quotes */}
+        <div className="mt-16 sm:mt-20">
+          <div className="flex items-end justify-between gap-4">
+            <p className="max-w-md text-sm text-navy-600">
+              {testimonials.length} team members have shared their experience of building a career
+              at WorkRoute.
+            </p>
+            <CarouselButtons
+              onPrev={() => step(-1)}
+              onNext={() => step(1)}
+              atStart={atStart}
+              atEnd={atEnd}
+              controls="reviews-track"
+              label="reviews"
+            />
+          </div>
+          <div
+            ref={ref}
+            id="reviews-track"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="What our team says. Use the arrow keys or the buttons to move."
+            tabIndex={0}
+            {...handlers}
+            className={`no-scrollbar -mx-4 mt-6 flex gap-4 overflow-x-auto scroll-px-4 px-4 pb-4 pt-1 sm:mx-0 sm:scroll-px-0 sm:px-px sm:gap-5 ${
+              grabbing ? "cursor-grabbing select-none snap-none" : "cursor-grab snap-x snap-mandatory"
+            }`}
+          >
+            {testimonials.map((t, i) => (
+              <div
+                key={t.name}
+                className="w-[85%] shrink-0 snap-start sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)]"
+              >
+                <TestimonialCard testimonial={t} index={i} />
+              </div>
+            ))}
           </div>
         </div>
       </div>

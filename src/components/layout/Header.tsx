@@ -5,39 +5,39 @@ import Link from "next/link";
 import { mainNav, secondaryNav, type NavItem } from "@/config/navigation";
 import { siteConfig } from "@/config/site";
 import { Icon } from "@/components/Icon";
-import { ApplyButton } from "@/components/apply/ApplyButton";
 import { Logo } from "@/components/layout/Logo";
 
 /**
  * The site header.
  *
- * White rather than cream, which is the one place this site breaks its own
- * "never pure white" rule and should: a white bar over a cream page separates
- * itself without needing a heavy border or a shadow, and the crispness is most
- * of what reads as professional. The page behind it stays cream.
+ * Cream and translucent, as in the approved design, so it sits on the page
+ * rather than over it; a hairline and a soft shadow appear once the page has
+ * scrolled, which is what keeps it legible over the sections below.
  *
- * The nav is grouped — see config/navigation. Two of the four items open a
- * panel, which is built here rather than pulled in, because a menu that is not
- * reachable from a keyboard is worse than no menu: the three things that make
- * one real are Escape, a click outside, and focus leaving the group, and all
- * three are cheap when you own the component.
+ * The nav is grouped — see config/navigation. Two of the items open a panel,
+ * built here rather than pulled in, because a menu that is not reachable from
+ * a keyboard is worse than no menu: Escape, a click outside, and focus leaving
+ * the group all close it.
+ *
+ * On phones and small tablets the whole nav moves into a panel that slides in
+ * from the right. It takes focus when it opens, keeps the page behind it from
+ * scrolling, and hands focus back to the menu button when it closes.
  */
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   /**
    * Which group is open, and whether it was opened deliberately.
    *
-   * The two are not the same thing, and conflating them is the classic way
-   * these menus end up broken. Hovering opens a panel; the pointer arriving on
-   * the button to click it has already opened it, so a plain toggle would read
-   * that click as "close" and the panel would vanish the instant it was
-   * pressed. Pinned says the person meant it: a pinned panel survives the
-   * pointer leaving, and only a second press, Escape or a click elsewhere
-   * shuts it.
+   * Hovering opens a panel; the pointer arriving on the button to click it has
+   * already opened it, so a plain toggle would read that click as "close".
+   * Pinned says the person meant it: a pinned panel survives the pointer
+   * leaving, and only a second press, Escape or a click elsewhere shuts it.
    */
   const [menu, setMenu] = useState<{ label: string; pinned: boolean } | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const navRef = useRef<HTMLUListElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   /** Lets a pointer leave one group and arrive at the next without a flicker. */
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openMenu = menu?.label ?? null;
@@ -54,14 +54,13 @@ export function Header() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (openMenu) setMenu(null);
-      else if (mobileOpen) setMobileOpen(false);
+      else if (mobileOpen) closeDrawer();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [mobileOpen, openMenu]);
 
-  // A click anywhere else closes the dropdown. Without this the panel outlives
-  // the intent behind it and follows you down the page.
+  // A click anywhere else closes the dropdown.
   useEffect(() => {
     if (!openMenu) return;
     const onDown = (e: MouseEvent) => {
@@ -71,9 +70,56 @@ export function Header() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [openMenu]);
 
-  useEffect(() => () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-  }, []);
+  // The drawer: lock the page behind it, move focus in, keep Tab inside it.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const html = document.documentElement;
+    const previous = html.style.overflow;
+    html.style.overflow = "hidden";
+    const first = drawerRef.current?.querySelector<HTMLElement>("a, button");
+    first?.focus();
+
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !drawerRef.current) return;
+      const focusable = drawerRef.current.querySelectorAll<HTMLElement>("a, button");
+      if (!focusable.length) return;
+      const firstEl = focusable[0];
+      const lastEl = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === firstEl) {
+        e.preventDefault();
+        lastEl.focus();
+      } else if (!e.shiftKey && document.activeElement === lastEl) {
+        e.preventDefault();
+        firstEl.focus();
+      }
+    };
+    document.addEventListener("keydown", trap);
+    return () => {
+      html.style.overflow = previous;
+      document.removeEventListener("keydown", trap);
+    };
+  }, [mobileOpen]);
+
+  // A drawer left open past the breakpoint would trap a desktop visitor.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const onChange = () => mq.matches && setMobileOpen(false);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [mobileOpen]);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  function closeDrawer() {
+    setMobileOpen(false);
+    menuButtonRef.current?.focus();
+  }
 
   /** Pointer arrived on a group. Opens it, without claiming it was meant. */
   const hoverEnter = (label: string) => {
@@ -95,40 +141,39 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full border-b border-cream-300 bg-white transition-shadow ${
-        scrolled ? "shadow-[0_1px_16px_rgba(15,16,53,0.07)]" : ""
+      className={`sticky top-0 z-50 w-full border-b transition-shadow duration-300 ${
+        scrolled
+          ? "border-cream-300 shadow-[0_6px_24px_-12px_rgba(15,16,53,0.18)]"
+          : "border-cream-300/70"
       }`}
     >
+      {/* The background is its own layer: a blur on the header itself would
+          make it the box the fixed mobile panel is positioned in. */}
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 -z-10 transition-colors duration-300 ${
+          scrolled ? "bg-cream-100/90 backdrop-blur-md" : "bg-cream-100"
+        }`}
+      />
       <a href="#main" className="sr-only sr-only-focusable rounded bg-brand-600 text-white">
         Skip to main content
       </a>
 
-      <nav className="container-page flex h-16 items-center gap-6 lg:h-[72px]" aria-label="Main">
-        {/* ---------------------------------------------------------------- */}
-        {/* The mark                                                         */}
-        {/* ---------------------------------------------------------------- */}
-        <div className="flex shrink-0 items-center">
-          <Link
-            href="/#home"
-            className="flex items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500"
-            aria-label={`${siteConfig.company.name} home`}
-          >
-            <Logo className="h-9 w-9" />
-            <span className="flex flex-col leading-none">
-              <span className="text-[17px] font-bold tracking-tight text-navy-900">
-                {siteConfig.company.shortName}
-              </span>
-              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.17em] text-navy-400">
-                {siteConfig.company.descriptor}
-              </span>
-            </span>
-          </Link>
-        </div>
+      <nav className="container-page flex h-16 items-center gap-6 sm:h-[72px] xl:h-[76px]" aria-label="Main">
+        {/* The mark */}
+        <Link
+          href="/#home"
+          className="flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500"
+          aria-label={`${siteConfig.company.name} home`}
+        >
+          <Logo className="h-9 w-9" />
+          <span className="font-display text-[1.375rem] font-extrabold tracking-[-0.03em] text-navy-900">
+            {siteConfig.company.shortName}
+          </span>
+        </Link>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* The nav, centred                                                 */}
-        {/* ---------------------------------------------------------------- */}
-        <ul ref={navRef} className="mx-auto hidden items-center gap-1 lg:flex">
+        {/* The nav, centred */}
+        <ul ref={navRef} className="mx-auto hidden items-center gap-1 xl:flex">
           {mainNav.map((item) => (
             <li
               key={item.label}
@@ -146,72 +191,100 @@ export function Header() {
               ) : (
                 <Link href={item.href!} className={LINK_CLASS}>
                   {item.label}
+                  <Underline />
                 </Link>
               )}
             </li>
           ))}
+          {secondaryNav.map((item) => (
+            <li key={item.href}>
+              <Link href={item.href} className={LINK_CLASS}>
+                {item.label}
+                <Underline />
+              </Link>
+            </li>
+          ))}
         </ul>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Secondary, then the one action                                   */}
-        {/* ---------------------------------------------------------------- */}
-        <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
-          <div className="hidden items-center gap-4 lg:flex">
-            <span aria-hidden="true" className="h-6 w-px bg-cream-300" />
-            {secondaryNav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-lg px-1 py-2 text-[15px] font-medium text-navy-500 transition hover:text-navy-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="hidden lg:block">
-            <ApplyButton label="Apply Now" className="!px-6 !py-2.5 !text-[15px]" />
-          </div>
+        {/* The one action */}
+        <div className="ml-auto flex shrink-0 items-center gap-2 xl:ml-0">
+          <Link
+            href="/#open-positions"
+            className="btn-brand group hidden !min-h-[44px] !px-5 !text-sm sm:inline-flex"
+          >
+            View Open Roles
+            <Icon
+              name="arrowRight"
+              className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+            />
+          </Link>
 
           <button
+            ref={menuButtonRef}
             type="button"
-            className="-mr-2 rounded-xl p-2.5 text-navy-700 transition hover:bg-cream-200 lg:hidden"
+            className="-mr-1.5 flex h-11 w-11 items-center justify-center rounded-xl text-navy-900 transition hover:bg-cream-200 xl:hidden"
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Open menu"
+            onClick={() => setMobileOpen(true)}
           >
-            <Icon name={mobileOpen ? "close" : "menu"} className="h-6 w-6" />
+            <Icon name="menu" className="h-6 w-6" />
           </button>
         </div>
       </nav>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Mobile                                                             */}
-      {/* ------------------------------------------------------------------ */}
-      {/* Flat, with the groups as headings. A dropdown inside a dropdown is a
-          thing to fight with on a phone, and there are only six links. */}
-      {mobileOpen ? (
+      {/* Mobile: a panel from the right, over a dimmed page. */}
+      <div
+        className={`fixed inset-0 z-[60] xl:hidden ${mobileOpen ? "" : "pointer-events-none"}`}
+        aria-hidden={!mobileOpen}
+      >
         <div
+          onClick={closeDrawer}
+          className={`absolute inset-0 bg-navy-950/40 backdrop-blur-[2px] transition-opacity duration-300 ${
+            mobileOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          ref={drawerRef}
           id="mobile-menu"
-          className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-cream-300 bg-white lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          inert={!mobileOpen}
+          className={`absolute inset-y-0 right-0 flex w-[min(22rem,88vw)] flex-col bg-cream-100 shadow-lift-lg transition-transform duration-300 ease-out ${
+            mobileOpen ? "translate-x-0" : "translate-x-full"
+          }`}
         >
-          <ul className="container-page flex flex-col gap-0.5 py-4">
+          <div className="flex h-16 items-center justify-between border-b border-cream-300 px-5">
+            <span className="flex items-center gap-2">
+              <Logo className="h-8 w-8" />
+              <span className="font-display text-xl font-extrabold tracking-[-0.03em] text-navy-900">
+                {siteConfig.company.shortName}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={closeDrawer}
+              aria-label="Close menu"
+              className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-navy-900 transition hover:bg-cream-200"
+            >
+              <Icon name="close" className="h-6 w-6" />
+            </button>
+          </div>
+
+          <ul className="flex-1 overflow-y-auto px-3 py-4">
             {mainNav.map((item) =>
               item.children ? (
-                <li key={item.label} className="pt-3">
-                  <p className="px-4 pb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-navy-400">
+                <li key={item.label} className="pt-4">
+                  <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-navy-400">
                     {item.label}
                   </p>
                   <ul>
                     {item.children.map((child) => (
                       <li key={child.href}>
-                        <Link
-                          href={child.href}
-                          onClick={() => setMobileOpen(false)}
-                          className={MOBILE_LINK_CLASS}
-                        >
+                        <Link href={child.href} onClick={closeDrawer} className={MOBILE_LINK_CLASS}>
                           {child.label}
+                          <Icon name="chevronRight" className="h-4 w-4 text-navy-300" />
                         </Link>
                       </li>
                     ))}
@@ -219,52 +292,60 @@ export function Header() {
                 </li>
               ) : (
                 <li key={item.label}>
-                  <Link
-                    href={item.href!}
-                    onClick={() => setMobileOpen(false)}
-                    className={MOBILE_LINK_CLASS}
-                  >
+                  <Link href={item.href!} onClick={closeDrawer} className={MOBILE_LINK_CLASS}>
                     {item.label}
+                    <Icon name="chevronRight" className="h-4 w-4 text-navy-300" />
                   </Link>
                 </li>
               ),
             )}
             {secondaryNav.map((item) => (
-              <li key={item.href} className="mt-3 border-t border-cream-200 pt-3">
-                <Link
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={MOBILE_LINK_CLASS}
-                >
+              <li key={item.href} className="mt-3 border-t border-cream-300 pt-3">
+                <Link href={item.href} onClick={closeDrawer} className={MOBILE_LINK_CLASS}>
                   {item.label}
+                  <Icon name="chevronRight" className="h-4 w-4 text-navy-300" />
                 </Link>
               </li>
             ))}
-            <li className="px-1 pt-3">
-              <div onClick={() => setMobileOpen(false)}>
-                <ApplyButton label="Apply Now" className="w-full" />
-              </div>
-            </li>
           </ul>
+
+          <div className="space-y-2.5 border-t border-cream-300 p-5">
+            <Link href="/#open-positions" onClick={closeDrawer} className="btn-brand w-full">
+              View Open Roles
+              <Icon name="arrowRight" className="h-4 w-4" />
+            </Link>
+            <Link href="/apply" onClick={closeDrawer} className="btn-line w-full">
+              Apply Now
+            </Link>
+          </div>
         </div>
-      ) : null}
+      </div>
     </header>
   );
 }
 
 const LINK_CLASS =
-  "flex items-center gap-1 rounded-lg px-3.5 py-2 text-[15px] font-medium text-navy-700 transition hover:text-navy-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500";
+  "group relative flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-lg px-3.5 text-[15px] font-semibold text-navy-700 transition hover:text-navy-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500";
 
 const MOBILE_LINK_CLASS =
-  "block rounded-xl px-4 py-3 text-base font-medium text-navy-800 transition hover:bg-cream-100";
+  "flex min-h-[48px] items-center justify-between rounded-xl px-3 text-base font-semibold text-navy-800 transition hover:bg-cream-200";
+
+/** The amber line that grows under a link on hover, as on the active item in the design. */
+function Underline() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute inset-x-3.5 bottom-1.5 h-0.5 origin-left scale-x-0 rounded-full bg-brand-500 transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100"
+    />
+  );
+}
 
 /**
  * One group in the bar, and the panel it opens.
  *
  * A button rather than a link, because it goes nowhere — and `aria-expanded`
  * so a screen reader is told it opens something before it is pressed. Focus
- * leaving the whole group closes it, which is what makes tabbing through the
- * header behave the way the mouse does.
+ * leaving the whole group closes it.
  */
 function GroupButton({
   item,
@@ -292,15 +373,13 @@ function GroupButton({
         {item.label}
         <Icon
           name="chevronDown"
-          className={`h-4 w-4 text-navy-400 transition-transform duration-200 ${
-            open ? "-rotate-180" : ""
-          }`}
+          className={`h-4 w-4 text-navy-400 transition-transform duration-200 ${open ? "-rotate-180" : ""}`}
         />
       </button>
 
       {open ? (
         <div className="absolute left-0 top-full z-50 pt-2">
-          <div className="w-[19rem] overflow-hidden rounded-2xl border border-cream-300 bg-white p-2 shadow-[0_16px_48px_rgba(15,16,53,0.13)]">
+          <div className="w-[19rem] overflow-hidden rounded-2xl bg-white p-2 shadow-lift-lg ring-1 ring-cream-300">
             {item.children!.map((child) => (
               <Link
                 key={child.href}

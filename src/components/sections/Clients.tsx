@@ -1,149 +1,75 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import { clients } from "@/config/content";
 import { CompanyLogo } from "@/components/CompanyLogo";
-import { Icon } from "@/components/Icon";
+import { CarouselButtons } from "@/components/ui/CarouselButtons";
+import { useCarousel } from "@/components/ui/useCarousel";
+import { Arc, DotGrid, Glow, SectionHeading } from "@/components/ui/marketing";
 
+/**
+ * "Companies we work with" — a two-row slider of client cards.
+ *
+ * Five columns show on a wide screen, three on a tablet, two on a phone, so
+ * no screen size is handed the whole list at once. The track snaps to whole
+ * columns; swipe, drag, the arrow buttons and the arrow keys all move it.
+ */
 export function Clients() {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
-  const [grabbing, setGrabbing] = useState(false);
-
-  // Drag-to-scroll state (mouse only; touch/trackpad use native scrolling).
-  const dragging = useRef(false);
-  const dragMoved = useRef(false);
-  const start = useRef({ x: 0, left: 0 });
-
-  const update = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setAtStart(el.scrollLeft <= 4);
-    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    update();
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      el.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, [update]);
-
-  const scrollByPage = (dir: 1 | -1) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
-  };
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType !== "mouse") return; // let touch swipe scroll natively
-    const el = scrollerRef.current;
-    if (!el) return;
-    dragging.current = true;
-    dragMoved.current = false;
-    start.current = { x: e.clientX, left: el.scrollLeft };
-    setGrabbing(true);
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const el = scrollerRef.current;
-    if (!el) return;
-    const dx = e.clientX - start.current.x;
-    if (Math.abs(dx) > 3) dragMoved.current = true;
-    el.scrollLeft = start.current.left - dx;
-  };
-
-  const endDrag = () => {
-    dragging.current = false;
-    setGrabbing(false);
-  };
-
-  // Suppress accidental clicks fired at the end of a drag.
-  const onClickCapture = (e: React.MouseEvent) => {
-    if (dragMoved.current) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
+  const { ref, atStart, atEnd, grabbing, step, handlers } = useCarousel();
 
   return (
-    <section id="clients" className="section bg-cream-200/70">
-      <div className="container-page">
-        {/* Header + controls */}
-        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
-            <span className="pill uppercase tracking-wider">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-              Our Clients
-            </span>
-            <h2 className="mt-4 text-balance text-3xl font-bold leading-[1.1] tracking-tight text-navy-900 sm:text-4xl">
-              Companies we work with
-            </h2>
-            <p className="mt-4 text-pretty text-base leading-relaxed text-navy-600 sm:text-lg">
-              We power customer experience teams at {clients.length}+ international
-              brands across technology, finance, retail, healthcare, and more.
-            </p>
-          </div>
+    <section
+      id="clients"
+      aria-labelledby="clients-title"
+      className="section-pad relative overflow-hidden bg-gradient-to-b from-cream-100 to-[#FBF6EC]"
+    >
+      <Glow className="-right-48 -top-48 h-[32rem] w-[32rem]" />
+      <Glow className="-bottom-64 -left-40 h-[30rem] w-[30rem] opacity-70" />
+      <Arc className="-right-40 -top-56 h-[30rem] w-[30rem]" opacity={0.35} />
+      <DotGrid className="bottom-10 left-6 hidden md:block" cols={9} rows={4} tone="navy" />
 
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm font-medium text-navy-500 lg:inline">
-              Drag to explore
+      <div className="container-page relative">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <SectionHeading
+            id="clients-title"
+            label="Our Clients"
+            title="Companies we work with"
+            intro={`We power customer experience teams at ${clients.length}+ international brands across technology, finance, retail, healthcare, and more.`}
+          />
+          <div className="flex shrink-0 items-center justify-between gap-4 md:justify-end">
+            <span className="whitespace-nowrap text-sm font-medium text-navy-500">
+              <span className="hidden lg:inline">Drag to explore</span>
+              <span className="lg:hidden">Swipe to explore</span>
             </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => scrollByPage(-1)}
-                disabled={atStart}
-                aria-label="Scroll to previous clients"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream-400 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-cream-400 disabled:hover:text-navy-700"
-              >
-                <Icon name="arrowRight" className="h-5 w-5 rotate-180" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollByPage(1)}
-                disabled={atEnd}
-                aria-label="Scroll to more clients"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream-400 bg-white text-navy-700 shadow-soft transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-cream-400 disabled:hover:text-navy-700"
-              >
-                <Icon name="arrowRight" className="h-5 w-5" />
-              </button>
-            </div>
+            <CarouselButtons
+              onPrev={() => step(-1)}
+              onNext={() => step(1)}
+              atStart={atStart}
+              atEnd={atEnd}
+              controls="clients-track"
+              label="clients"
+            />
           </div>
         </div>
 
-        {/* Manually scrollable 2-row track — drag anywhere to scroll */}
-        <div className="relative mt-10 [mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]">
+        <div className="relative mt-10 [mask-image:linear-gradient(to_right,transparent,black_2%,black_98%,transparent)]">
           <div
-            ref={scrollerRef}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={endDrag}
-            onPointerLeave={endDrag}
-            onClickCapture={onClickCapture}
-            className={`no-scrollbar grid grid-flow-col grid-rows-2 gap-4 overflow-x-auto pb-3 ${
-              grabbing ? "cursor-grabbing select-none" : "cursor-grab"
+            ref={ref}
+            id="clients-track"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label={`Client companies, ${clients.length} in all. Use the arrow keys or the buttons to move.`}
+            tabIndex={0}
+            {...handlers}
+            className={`no-scrollbar grid auto-cols-[calc((100%-0.75rem)/2)] grid-flow-col grid-rows-2 gap-3 overflow-x-auto px-px pb-4 pt-1 sm:auto-cols-[calc((100%-2rem)/3)] sm:gap-4 lg:auto-cols-[calc((100%-4rem)/5)] ${
+              grabbing ? "cursor-grabbing select-none snap-none" : "cursor-grab snap-x snap-mandatory"
             }`}
-            role="group"
-            aria-label="Client companies — drag or use arrows to explore"
           >
             {clients.map((client, i) => (
               <article
                 key={client.name}
-                className="group flex min-w-[15rem] items-center rounded-2xl border border-cream-300 bg-white px-5 py-4 shadow-soft transition duration-200 hover:border-brand-200 hover:shadow-card"
+                className="card-soft group flex min-w-0 snap-start items-center px-3 py-3.5 transition duration-300 hover:-translate-y-0.5 hover:shadow-lift-lg sm:px-4 sm:py-4"
               >
-                <CompanyLogo
-                  name={client.name}
-                  industry={client.industry}
-                  index={i}
-                />
+                <CompanyLogo name={client.name} industry={client.industry} index={i} />
               </article>
             ))}
           </div>

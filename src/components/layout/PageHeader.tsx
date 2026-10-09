@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { Arc, DotGrid, Glow, SectionLabel } from "@/components/ui/marketing";
 
+/** The top of every inner page, in the same style as the home page's sections. */
 export function PageHeader({
   eyebrow,
   title,
@@ -12,24 +14,16 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="relative overflow-hidden border-b border-cream-300 bg-gradient-to-b from-navy-50 to-white">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_60%_80%_at_30%_0%,black,transparent)]" />
-        <div className="absolute -left-20 top-[-6rem] h-72 w-72 rounded-full bg-brand-200/30 blur-3xl" />
-      </div>
+    <header className="relative overflow-hidden border-b border-cream-300 bg-gradient-to-b from-cream-100 to-[#FBF6EC]">
+      <Glow className="-right-40 -top-48 h-[30rem] w-[30rem]" />
+      <Arc className="-right-56 -top-64 hidden h-[30rem] w-[30rem] md:block" opacity={0.4} />
+      <DotGrid className="bottom-8 right-10 hidden md:block" cols={6} rows={3} />
       <div className="container-page relative py-14 sm:py-20">
-        {eyebrow ? (
-          <span className="pill uppercase tracking-wider">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-            {eyebrow}
-          </span>
-        ) : null}
-        <h1 className="mt-4 max-w-3xl text-balance text-4xl font-bold tracking-tight text-navy-900 sm:text-5xl">
+        {eyebrow ? <SectionLabel>{eyebrow}</SectionLabel> : null}
+        <h1 className="h-display mt-4 max-w-3xl text-balance !text-[clamp(2rem,1.4rem+2.6vw,3.25rem)]">
           {title}
         </h1>
-        {description ? (
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-navy-600">{description}</p>
-        ) : null}
+        {description ? <p className="lead mt-4 max-w-2xl text-pretty">{description}</p> : null}
         {children ? <div className="mt-6">{children}</div> : null}
       </div>
     </header>

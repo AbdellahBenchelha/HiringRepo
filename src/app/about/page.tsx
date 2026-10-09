@@ -1,8 +1,8 @@
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Icon } from "@/components/Icon";
 import { Stats } from "@/components/sections/Stats";
+import { Values } from "@/components/sections/Values";
 import { CtaBand } from "@/components/sections/CtaBand";
 
 export const metadata = buildMetadata({
@@ -28,22 +28,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="bg-cream-200/70 py-16 sm:py-20">
-        <div className="container-page">
-          <h2 className="text-center text-3xl">Our Values</h2>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {siteConfig.company.values.map((value) => (
-              <div key={value.title} className="card h-full">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
-                  <Icon name="checkCircle" className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 text-base font-semibold">{value.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-navy-600">{value.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Values />
 
       <Stats />
       <CtaBand />

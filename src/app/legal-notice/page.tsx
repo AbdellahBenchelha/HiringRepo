@@ -45,7 +45,7 @@ export default function LegalNoticePage() {
       </p>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-cream-300">
-        <table className="w-full text-left text-sm">
+        <table className="w-full table-fixed text-left text-sm [overflow-wrap:anywhere]">
           <tbody className="divide-y divide-navy-100">
             {rows.map((row) => (
               <tr key={row.label}>

@@ -122,13 +122,16 @@ export function CompanyLogo({
 
   return (
     <span className={`flex items-center gap-3 ${className}`}>
-      <Mark
-        className="h-9 w-9 shrink-0 transition-transform duration-200 group-hover:scale-110"
-        style={{ color }}
+      {/* The mark on a tile tinted with its own colour. */}
+      <span
         aria-hidden="true"
-      />
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
+        style={{ backgroundColor: `${color}14` }}
+      >
+        <Mark className="h-6 w-6" style={{ color }} aria-hidden="true" />
+      </span>
       <span className="min-w-0">
-        <span className="block truncate text-base font-bold tracking-tight text-navy-900">
+        <span className="block truncate font-display text-[15px] font-bold tracking-[-0.01em] text-navy-900">
           {name}
         </span>
         {industry ? (
