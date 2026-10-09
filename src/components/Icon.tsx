@@ -66,7 +66,11 @@ export type IconName =
   | "fileSearch"
   | "fileCheck"
   | "monitorUser"
-  | "list";
+  | "list"
+  | "heartLine"
+  | "chatDots"
+  | "shieldCheck"
+  | "usersGroup";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -185,6 +189,46 @@ const paths: Record<IconName, React.ReactNode> = {
     <path fillRule="evenodd" clipRule="evenodd" d="M3 3h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-7v2h3v2H7v-2h3v-2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm1 2v10h16V5H4Zm8 1.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6Zm-4 7.5c.4-1.7 2-2.6 4-2.6s3.6.9 4 2.6H8Z" />
   ),
   list: <path d="M4 5h2v2H4V5Zm4 0h12v2H8V5ZM4 11h2v2H4v-2Zm4 0h12v2H8v-2Zm-4 6h2v2H4v-2Zm4 0h12v2H8v-2Z" />,
+  // Outline icons, drawn with a stroke for the values cards.
+  heartLine: (
+    <path
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+      d="M12 20s-7-4.4-8.9-8.4C1.7 8.6 3.6 5 7 5c1.9 0 3.2 1 5 3 1.8-2 3.1-3 5-3 3.4 0 5.3 3.6 3.9 6.6C19 15.6 12 20 12 20Z"
+    />
+  ),
+  chatDots: (
+    <g>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        d="M12 3.5c4.97 0 9 3.36 9 7.5s-4.03 7.5-9 7.5c-1.1 0-2.15-.16-3.12-.46L4 20l1.3-3.9C3.85 14.75 3 12.95 3 11c0-4.14 4.03-7.5 9-7.5Z"
+      />
+      <circle cx="8.4" cy="11" r="1.25" />
+      <circle cx="12" cy="11" r="1.25" />
+      <circle cx="15.6" cy="11" r="1.25" />
+    </g>
+  ),
+  usersGroup: (
+    <g>
+      <circle cx="12" cy="7" r="3.1" />
+      <path d="M6.8 19.2c0-3.1 2.3-5.4 5.2-5.4s5.2 2.3 5.2 5.4V20H6.8v-.8Z" />
+      <circle cx="5.4" cy="9.3" r="2.3" />
+      <path d="M1.2 19.2c0-2.5 1.7-4.2 4.1-4.2.9 0 1.7.2 2.3.6a7.2 7.2 0 0 0-1.9 4.3V20H1.2v-.8Z" />
+      <circle cx="18.6" cy="9.3" r="2.3" />
+      <path d="M22.8 19.2c0-2.5-1.7-4.2-4.1-4.2-.9 0-1.7.2-2.3.6a7.2 7.2 0 0 1 1.9 4.3V20h4.5v-.8Z" />
+    </g>
+  ),
+  shieldCheck: (
+    <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" />
+      <path d="m9 12 2.2 2.2L15.5 10" />
+    </g>
+  ),
   expand: (
     <path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z" />
   ),
