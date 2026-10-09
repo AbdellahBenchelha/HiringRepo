@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { jobs } from "@/config/jobs";
 import { JobCard } from "@/components/cards/JobCard";
 import { Icon } from "@/components/Icon";
-import { Accent, Glow, PrimaryButton, SectionLabel } from "@/components/ui/marketing";
+import { Accent, Arc, Glow, PrimaryButton, SectionLabel } from "@/components/ui/marketing";
 
 const categories = [
   { label: "All roles", match: () => true },
@@ -30,9 +30,15 @@ export function OpenPositions() {
     <section
       id="open-positions"
       aria-labelledby="positions-title"
-      className="section-pad relative overflow-hidden bg-gradient-to-b from-cream-100 via-white/40 to-cream-100"
+      className="section-pad relative isolate overflow-hidden bg-gradient-to-b from-[#FBFAF7] via-cream-100 to-[#FBF7F0]"
     >
-      <Glow className="-right-40 -top-24 h-[28rem] w-[28rem] opacity-70" />
+      {/* Soft shapes: warm top left, a cool grey-blue top right, fine amber curves */}
+      <Glow className="-left-48 -top-32 h-[30rem] w-[30rem] opacity-70" />
+      <span
+        aria-hidden="true"
+        className="absolute -right-32 -top-24 -z-10 h-[30rem] w-[24rem] rotate-[24deg] rounded-[45%] bg-gradient-to-bl from-[#E9EDF6] to-transparent opacity-80"
+      />
+      <Arc className="-left-80 top-40 -z-10 hidden h-[34rem] w-[34rem] lg:block" opacity={0.3} />
 
       <div className="container-page relative">
         <div className="mx-auto max-w-3xl text-center">
@@ -86,38 +92,52 @@ export function OpenPositions() {
         </div>
 
         {/* Results */}
-        <ul key={active} className="mt-8 grid animate-fade-in gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {/* Wrapped rather than a grid, so a last row that is not full sits in
+            the middle instead of leaving a hole on the right. */}
+        <ul key={active} className="mt-8 flex animate-fade-in flex-wrap justify-center gap-5 lg:gap-6">
           {filtered.map((job) => (
-            <li key={job.slug}>
+            <li
+              key={job.slug}
+              className="w-full md:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3rem)/3)]"
+            >
               <JobCard job={job} />
             </li>
           ))}
         </ul>
 
         {/* Open application */}
-        <div className="relative mt-8 overflow-hidden rounded-2xl bg-gradient-to-r from-brand-50 via-[#FFF4DC] to-brand-100/80 p-5 ring-1 ring-inset ring-brand-200/70 sm:p-7">
+        <div className="relative isolate mt-8 overflow-hidden rounded-3xl bg-gradient-to-r from-[#FFF6E9] via-[#FFF1DD] to-[#FFE7C4] p-6 ring-1 ring-inset ring-brand-200/60 sm:p-8 lg:mt-10 lg:px-10">
           <span
             aria-hidden="true"
-            className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-brand-200/40 blur-2xl"
+            className="absolute -right-20 -top-28 -z-10 h-72 w-[30rem] rotate-[-12deg] rounded-[50%] bg-white/45"
           />
-          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-4 sm:items-center">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 160"
+            preserveAspectRatio="none"
+            fill="none"
+            className="absolute inset-y-0 right-0 -z-10 hidden h-full w-1/2 md:block"
+          >
+            <path d="M40 150C160 90 300 140 600 40" stroke="#F5A623" strokeOpacity="0.35" strokeWidth="1.5" />
+          </svg>
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-5 sm:items-center">
               <span
                 aria-hidden="true"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-500 shadow-lift sm:h-14 sm:w-14"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FFE7C2] to-[#FFDCA6] text-brand-500 sm:h-20 sm:w-20"
               >
-                <Icon name="fileEdit" className="h-6 w-6 sm:h-7 sm:w-7" />
+                <Icon name="fileAdd" className="h-8 w-8 sm:h-9 sm:w-9" />
               </span>
               <div>
-                <p className="font-display text-lg font-extrabold tracking-[-0.02em] text-navy-900 sm:text-xl">
+                <p className="font-display text-xl font-extrabold tracking-[-0.025em] text-navy-900 sm:text-[1.75rem]">
                   Don&apos;t see the right role?
                 </p>
-                <p className="mt-1 text-sm text-navy-600 sm:text-[15px]">
+                <p className="mt-1.5 text-[15px] leading-relaxed text-navy-600 sm:text-[17px]">
                   Send a general application and we&apos;ll reach out when something fits your skills.
                 </p>
               </div>
             </div>
-            <PrimaryButton href="/apply" className="w-full shrink-0 sm:w-auto sm:px-8">
+            <PrimaryButton href="/apply" className="w-full shrink-0 !min-h-[56px] md:w-auto md:px-10">
               Submit your CV
             </PrimaryButton>
           </div>

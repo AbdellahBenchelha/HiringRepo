@@ -70,7 +70,14 @@ export type IconName =
   | "heartLine"
   | "chatDots"
   | "shieldCheck"
-  | "usersGroup";
+  | "usersGroup"
+  | "headsetLine"
+  | "phoneLine"
+  | "chatsLine"
+  | "laptopLine"
+  | "mapPinLine"
+  | "briefcaseLine"
+  | "fileAdd";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -211,6 +218,53 @@ const paths: Record<IconName, React.ReactNode> = {
       <circle cx="8.4" cy="11" r="1.25" />
       <circle cx="12" cy="11" r="1.25" />
       <circle cx="15.6" cy="11" r="1.25" />
+    </g>
+  ),
+  // Outline icons for the job cards.
+  headsetLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
+      <path d="M4 14a2 2 0 0 1 2-2h1.5v6H6a2 2 0 0 1-2-2v-2Z" />
+      <path d="M20 14a2 2 0 0 0-2-2h-1.5v6H18a2 2 0 0 0 2-2v-2Z" />
+      <path d="M18 18c0 1.7-1.8 3-4 3h-1.5" />
+    </g>
+  ),
+  phoneLine: (
+    <path
+      fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"
+      d="M5.2 3.8h3.1l1.6 4.1-2.1 1.4a11.5 11.5 0 0 0 6.9 6.9l1.4-2.1 4.1 1.6v3.1a2 2 0 0 1-2.1 2A16.5 16.5 0 0 1 3.2 5.9a2 2 0 0 1 2-2.1Z"
+    />
+  ),
+  chatsLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 4.5h9.5a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 1-1.5 1.5H8.5L5 15.5v-2.5h-.5A1.5 1.5 0 0 1 3 11.5V6a1.5 1.5 0 0 1 1.5-1.5Z" />
+      <path d="M15.5 9h3A1.5 1.5 0 0 1 20 10.5V16a1.5 1.5 0 0 1-1.5 1.5H18V20l-3.5-2.5H11A1.5 1.5 0 0 1 9.5 16v-1" />
+      <path d="M6.5 8h5.5M6.5 10.2h3.5" />
+    </g>
+  ),
+  laptopLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4.5" y="5" width="15" height="10" rx="1.5" />
+      <path d="M2.5 19h19" />
+    </g>
+  ),
+  mapPinLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10Z" />
+      <circle cx="12" cy="11" r="2.1" />
+    </g>
+  ),
+  briefcaseLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="7" width="17" height="12.5" rx="2" />
+      <path d="M9 7V5.6A1.6 1.6 0 0 1 10.6 4h2.8A1.6 1.6 0 0 1 15 5.6V7M3.5 12.5h17" />
+    </g>
+  ),
+  fileAdd: (
+    <g>
+      <path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" />
+      <path fill="#fff" fillOpacity="0.55" d="M14 2v3.5A1.5 1.5 0 0 0 15.5 7H19l-5-5Z" />
+      <path fill="#fff" d="M11 10.5h2v2.75h2.75v2H13V18h-2v-2.75H8.25v-2H11V10.5Z" />
     </g>
   ),
   usersGroup: (
