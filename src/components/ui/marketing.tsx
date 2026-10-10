@@ -164,7 +164,7 @@ export function ResponsiveImage({
     // eslint-disable-next-line @next/next/no-img-element -- pre-sized WebP with its own srcset
     <img
       src={image.src}
-      srcSet={`${image.src} ${image.width}w, ${image.src2x} ${image.width * 2}w`}
+      srcSet={`${image.src} ${image.width}w, ${image.src2x} ${image.width2x}w`}
       sizes={sizes}
       width={image.width}
       height={image.height}

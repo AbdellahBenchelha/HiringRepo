@@ -228,7 +228,7 @@ export default async function JobDetailPage({
           </div>
 
           {/* The role's photo, with its pay and the remote promise beside it */}
-          <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
+          <div className="relative mx-auto mt-8 w-full max-w-lg sm:mt-4 lg:mt-0 lg:max-w-none">
             <span
               aria-hidden="true"
               className="absolute -right-6 -top-8 h-[88%] w-[90%] rounded-[46%_54%_42%_58%/52%_44%_56%_48%] bg-gradient-to-bl from-[#FFD9A0] to-[#FFEFD8] sm:-right-10"
@@ -263,7 +263,7 @@ export default async function JobDetailPage({
               </div>
             ) : null}
             {remote ? (
-              <div className="absolute -top-5 right-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lift-lg ring-1 ring-cream-300/60 sm:-right-6">
+              <div className="absolute -top-12 right-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lift-lg ring-1 ring-cream-300/60 sm:-right-6 sm:-top-8 lg:-top-5">
                 <span
                   aria-hidden="true"
                   className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#FFEBCF] to-[#FFE0B2] text-brand-500"
