@@ -9,6 +9,7 @@ export default function robots(): MetadataRoute.Robots {
       disallow: "/api/",
     },
     sitemap: `${siteConfig.url}/sitemap.xml`,
-    host: siteConfig.url,
+    // No "Host:" line: it is a Yandex-only rule that Google ignores, and the
+    // canonical tags on every page already name the one true address.
   };
 }

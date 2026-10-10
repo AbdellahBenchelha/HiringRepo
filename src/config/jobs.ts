@@ -79,7 +79,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
-    updatedAt: "2026-08-27",
+    updatedAt: "2026-10-10",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Respond to customer inquiries by phone, email, or live chat",
@@ -108,7 +108,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
-    updatedAt: "2026-08-27",
+    updatedAt: "2026-10-10",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Handle inbound or outbound calls",
@@ -137,7 +137,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "Strong written English required; additional languages a plus",
     datePosted: "2026-08-17",
-    updatedAt: "2026-08-27",
+    updatedAt: "2026-10-10",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Answer customer questions through live chat and email",
@@ -164,7 +164,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
-    updatedAt: "2026-08-27",
+    updatedAt: "2026-10-10",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Help customers troubleshoot basic technical problems",
@@ -200,7 +200,7 @@ export const jobs: JobPosting[] = [
     experienceLevel: "Entry level to experienced",
     languages: "English required; additional languages an advantage",
     datePosted: "2026-08-17",
-    updatedAt: "2026-08-27",
+    updatedAt: "2026-10-10",
     employmentType: "FULL_TIME",
     responsibilities: [
       "Contact prospective or existing customers",

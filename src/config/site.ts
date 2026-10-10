@@ -136,7 +136,11 @@ export const siteConfig = {
     mapEmbedUrl: "", // PLACEHOLDER — paste a Google Maps embed URL if available
   },
 
-  /** How long a listing stays valid, in days, from its datePosted. */
+  /**
+   * The least time a listing is marked open for, in days from its datePosted.
+   * The job page keeps it at least 30 days ahead after that, while the role is
+   * listed — see jobPostingJsonLd.
+   */
   jobValidityDays: 90,
 
   social: [

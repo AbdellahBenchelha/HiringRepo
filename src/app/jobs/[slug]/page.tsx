@@ -22,6 +22,12 @@ import {
   SectionLabel,
 } from "@/components/ui/marketing";
 
+/**
+ * Rebuilt once a day, so the listing's end date (validThrough, below) keeps
+ * moving forward while the role is open, even when nothing is deployed.
+ */
+export const revalidate = 86400;
+
 export function generateStaticParams() {
   return jobs.map((job) => ({ slug: job.slug }));
 }
@@ -46,8 +52,11 @@ export async function generateMetadata({
  * Google Jobs box above the normal results.
  *
  * Two details Google is strict about:
- *   validThrough — a posting with no end date is treated as indefinitely open
- *     and gets deprioritised, so it is derived from datePosted.
+ *   validThrough — the date after which the listing is closed. A fixed date
+ *     counted from datePosted made every role "expire" 90 days after posting,
+ *     although the roles are recruited for continuously; Google then drops
+ *     them. It is now always at least 30 days ahead (the page is rebuilt
+ *     daily), and a role closes by being removed from config/jobs.ts.
  *   applicantLocationRequirements — for a TELECOMMUTE role this must name real
  *     countries. A placeholder is rejected, and the values decide which
  *     candidates are shown the listing at all.
@@ -59,23 +68,48 @@ export async function generateMetadata({
  *     commission is real pay but not base pay, so inflating this figure with
  *     it would misreport what the role guarantees.
  */
+/** Text for inside HTML: the description below is HTML, so it must not break out. */
+function escapeHtml(v: string): string {
+  return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/**
+ * The full listing as HTML, the way Google asks for it: the summary, the key
+ * facts, responsibilities, requirements and what we offer — the same content
+ * the page shows. A one-paragraph summary reads to Google as a thin listing.
+ */
+function jobDescriptionHtml(job: JobPosting): string {
+  const list = (items: string[]) => `<ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+  const offers = FEATURED_BENEFITS.map((f) => benefits.find((b) => b.title === f.title))
+    .filter((b): b is (typeof benefits)[number] => !!b)
+    .map((b) => `${b.title} — ${b.description}`);
+  return [
+    `<p>${escapeHtml(job.shortDescription)}</p>`,
+    `<p><strong>Work arrangement:</strong> ${escapeHtml(job.workArrangement)}<br>` +
+      `<strong>Employment type:</strong> ${escapeHtml(employmentLabels[job.employmentType] ?? job.employmentType)}<br>` +
+      `<strong>Experience level:</strong> ${escapeHtml(job.experienceLevel)}<br>` +
+      `<strong>Languages:</strong> ${escapeHtml(job.languages)}</p>`,
+    job.salary?.detail ? `<p>${escapeHtml(job.salary.detail)}</p>` : "",
+    `<h3>Responsibilities</h3>${list(job.responsibilities)}`,
+    `<h3>Requirements</h3>${list(job.requirements)}`,
+    offers.length ? `<h3>What we offer</h3>${list(offers)}` : "",
+    `<h3>How to apply</h3><p>Apply online at ${escapeHtml(siteConfig.url)}/apply.</p>`,
+  ].join("");
+}
+
 function jobPostingJsonLd(slug: string) {
   const job = getJobBySlug(slug);
   if (!job) return null;
 
-  const posted = new Date(job.datePosted);
-  const validThrough = new Date(posted);
-  validThrough.setDate(validThrough.getDate() + siteConfig.jobValidityDays);
+  const DAY = 24 * 60 * 60 * 1000;
+  const fromPosting = Date.parse(job.datePosted) + siteConfig.jobValidityDays * DAY;
+  const validThrough = new Date(Math.max(fromPosting, Date.now() + 30 * DAY));
 
   return {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,
-    description: `${job.shortDescription} Responsibilities include: ${job.responsibilities.join(
-      "; "
-    )}. Requirements: ${job.requirements.join("; ")}.${
-      job.salary?.detail ? ` ${job.salary.detail}` : ""
-    }`,
+    description: jobDescriptionHtml(job),
     identifier: {
       "@type": "PropertyValue",
       name: siteConfig.company.name,

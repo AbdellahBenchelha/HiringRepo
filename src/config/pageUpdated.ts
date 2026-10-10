@@ -17,12 +17,12 @@
  * src/config/jobs.ts, so editing one listing does not disturb the others.
  */
 export const PAGE_UPDATED: Record<string, string> = {
-  "": "2026-06-25",
-  "/about": "2026-08-12",
-  "/careers": "2026-06-25",
-  "/jobs": "2026-06-25",
-  "/apply": "2026-08-26",
-  "/contact": "2026-06-25",
+  "": "2026-10-10",
+  "/about": "2026-10-10",
+  "/careers": "2026-10-10",
+  "/jobs": "2026-10-10",
+  "/apply": "2026-10-10",
+  "/contact": "2026-10-10",
   "/privacy-policy": "2026-10-02",
   "/applicant-privacy": "2026-06-25",
   "/cookie-policy": "2026-09-03",
