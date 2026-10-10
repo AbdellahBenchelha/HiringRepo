@@ -72,10 +72,13 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className={`${bare ? "" : "card"} space-y-5`}>
-      <div>
-        <h3 className="font-display text-xl font-extrabold tracking-[-0.02em] text-navy-900 sm:text-2xl">
+      <div className="pb-1">
+        <h3 className="font-display text-2xl font-extrabold tracking-[-0.025em] text-navy-900 sm:text-[2rem]">
           Send us a message
         </h3>
+        <p className="mt-2 text-[15px] leading-relaxed text-navy-500">
+          Fill out the form below and our team will get back to you as soon as possible.
+        </p>
       </div>
 
       <div aria-hidden="true" className="absolute left-[-9999px] h-px w-px overflow-hidden">
@@ -84,11 +87,12 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Name" htmlFor="contact-name" required error={errors.name}>
-          <WithIcon icon="user">
+        <Field label="Full Name" htmlFor="contact-name" required error={errors.name}>
+          <WithIcon icon="userLine">
             <TextInput
               id="contact-name"
               autoComplete="name"
+              placeholder="Enter your full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={errors.name}
@@ -96,12 +100,13 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
             />
           </WithIcon>
         </Field>
-        <Field label="Email" htmlFor="contact-email" required error={errors.email}>
-          <WithIcon icon="mail">
+        <Field label="Email Address" htmlFor="contact-email" required error={errors.email}>
+          <WithIcon icon="mailLine">
             <TextInput
               id="contact-email"
               type="email"
               autoComplete="email"
+              placeholder="Enter your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}
@@ -114,6 +119,7 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
         <WithIcon icon="list">
           <TextInput
             id="contact-subject"
+            placeholder="What is your question about?"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             error={errors.subject}
@@ -122,9 +128,10 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
         </WithIcon>
       </Field>
       <Field label="Message" htmlFor="contact-message" required error={errors.message}>
-        <WithIcon icon="chat" top>
+        <WithIcon icon="chatLine" top>
           <Textarea
             id="contact-message"
+            placeholder="Type your message here…"
             value={message}
             maxLength={MAX_MESSAGE}
             onChange={(e) => setMessage(e.target.value)}
@@ -132,14 +139,17 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
             aria-describedby={[errors.message ? "contact-message-error" : null, "contact-message-count"]
               .filter(Boolean)
               .join(" ")}
-            className={`textarea min-h-[8.5rem] !rounded-xl bg-cream-50 pl-11 ${
+            className={`textarea min-h-[9.5rem] !resize-none !rounded-xl border-cream-300 bg-white pb-8 pl-12 pt-3.5 placeholder:text-navy-300 ${
               errors.message ? "input-invalid" : ""
             }`}
           />
+          <p
+            id="contact-message-count"
+            className="pointer-events-none absolute bottom-3 right-4 text-xs tabular-nums text-navy-400"
+          >
+            {message.length}/{MAX_MESSAGE}
+          </p>
         </WithIcon>
-        <p id="contact-message-count" className="mt-1.5 text-right text-xs tabular-nums text-navy-400">
-          {message.length}/{MAX_MESSAGE}
-        </p>
       </Field>
 
       {status === "error" ? (
@@ -148,7 +158,7 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
         </p>
       ) : null}
 
-      <button type="submit" disabled={status === "submitting"} className="btn-brand group w-full">
+      <button type="submit" disabled={status === "submitting"} className="btn-brand group w-full !min-h-[58px] !text-base">
         {status === "submitting" ? "Sending…" : "Send Message"}
         {status === "submitting" ? null : (
           <Icon
@@ -165,7 +175,9 @@ export function ContactForm({ bare = false }: { bare?: boolean }) {
 const MAX_MESSAGE = 4000;
 
 function inputClass(error?: string): string {
-  return `input !rounded-xl bg-cream-50 pl-11 ${error ? "input-invalid" : ""}`;
+  return `input !min-h-[52px] !rounded-xl border-cream-300 bg-white pl-12 placeholder:text-navy-300 ${
+    error ? "input-invalid" : ""
+  }`;
 }
 
 /** A field with a small icon inside its left edge, as in the approved design. */

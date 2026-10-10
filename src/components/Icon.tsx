@@ -77,7 +77,11 @@ export type IconName =
   | "laptopLine"
   | "mapPinLine"
   | "briefcaseLine"
-  | "fileAdd";
+  | "fileAdd"
+  | "mailLine"
+  | "clockLine"
+  | "userLine"
+  | "chatLine";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -265,6 +269,30 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" />
       <path fill="#fff" fillOpacity="0.55" d="M14 2v3.5A1.5 1.5 0 0 0 15.5 7H19l-5-5Z" />
       <path fill="#fff" d="M11 10.5h2v2.75h2.75v2H13V18h-2v-2.75H8.25v-2H11V10.5Z" />
+    </g>
+  ),
+  mailLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+    </g>
+  ),
+  clockLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </g>
+  ),
+  userLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8.5" r="3.8" />
+      <path d="M4.8 20c.6-3.6 3.6-6 7.2-6s6.6 2.4 7.2 6" />
+    </g>
+  ),
+  chatLine: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4.5h14A1.5 1.5 0 0 1 20.5 6v9a1.5 1.5 0 0 1-1.5 1.5h-8.5L6 20v-3.5H5A1.5 1.5 0 0 1 3.5 15V6A1.5 1.5 0 0 1 5 4.5Z" />
+      <path d="M7.5 9h9M7.5 12h6" />
     </g>
   ),
   usersGroup: (
