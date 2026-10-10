@@ -2,7 +2,7 @@ import Link from "next/link";
 import { faqs } from "@/config/content";
 import { images } from "@/config/images";
 import { FaqAccordion } from "@/components/FaqAccordion";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import {
   Accent,
   DotGrid,
@@ -20,6 +20,12 @@ import {
  * amber arcs, as in the approved design. The photo sits in a slanted frame on
  * a peach shape, and the way to a person rests on its lower edge.
  */
+const quickFacts: { icon: IconName; label: string }[] = [
+  { icon: "home", label: "100% remote" },
+  { icon: "fileAdd", label: "CV optional" },
+  { icon: "graduation", label: "Paid training" },
+];
+
 export function Faq() {
   return (
     <section
@@ -42,10 +48,11 @@ export function Faq() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:gap-12 xl:gap-16">
+        <div className="mt-12 grid items-start gap-10 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:gap-12 xl:gap-16">
           {/* Photo in a slanted frame, and the way to a person */}
           <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
-            <div className="relative pb-36 lg:sticky lg:top-28">
+            <div className="lg:sticky lg:top-28">
+            <div className="relative pb-36">
               {/* The shapes behind the photo */}
               <span
                 aria-hidden="true"
@@ -68,11 +75,11 @@ export function Faq() {
               {/* Slanted frame: the box is skewed and the photo counter-skewed,
                   so its edges lean and the person stays upright. */}
               <div className="relative ml-2 mr-4 mt-8 -skew-y-3 overflow-hidden rounded-[2.25rem] shadow-lift-lg sm:ml-6">
-                <div className="aspect-[1.42] skew-y-3 scale-[1.08]">
+                <div className="aspect-[1.2] skew-y-3 scale-[1.08]">
                   <ResponsiveImage
                     image={images.faq}
                     sizes="(min-width: 1024px) 480px, 92vw"
-                    className="object-[42%_30%]"
+                    className="object-[44%_30%]"
                   />
                 </div>
               </div>
@@ -102,6 +109,27 @@ export function Faq() {
                   />
                 </Link>
               </div>
+            </div>
+
+            {/* Three answers at a glance, straight from the questions */}
+            <ul className="mt-6 grid grid-cols-3 gap-3">
+              {quickFacts.map((f) => (
+                <li
+                  key={f.label}
+                  className="flex flex-col items-center gap-2 rounded-2xl bg-white/80 px-2 py-4 text-center shadow-[0_1px_2px_rgba(15,16,53,0.04),0_10px_24px_-16px_rgba(15,16,53,0.2)] ring-1 ring-white sm:flex-row sm:gap-3 sm:px-4 sm:text-left lg:flex-col lg:gap-2 lg:px-2 lg:text-center xl:flex-row xl:gap-3 xl:px-4 xl:text-left"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF1DC] text-brand-500"
+                  >
+                    <Icon name={f.icon} className="h-5 w-5" />
+                  </span>
+                  <span className="text-[13px] font-bold leading-tight text-navy-900 sm:text-sm">
+                    {f.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
             </div>
           </div>
 

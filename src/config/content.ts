@@ -399,7 +399,16 @@ export interface FaqItem {
   answer: string;
 }
 
+/**
+ * The nine questions on the home page, most-asked first — the first one opens
+ * by default. Kept to the ones that decide whether somebody applies.
+ */
 export const faqs: FaqItem[] = [
+  {
+    question: "Are remote positions available?",
+    answer:
+      "Yes — all of our positions are fully remote. You can work from wherever you're based, and each job listing confirms the remote arrangement.",
+  },
   {
     question: "Do I need previous call-center experience?",
     answer:
@@ -411,19 +420,19 @@ export const faqs: FaqItem[] = [
       "Yes. A CV is optional. You can complete the application form with your details and experience even if you do not have a CV ready. If you do have one, attaching it helps our team learn more about you.",
   },
   {
+    question: "Is training provided?",
+    answer:
+      "Absolutely. We provide comprehensive, paid professional training during onboarding and ongoing development throughout your career with us.",
+  },
+  {
     question: "Which languages are required?",
     answer:
       "Language requirements depend on the position. English is commonly required, and additional languages can open up more opportunities. Each job listing describes its language requirements, and you can list all of your languages and proficiency levels in the application form.",
   },
   {
-    question: "Are remote positions available?",
+    question: "Are there full-time and part-time positions?",
     answer:
-      "Yes — all of our positions are fully remote. You can work from wherever you're based, and each job listing confirms the remote arrangement.",
-  },
-  {
-    question: "Is training provided?",
-    answer:
-      "Absolutely. We provide comprehensive, paid professional training during onboarding and ongoing development throughout your career with us.",
+      "Yes. Depending on the role and location, we offer full-time, part-time, and temporary opportunities. You can indicate your employment preference in the application form.",
   },
   {
     question: "How long does the recruitment process take?",
@@ -436,28 +445,8 @@ export const faqs: FaqItem[] = [
       "We carefully review every application. However, due to the volume we receive, only shortlisted candidates may be contacted for the next stage. We appreciate the time every applicant invests.",
   },
   {
-    question: "Can I apply for more than one position?",
-    answer:
-      "Yes. You are welcome to apply for more than one position that matches your skills and interests. Please submit a separate application for each role so we can match you correctly.",
-  },
-  {
-    question: "Are there full-time and part-time positions?",
-    answer:
-      "Yes. Depending on the role and location, we offer full-time, part-time, and temporary opportunities. You can indicate your employment preference in the application form.",
-  },
-  {
     question: "How will my personal data be used?",
     answer:
       "Your information is used solely for recruitment purposes — to assess your application and contact you about opportunities. Please see our Applicant Privacy Notice and Privacy Policy for full details on how we handle and protect your data.",
-  },
-  {
-    question: "Can I update my application after submitting it?",
-    answer:
-      "If you need to update or correct your application, please contact our recruitment team using the details on our Contact page. You can also request access to, correction of, or deletion of your data as described in our Privacy Policy.",
-  },
-  {
-    question: "Does submitting an application guarantee employment?",
-    answer:
-      "No. Submitting an application does not guarantee an interview or employment. All applications are assessed against the requirements of the role and our current hiring needs.",
   },
 ];
