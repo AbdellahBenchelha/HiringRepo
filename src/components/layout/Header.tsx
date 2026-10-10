@@ -209,10 +209,10 @@ export function Header() {
         {/* The one action */}
         <div className="ml-auto flex shrink-0 items-center gap-2 xl:ml-0">
           <Link
-            href="/#open-positions"
-            className="btn-brand group hidden !min-h-[44px] !px-5 !text-sm sm:inline-flex"
+            href="/apply"
+            className="btn-brand group hidden !min-h-[44px] !px-6 !text-sm sm:inline-flex"
           >
-            View Open Roles
+            Apply Now
             <Icon
               name="arrowRight"
               className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
@@ -310,12 +310,12 @@ export function Header() {
           </ul>
 
           <div className="space-y-2.5 border-t border-cream-300 p-5">
-            <Link href="/#open-positions" onClick={closeDrawer} className="btn-brand w-full">
-              View Open Roles
+            <Link href="/apply" onClick={closeDrawer} className="btn-brand w-full">
+              Apply Now
               <Icon name="arrowRight" className="h-4 w-4" />
             </Link>
-            <Link href="/apply" onClick={closeDrawer} className="btn-line w-full">
-              Apply Now
+            <Link href="/#open-positions" onClick={closeDrawer} className="btn-line w-full">
+              View Open Roles
             </Link>
           </div>
         </div>
