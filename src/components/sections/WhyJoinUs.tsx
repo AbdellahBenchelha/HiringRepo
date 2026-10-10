@@ -64,16 +64,20 @@ export function WhyJoinUs() {
               View open roles
             </PrimaryButton>
 
+            {/* Three equal cells with dividers. The figure size follows the
+                width this column actually gets in each layout (it is narrowest
+                on phones and in the three-column wide layout), so all three
+                always sit on one row. */}
             <dl className="mt-10 grid grid-cols-3">
               {figures.map((f, i) => (
                 <div
                   key={f.label}
-                  className={`flex flex-col-reverse justify-end ${
-                    i > 0 ? "border-l border-brand-200 pl-4 sm:pl-6" : "pr-2"
-                  } ${i < figures.length - 1 ? "pr-2 sm:pr-4" : ""}`}
+                  className={`flex min-w-0 flex-col-reverse justify-end ${
+                    i > 0 ? "border-l border-brand-200 pl-3 sm:pl-4" : "pr-2"
+                  }`}
                 >
-                  <dt className="mt-1.5 text-xs text-navy-500 sm:text-sm">{f.label}</dt>
-                  <dd className="font-display text-[1.75rem] font-extrabold leading-none tracking-[-0.03em] text-navy-900 sm:text-[2rem]">
+                  <dt className="mt-1.5 text-xs leading-snug text-navy-500 sm:text-[13px]">{f.label}</dt>
+                  <dd className="whitespace-nowrap font-display text-[1.625rem] font-extrabold leading-none tracking-[-0.03em] text-navy-900 md:text-[1.875rem] xl:text-[1.75rem]">
                     {f.value}
                   </dd>
                 </div>

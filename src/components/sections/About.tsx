@@ -63,7 +63,7 @@ export function About() {
         </div>
 
         {/* Team photo, with the brand card resting on its lower edge */}
-        <Reveal className="relative pb-12 sm:pb-10">
+        <Reveal className="relative mx-auto w-full max-w-2xl pb-12 sm:pb-10 lg:max-w-none">
           <DotGrid className="-bottom-2 -right-2 hidden sm:block" cols={8} rows={5} tone="navy" />
           <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] shadow-lift-lg ring-1 ring-white/60 lg:aspect-[1.45]">
             <ResponsiveImage

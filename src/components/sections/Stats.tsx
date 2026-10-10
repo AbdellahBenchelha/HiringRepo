@@ -39,7 +39,7 @@ export function Stats() {
       <div className="container-page">
         <h2
           id="stats-title"
-          className="text-center text-[11px] font-bold uppercase tracking-[0.2em] text-brand-400 sm:text-xs"
+          className="text-center text-xs font-bold uppercase tracking-[0.2em] text-brand-400 sm:text-[13px]"
         >
           Trusted by international businesses
         </h2>

@@ -103,7 +103,7 @@ export function Header() {
   // A drawer left open past the breakpoint would trap a desktop visitor.
   useEffect(() => {
     if (!mobileOpen) return;
-    const mq = window.matchMedia("(min-width: 1280px)");
+    const mq = window.matchMedia("(min-width: 1024px)");
     const onChange = () => mq.matches && setMobileOpen(false);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
@@ -159,11 +159,11 @@ export function Header() {
         Skip to main content
       </a>
 
-      <nav className="container-page flex h-16 items-center gap-6 sm:h-[72px] xl:h-[76px]" aria-label="Main">
+      <nav className="container-page flex h-16 items-center gap-4 sm:h-[72px] xl:h-[76px] xl:gap-6" aria-label="Main">
         {/* The mark */}
         <Link
           href="/#home"
-          className="flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500"
+          className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500"
           aria-label={`${siteConfig.company.name} home`}
         >
           <Logo className="h-9 w-9" />
@@ -173,7 +173,7 @@ export function Header() {
         </Link>
 
         {/* The nav, centred */}
-        <ul ref={navRef} className="mx-auto hidden items-center gap-1 xl:flex">
+        <ul ref={navRef} className="mx-auto hidden items-center gap-0.5 lg:flex xl:gap-1">
           {mainNav.map((item) => (
             <li
               key={item.label}
@@ -207,7 +207,7 @@ export function Header() {
         </ul>
 
         {/* The one action */}
-        <div className="ml-auto flex shrink-0 items-center gap-2 xl:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
           <Link
             href="/apply"
             className="btn-brand group hidden !min-h-[44px] !px-6 !text-sm sm:inline-flex"
@@ -222,7 +222,7 @@ export function Header() {
           <button
             ref={menuButtonRef}
             type="button"
-            className="-mr-1.5 flex h-11 w-11 items-center justify-center rounded-xl text-navy-900 transition hover:bg-cream-200 xl:hidden"
+            className="-mr-1.5 flex h-11 w-11 items-center justify-center rounded-xl text-navy-900 transition hover:bg-cream-200 lg:hidden"
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"
             aria-label="Open menu"
@@ -235,7 +235,7 @@ export function Header() {
 
       {/* Mobile: a panel from the right, over a dimmed page. */}
       <div
-        className={`fixed inset-0 z-[60] xl:hidden ${mobileOpen ? "" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-[60] lg:hidden ${mobileOpen ? "" : "pointer-events-none"}`}
         aria-hidden={!mobileOpen}
       >
         <div
@@ -325,7 +325,7 @@ export function Header() {
 }
 
 const LINK_CLASS =
-  "group relative flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-lg px-3.5 text-[15px] font-semibold text-navy-700 transition hover:text-navy-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500";
+  "group relative flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-lg px-2.5 text-[14px] font-semibold xl:px-3.5 xl:text-[15px] text-navy-700 transition hover:text-navy-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500";
 
 const MOBILE_LINK_CLASS =
   "flex min-h-[48px] items-center justify-between rounded-xl px-3 text-base font-semibold text-navy-800 transition hover:bg-cream-200";
@@ -335,7 +335,7 @@ function Underline() {
   return (
     <span
       aria-hidden="true"
-      className="absolute inset-x-3.5 bottom-1.5 h-0.5 origin-left scale-x-0 rounded-full bg-brand-500 transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100"
+      className="absolute inset-x-2.5 bottom-1.5 h-0.5 origin-left xl:inset-x-3.5 scale-x-0 rounded-full bg-brand-500 transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100"
     />
   );
 }

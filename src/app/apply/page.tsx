@@ -115,7 +115,7 @@ export default async function ApplyPage({
       {/* Body */}
       <section className="bg-cream-100 py-12 sm:py-16 lg:py-20">
         <div className="container-page">
-          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
+          <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-10">
             {/* Form */}
             <div className="min-w-0">
               <div className="rounded-[2rem] bg-white p-5 shadow-[0_2px_6px_rgba(15,16,53,0.04),0_34px_70px_-34px_rgba(15,16,53,0.26)] ring-1 ring-cream-300/50 sm:p-8 lg:p-10">
@@ -127,7 +127,7 @@ export default async function ApplyPage({
                     </p>
                     <Link
                       href="/apply"
-                      className="text-sm font-bold text-brand-800 underline decoration-brand-300 underline-offset-4 hover:decoration-brand-600"
+                      className="-my-2 inline-flex min-h-[44px] items-center px-2 text-sm font-bold text-brand-800 underline decoration-brand-300 underline-offset-4 hover:decoration-brand-600"
                     >
                       Change
                     </Link>
@@ -142,9 +142,11 @@ export default async function ApplyPage({
             </div>
 
             {/* Sidebar */}
-            <aside className="space-y-6 lg:sticky lg:top-28">
+            {/* Beside the form on a wide screen; below it, as a row of cards, on a
+                laptop or tablet, so the form keeps its full width there. */}
+            <aside className="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-3 xl:sticky xl:top-28 xl:block xl:space-y-6">
               {/* What happens next */}
-              <div className={SIDE_CARD}>
+              <div className={`${SIDE_CARD} md:col-span-2 lg:col-span-1`}>
                 <h2 className="font-display text-lg font-extrabold tracking-[-0.015em] text-navy-900">
                   What happens next
                 </h2>
