@@ -222,6 +222,51 @@ export function readPanReuploadToken(token: string | undefined | null): PanReupl
 }
 
 /**
+ * Link a candidate to the proof-of-address page.
+ *
+ * Its own marker, like the others, so no other link can open it. Never
+ * expires, and a newer email does not retire an older one: the page reads the
+ * candidate's current state, so every link we ever sent them shows the same
+ * thing. The send time is carried only so two links are not identical.
+ */
+export interface AddressProofLink {
+  id: string;
+  sentAt: string;
+}
+
+export function createAddressProofToken(link: AddressProofLink): string {
+  const body = b64url(Buffer.from(JSON.stringify({ v: "address", i: link.id, s: link.sentAt })));
+  return `${body}.${sign(body)}`;
+}
+
+export type AddressProofTokenResult = { ok: true; link: AddressProofLink } | { ok: false; reason: "invalid" };
+
+export function readAddressProofToken(token: string | undefined | null): AddressProofTokenResult {
+  if (!token || typeof token !== "string" || !token.includes(".") || token.length > 600) {
+    return { ok: false, reason: "invalid" };
+  }
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return { ok: false, reason: "invalid" };
+
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
+
+  try {
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as { v?: unknown; i?: unknown; s?: unknown };
+    if (obj.v !== "address") return { ok: false, reason: "invalid" };
+    if (typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
+    if (typeof obj.s !== "string" || !obj.s || Number.isNaN(Date.parse(obj.s))) {
+      return { ok: false, reason: "invalid" };
+    }
+    return { ok: true, link: { id: obj.i, sentAt: obj.s } };
+  } catch {
+    return { ok: false, reason: "invalid" };
+  }
+}
+
+/**
  * Link a candidate to their company-details form.
  *
  * Its own marker again, so a link that asks for an EIN and a signed W-9 cannot

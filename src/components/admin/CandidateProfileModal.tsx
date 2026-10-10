@@ -13,6 +13,7 @@ import {
   verificationStateOf,
 } from "@/components/admin/VerificationPanel";
 import { ResidencePanel } from "@/components/admin/ResidencePanel";
+import { AddressProofPanel } from "@/components/admin/AddressProofPanel";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
@@ -591,6 +592,14 @@ export function CandidateProfileModal({
             defaultCountry={candidate.confirmedDetails?.country || candidate.country}
             nationality={candidate.confirmedDetails?.nationality}
             onChange={(patch) => onChange(patch)}
+          />
+
+          {/* The optional last step before the agreement: a bill or bank
+              statement showing the address the agreement will carry. */}
+          <AddressProofPanel
+            candidate={candidate}
+            onOpenDocument={onOpenDocument}
+            onChange={onChange}
           />
 
           {/* Last, because it answers for both panels above: what they sent

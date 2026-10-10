@@ -34,8 +34,10 @@ export function DocumentViewer({
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
-  const viewUrl = `/api/admin/documents/${candidateId}/${doc.kind}?mode=view`;
-  const downloadUrl = `/api/admin/documents/${candidateId}/${doc.kind}`;
+  // An earlier, replaced version is reached by its key; the current one without.
+  const version = doc.supersededAt && doc.key ? `v=${encodeURIComponent(doc.key)}` : "";
+  const viewUrl = `/api/admin/documents/${candidateId}/${doc.kind}?mode=view${version ? `&${version}` : ""}`;
+  const downloadUrl = `/api/admin/documents/${candidateId}/${doc.kind}${version ? `?${version}` : ""}`;
   const isPdf = extensionOf(doc.filename) === ".pdf";
 
   // Read through a ref so onClose is not a dependency: callers pass an inline

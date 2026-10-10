@@ -402,7 +402,7 @@ export function ResidencePanel({
             }}
             className="rounded-xl bg-navy-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800 disabled:opacity-50"
           >
-            {status === "not_asked" ? "Ask for proof of address" : "Ask again"}
+            {status === "not_asked" ? "Ask for proof of residence" : "Ask again"}
           </button>
 
           {/* Only once there is something to decide on. A Verify button with

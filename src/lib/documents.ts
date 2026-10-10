@@ -72,6 +72,11 @@ export const DOCUMENT_KINDS = [
    */
   "panFront",
   "panBack",
+  /**
+   * Proof of address: a recent bill or bank statement, PDF only. Earlier ones
+   * are kept when a new one is asked for. See lib/addressProof.
+   */
+  "addressProof",
 ] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
@@ -95,6 +100,7 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   einLetter: "EIN confirmation letter",
   panFront: "PAN card — front",
   panBack: "PAN card — back",
+  addressProof: "Proof of address",
 };
 
 /** Short form for the table chips, where three of them share one cell. */
@@ -114,6 +120,7 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   einLetter: "EIN",
   panFront: "PAN",
   panBack: "PAN back",
+  addressProof: "Address",
 };
 
 /** The identity pair, which the application documents column does not show. */
@@ -216,11 +223,16 @@ export function isPanDocumentKind(kind: DocumentKind): boolean {
 export const COMPANY_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"] as const;
 export const COMPANY_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
+/** Proof of address: PDF only, as the page tells the candidate. */
+export const PDF_EXTENSIONS = [".pdf"] as const;
+export const PDF_MIME = ["application/pdf"] as const;
+
 export function maxBytesFor(kind: DocumentKind): number {
   if (isAudioKind(kind)) return MAX_AUDIO_BYTES;
   // A scanned certificate runs to several pages, and a phone photograph of one
-  // is no smaller than a photograph of a passport.
-  if (isCompanyKind(kind) || isPanDocumentKind(kind)) return MAX_IMAGE_BYTES;
+  // is no smaller than a photograph of a passport. A bank statement PDF is
+  // several pages too.
+  if (isCompanyKind(kind) || isPanDocumentKind(kind) || kind === "addressProof") return MAX_IMAGE_BYTES;
   return isImageKind(kind) ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
 }
 
@@ -228,6 +240,7 @@ export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_EXTENSIONS;
   if (isPanDocumentKind(kind)) return IMAGE_EXTENSIONS;
   if (isCompanyKind(kind)) return COMPANY_EXTENSIONS;
+  if (kind === "addressProof") return PDF_EXTENSIONS;
   return isImageKind(kind) ? IMAGE_EXTENSIONS : ALLOWED_EXTENSIONS;
 }
 
@@ -235,6 +248,7 @@ export function allowedMimeFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_MIME;
   if (isPanDocumentKind(kind)) return IMAGE_MIME;
   if (isCompanyKind(kind)) return COMPANY_MIME;
+  if (kind === "addressProof") return PDF_MIME;
   return isImageKind(kind) ? IMAGE_MIME : ALLOWED_MIME;
 }
 
@@ -252,7 +266,15 @@ export function keepsHistory(kind: DocumentKind): boolean {
   // it against.
   // And the PAN card: when a re-upload is asked for, the first photos are
   // what the recruiter compares the new ones against.
-  return isImageKind(kind) || isAudioKind(kind) || isCompanyKind(kind) || isPanDocumentKind(kind);
+  // And proof of address: when a new document is asked for, the earlier one is
+  // what the new one is read against.
+  return (
+    isImageKind(kind) ||
+    isAudioKind(kind) ||
+    isCompanyKind(kind) ||
+    isPanDocumentKind(kind) ||
+    kind === "addressProof"
+  );
 }
 
 /**

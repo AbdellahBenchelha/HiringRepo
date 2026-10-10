@@ -26,6 +26,15 @@ import { formatRate } from "@/lib/offer";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
 import type { CandidateView } from "@/lib/candidateView";
+import { ADDRESS_STATUS_LABEL, type AddressProofStatus } from "@/lib/addressProof";
+
+/** The proof-of-address tag's colour, by where it stands. */
+const ADDRESS_TAG: Record<AddressProofStatus, string> = {
+  not_asked: "border-navy-200 bg-navy-50 text-navy-600",
+  asked: "border-amber-200 bg-amber-50 text-amber-800",
+  received: "border-blue-200 bg-blue-50 text-blue-800",
+  approved: "border-green-200 bg-green-50 text-green-800",
+};
 
 /**
  * Everyone who said yes.
@@ -69,6 +78,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   const [gstin, setGstin] = useState<"all" | "yes" | "no">("all");
   // The final interview is the live chat: has its link been emailed yet?
   const [chatSent, setChatSent] = useState<"all" | "yes" | "notStarted" | "no">("all");
+  const [addressProof, setAddressProof] = useState<"all" | AddressProofStatus>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -121,9 +131,10 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       if (chatSent === "no" && c.chatLinkSentAt) return false;
       // The people the "start your chat" reminder is for.
       if (chatSent === "notStarted" && (!c.chatLinkSentAt || c.chatStarted)) return false;
+      if (addressProof !== "all" && (c.addressProofStatus ?? "not_asked") !== addressProof) return false;
       return true;
     });
-  }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent]);
+  }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent, addressProof]);
 
   /** How many rows the hidden countries are keeping off the table. */
   const hiddenCount = useMemo(
@@ -194,7 +205,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, hiddenCountries.hidden, verified, engagedAs, gstin, chatSent, pageSize]);
+  }, [search, country, hiddenCountries.hidden, verified, engagedAs, gstin, chatSent, addressProof, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -217,7 +228,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   return (
     <>
       <div ref={tableTop} className="card mb-5 p-4 sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
           <label className="block">
             <span className="label">Search</span>
             <input
@@ -287,6 +298,22 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
           </label>
 
           <label className="block">
+            <span className="label">Proof of address</span>
+            <select
+              id="addressProof"
+              className="select"
+              value={addressProof}
+              onChange={(e) => setAddressProof(e.target.value as typeof addressProof)}
+            >
+              <option value="all">All</option>
+              <option value="not_asked">Not asked</option>
+              <option value="asked">Asked</option>
+              <option value="received">Received</option>
+              <option value="approved">Approved</option>
+            </select>
+          </label>
+
+          <label className="block">
             <span className="label">Country</span>
             <select id="country" className="select" value={country} onChange={(e) => setCountry(e.target.value)}>
               <option value="all">All countries</option>
@@ -328,6 +355,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                 setEngagedAs("all");
                 setGstin("all");
                 setChatSent("all");
+                setAddressProof("all");
               }}
               className="rounded-full px-3 py-1 text-xs font-semibold text-navy-600 transition hover:bg-navy-100"
             >
@@ -514,6 +542,16 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                         >
                           <Icon name="checkCircle" className="h-3 w-3" />
                           Live check passed
+                        </span>
+                      ) : null}
+                      {c.addressProofStatus && c.addressProofStatus !== "not_asked" ? (
+                        <span
+                          data-address-tag={c.addressProofStatus}
+                          title="Proof of address — see View info → ID check"
+                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${ADDRESS_TAG[c.addressProofStatus]}`}
+                        >
+                          <Icon name="home" className="h-3 w-3" />
+                          Address {ADDRESS_STATUS_LABEL[c.addressProofStatus].toLowerCase()}
                         </span>
                       ) : null}
                       </div>

@@ -149,6 +149,9 @@ export async function POST(req: NextRequest) {
       verifiedAt: c.verifiedAt,
       status: c.status,
       verifiedAckSentAt: c.verifiedAckSentAt,
+      addressProofRequestedAt: c.addressProofRequestedAt,
+      addressProofSubmittedAt: c.addressProofSubmittedAt,
+      addressProofApprovedAt: c.addressProofApprovedAt,
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });

@@ -18,6 +18,15 @@
  */
 import { siteConfig } from "@/config/site";
 import {
+  addressProofReaskHtml,
+  addressProofReaskSubject,
+  addressProofReaskText,
+  addressProofReminderHtml,
+  addressProofReminderSubject,
+  addressProofReminderText,
+  addressProofRequestHtml,
+  addressProofRequestSubject,
+  addressProofRequestText,
   companyDetailsHtml,
   companyDetailsSubject,
   companyDetailsText,
@@ -84,6 +93,7 @@ import { deadlineFrom, formatDeadline } from "@/lib/offerReminder";
 import { sampleAgreement } from "@/lib/sampleAgreement";
 import { REUPLOAD_REASONS } from "@/lib/verification";
 import { RESIDENCE_REASONS } from "@/lib/residence";
+import { ADDRESS_REASK_REASONS } from "@/lib/addressProof";
 import { CHAT_LINK_TTL_DAYS, DEFAULT_HOURS } from "@/lib/chat";
 
 export type EmailStage = "application" | "voice" | "identity" | "offer";
@@ -392,7 +402,7 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     name: "Proof of residence",
     stage: "identity",
     when:
-      "Sent from Ask for proof of address in the ID check tab. The highlighted box carries the reason you choose; this preview shows the first preset.",
+      "Sent from Ask for proof of residence in the ID check tab. The highlighted box carries the reason you choose; this preview shows the first preset.",
     kind: "campaign",
     source: "residenceRequestHtml",
     render: () => {
@@ -586,6 +596,61 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         subject: companyDetailsSubject(),
         html: companyDetailsHtml(invite),
         text: companyDetailsText(invite),
+      };
+    },
+  },
+  {
+    id: "address-proof",
+    name: "Proof of address request",
+    stage: "offer",
+    when:
+      "Sent by hand from View info → ID check → Proof of address with Send request, or to many at once from the Accepted tab (Ask for proof of address). Optional last step before the final agreement — nothing waits on it. The link never expires; you get a Telegram message when they upload.",
+    kind: "campaign",
+    source: "addressProofRequestHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME, url: link("/address?t=EXAMPLE") };
+      return {
+        subject: addressProofRequestSubject(),
+        html: addressProofRequestHtml(payload),
+        text: addressProofRequestText(payload),
+      };
+    },
+  },
+  {
+    id: "address-proof-reminder",
+    name: "Proof of address reminder",
+    stage: "offer",
+    when:
+      "Sent by hand with Send reminder in View info → ID check → Proof of address, to somebody who was asked and has not uploaded yet. Same link.",
+    kind: "campaign",
+    source: "addressProofReminderHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME, url: link("/address?t=EXAMPLE") };
+      return {
+        subject: addressProofReminderSubject(),
+        html: addressProofReminderHtml(payload),
+        text: addressProofReminderText(payload),
+      };
+    },
+  },
+  {
+    id: "address-proof-reask",
+    name: "Proof of address — new document needed",
+    stage: "offer",
+    when:
+      "Sent from Ask for a new document in View info → ID check → Proof of address. The highlighted box carries the reason you choose; this preview shows the first preset. Their page opens again for a new upload.",
+    kind: "campaign",
+    source: "addressProofReaskHtml",
+    render: () => {
+      const payload = {
+        fullName: SAMPLE_NAME,
+        url: link("/address?t=EXAMPLE"),
+        reason: ADDRESS_REASK_REASONS[0].message,
+      };
+      return {
+        subject: addressProofReaskSubject(),
+        html: addressProofReaskHtml(payload),
+        text: addressProofReaskText(payload),
       };
     },
   },

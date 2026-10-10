@@ -18,9 +18,11 @@ import { VOICE_SKIPPED } from "@/lib/candidateStatus";
 import { VERIFIED_ACK_REFUSAL, verifiedAckRefusal } from "@/lib/verifiedAck";
 import { canOffer, type Offer } from "@/lib/offer";
 import type { CandidateDocument } from "@/lib/documents";
+import { addressProofStatus } from "@/lib/addressProof";
 
 export const BULK_ACTIONS = [
   "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer", "chatReminder", "verifiedAck",
+  "addressProof",
 ] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
@@ -34,6 +36,7 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   offer: "Send offers",
   chatReminder: "Remind to start chat",
   verifiedAck: "Tell them they’re verified",
+  addressProof: "Ask for proof of address",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
@@ -45,8 +48,11 @@ export const OFFER_ACTIONS: readonly BulkAction[] = ["offerReminder"];
  * only offers the offer reminder here, with the offer editor beside it.
  */
 export const FAVORITE_ACTIONS: readonly BulkAction[] = ["offerReminder"];
-/** Accepted: chasing the final interview chat for those who never started it. */
-export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder"];
+/**
+ * Accepted: chasing the final interview chat for those who never started it,
+ * and asking for proof of address (the optional last step).
+ */
+export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder", "addressProof"];
 
 /** Below this, a chat reminder sent again warns: two in a day read as spam. */
 const CHAT_REMINDER_WARN_MS = 24 * 60 * 60 * 1000;
@@ -128,6 +134,10 @@ export interface BulkCandidate {
   verifiedAt?: string;
   status?: string;
   verifiedAckSentAt?: string;
+  /** For the proof-of-address request: what was asked, and what came back. */
+  addressProofRequestedAt?: string;
+  addressProofSubmittedAt?: string;
+  addressProofApprovedAt?: string;
 }
 
 export type Eligibility =
@@ -161,6 +171,17 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
     });
     if (refusal) return { include: false, reason: VERIFIED_ACK_REFUSAL[refusal] ?? refusal };
     return c.verifiedAckSentAt ? { include: true, warn: "already told — this tells them again" } : { include: true };
+  }
+
+  // "Your agreement is ready — please confirm your address." Only after
+  // acceptance, and never to somebody whose document is already in: a new
+  // document is asked for one person at a time, with the reason, in View info.
+  if (action === "addressProof") {
+    if (!c.offerAcceptedAt) return { include: false, reason: "has not accepted an offer" };
+    const status = addressProofStatus(c);
+    if (status === "received") return { include: false, reason: "has already sent their proof of address" };
+    if (status === "approved") return { include: false, reason: "proof of address already approved" };
+    return status === "asked" ? { include: true, warn: "already asked — this asks again" } : { include: true };
   }
 
   // "You haven't started your final interview chat yet." Refused for anybody

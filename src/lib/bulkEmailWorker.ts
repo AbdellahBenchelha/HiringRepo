@@ -12,6 +12,7 @@ import { markItem, readBatch, setHeldUntil, setNextAt } from "@/lib/bulkEmailSto
 import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
 import { currentAllowance } from "@/lib/warmupStore";
 import { sendChatReminder } from "@/lib/chatReminderSend";
+import { sendAddressProofEmail } from "@/lib/addressProofSend";
 
 /**
  * SERVER-ONLY. Sends one candidate's email, waits, sends the next.
@@ -64,6 +65,16 @@ async function sendOne(batch: BatchState, id: string) {
       // The same send as the button in View info, re-checked per person: a
       // candidate who starts the chat while the batch waits is not reminded.
       return sendChatReminder(id, baseUrl(), { kind: "nudge", by: batch.startedBy, override: batch.override });
+    case "addressProof": {
+      // The same send as the button in View info, re-checked per person: a
+      // candidate who uploads while the batch waits is not asked again.
+      const result = await sendAddressProofEmail(id, baseUrl(), {
+        kind: "request",
+        by: batch.startedBy,
+        override: batch.override,
+      });
+      return result.ok ? { ok: true as const } : result;
+    }
     case "offer": {
       // The terms ride on the item, so a batch resumed after a restart still
       // sends what was agreed rather than a default.

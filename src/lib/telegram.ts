@@ -213,6 +213,37 @@ export function buildPanReuploadedMessage(
   ].join("\n");
 }
 
+/**
+ * A candidate sent their proof of address. Says which document, and — when the
+ * address they typed differs from the one on file — both, so the recruiter
+ * knows to look before opening anything.
+ */
+export function buildAddressProofMessage(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+  adminUrl: string,
+  documentType: string,
+  address: { given: string; onFile: string; changed: boolean },
+  again: boolean,
+): string {
+  return [
+    again ? "🏠 <b>New proof of address received</b>" : "🏠 <b>Proof of address received</b>",
+    "",
+    ...whoLines(name, email, country),
+    "",
+    `<b>Document:</b> ${escapeHtml(documentType)}`,
+    ...(address.changed
+      ? [
+          "⚠️ <b>They changed their address:</b>",
+          `<b>Now:</b> ${escapeHtml(address.given.slice(0, 300))}`,
+          `<b>On file:</b> ${escapeHtml(address.onFile.slice(0, 300) || "—")}`,
+        ]
+      : [`<b>Address:</b> ${escapeHtml(address.given.slice(0, 300))}`]),
+    `<a href="${escapeHtml(adminUrl).replace(/"/g, "&quot;")}">Open in the Admin Panel</a>`,
+  ].join("\n");
+}
+
 /** Build the "Personal information" message (sent after the first step). */
 export function buildPersonalMessage(fields: Record<string, unknown>): string | null {
   const lines = PERSONAL_FIELDS.flatMap(({ key, label }) => {

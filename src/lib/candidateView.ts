@@ -32,6 +32,12 @@ import { hasSsn } from "@/lib/ssn";
 import { awaitingDecision } from "@/lib/voiceAck";
 import type { CompanyCheck } from "@/lib/companyCheck";
 import type { VoiceStatus } from "@/lib/candidateStatus";
+import {
+  addressProofStatus,
+  type AddressProofEvent,
+  type AddressProofStatus,
+  type AddressProofSubmission,
+} from "@/lib/addressProof";
 
 export interface CandidateView {
   id: string;
@@ -131,6 +137,16 @@ export interface CandidateView {
   panReuploadedAt?: string;
   panAnsweredAt?: string;
   panDeletedAt?: string;
+  /** Proof of address — see lib/addressProof. */
+  addressProofRequestedAt?: string;
+  addressProofReason?: string;
+  addressProofEvents?: AddressProofEvent[];
+  addressProofSubmittedAt?: string;
+  addressProofSubmissions?: AddressProofSubmission[];
+  addressProofApprovedAt?: string;
+  addressProofApprovedBy?: string;
+  /** Derived, so the table, the filter and the panel cannot disagree. */
+  addressProofStatus: AddressProofStatus;
   /** The live identity check: what was sent, and how far they got with it. */
   liveVerificationUrl?: string;
   liveVerificationSentAt?: string;
@@ -351,6 +367,14 @@ export function toCandidateView(
     panReuploadedAt: c.panReuploadedAt,
     panAnsweredAt: c.panAnsweredAt,
     panDeletedAt: c.panDeletedAt,
+    addressProofRequestedAt: c.addressProofRequestedAt,
+    addressProofReason: c.addressProofReason,
+    addressProofEvents: c.addressProofEvents,
+    addressProofSubmittedAt: c.addressProofSubmittedAt,
+    addressProofSubmissions: c.addressProofSubmissions,
+    addressProofApprovedAt: c.addressProofApprovedAt,
+    addressProofApprovedBy: c.addressProofApprovedBy,
+    addressProofStatus: addressProofStatus(c),
     liveVerificationUrl: c.liveVerificationUrl,
     liveVerificationSentAt: c.liveVerificationSentAt,
     liveVerificationCount: c.liveVerificationCount,

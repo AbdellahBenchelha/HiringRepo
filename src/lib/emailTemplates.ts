@@ -1624,6 +1624,293 @@ export function panReuploadHtml(e: PanReuploadEmail): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Proof of address                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The three proof-of-address emails — the request, a reminder, and a request
+ * for a new document — sent by hand from View info or the Accepted tab. They
+ * share one layout and one list of what to send; only the opening differs.
+ * The link never expires, so none of them gives a deadline. See lib/addressProof.
+ */
+export interface AddressProofEmail {
+  fullName: string;
+  /** Their personal proof-of-address link. */
+  url: string;
+}
+
+export interface AddressProofReaskEmail extends AddressProofEmail {
+  /** Why the document was sent back — a preset or the recruiter's words. */
+  reason: string;
+}
+
+export function addressProofRequestSubject(): string {
+  return "Your agreement is ready — please confirm your address";
+}
+
+export function addressProofReminderSubject(): string {
+  return "Reminder: your proof of address is the last step";
+}
+
+export function addressProofReaskSubject(): string {
+  return "Please send a new proof of address";
+}
+
+/** Their first name, or nothing — "Good news, there!" reads worse than "Good news!". */
+function firstNameOrEmpty(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? "";
+}
+
+const ADDRESS_WHAT_TEXT = [
+  `What to upload — one of these, dated within the last 3 months:`,
+  `  • Service or utility bill (internet or TV service, gas, water,`,
+  `    electricity or city tax)`,
+  `  • Bank/credit card statement or account confirmation letter`,
+  ``,
+  `It must show your full name and your home address. It does not have to be`,
+  `in English. PDF only.`,
+];
+
+function addressProofText(opening: string[], buttonLabel: string, url: string): string {
+  return [
+    ...opening,
+    ``,
+    ...ADDRESS_WHAT_TEXT,
+    ``,
+    `${buttonLabel}:`,
+    url,
+    ``,
+    `This link is personal to you.`,
+    ``,
+    `We will never ask you for a payment of any kind, your card details or a password.`,
+    ``,
+    `Any questions, reply to this email or write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+function addressProofHtml(o: {
+  subject: string;
+  preheader: string;
+  heading: string;
+  /** Already-escaped HTML paragraphs, shown above the list. */
+  intro: string[];
+  /** Plain text, shown in the highlighted box under the intro. */
+  reason?: string;
+  /** Already-escaped HTML paragraph, shown under the highlighted box. */
+  afterReason?: string;
+  buttonLabel: string;
+  url: string;
+}): string {
+  const company = esc(siteConfig.company.name);
+  const url = esc(o.url);
+  const p = (html: string, bottom = 16) =>
+    `<p style="margin:0 0 ${bottom}px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">${html}</p>`;
+  const li = (html: string) =>
+    `<tr><td valign="top" style="padding:0 10px 8px 0;font:700 15px/1.55 Arial,Helvetica,sans-serif;color:${AMBER};">&#10003;</td><td style="padding:0 0 8px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${NAVY};">${html}</td></tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(o.subject)}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  ${esc(o.preheader)}
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          ${esc(o.heading)}
+        </h1>
+
+        ${o.intro.map((h, i) => p(h, i === o.intro.length - 1 ? 22 : 16)).join("\n        ")}
+${
+  o.reason
+    ? `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:0 0 22px 0;">
+          <tr>
+            <td style="padding:16px 20px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+              ${esc(o.reason)}
+            </td>
+          </tr>
+        </table>
+`
+    : ""
+}${o.afterReason ? `        ${p(o.afterReason, 22)}\n` : ""}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 26px 0;">
+          <tr>
+            <td style="padding:18px 20px 12px 20px;">
+              <p style="margin:0 0 12px 0;font:700 15px/1.5 Arial,Helvetica,sans-serif;color:${NAVY};">
+                What to upload &mdash; one of these, dated within the last 3 months:
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                ${li(`<strong>Service or utility bill</strong> &mdash; internet or TV service, gas, water, electricity or city tax`)}
+                ${li(`<strong>Bank/credit card statement</strong> or account confirmation letter`)}
+              </table>
+              <p style="margin:6px 0 6px 0;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+                It must show your full name and your home address. It does not have to be in English.
+                <strong style="color:${NAVY};">PDF only.</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 36px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                ${esc(o.buttonLabel)}
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 6px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          This link is personal to you.
+        </p>
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;">
+          <tr>
+            <td style="padding:16px 20px;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+              <strong style="color:${NAVY};">We will never ask you for</strong> a payment of any kind,
+              your card details or a password.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+const ADDRESS_REQUEST_INTRO =
+  "Your information is verified and your agreement is ready. Before we send you the final agreement, there is one last step: we need a proof of address.";
+
+export function addressProofRequestText(e: AddressProofEmail): string {
+  const first = firstNameOrEmpty(e.fullName);
+  return addressProofText(
+    [first ? `Good news, ${first}!` : "Good news!", ``, ADDRESS_REQUEST_INTRO],
+    "Upload proof of address",
+    e.url,
+  );
+}
+
+export function addressProofRequestHtml(e: AddressProofEmail): string {
+  const first = firstNameOrEmpty(e.fullName);
+  return addressProofHtml({
+    subject: addressProofRequestSubject(),
+    preheader: "One last step before your final agreement: a recent bill or bank statement showing your address.",
+    heading: first ? `Good news, ${first}!` : "Good news!",
+    intro: [
+      `Your information is verified and your agreement is ready. Before we send you the final agreement, there is <strong style="color:${NAVY};">one last step: we need a proof of address</strong>.`,
+    ],
+    buttonLabel: "Upload proof of address",
+    url: e.url,
+  });
+}
+
+const ADDRESS_REMINDER_INTRO =
+  "Your agreement is ready — we are only waiting for your proof of address before we send you the final agreement. It takes a minute.";
+
+export function addressProofReminderText(e: AddressProofEmail): string {
+  return addressProofText(
+    [`Hi ${firstNameOf(e.fullName)},`, ``, ADDRESS_REMINDER_INTRO],
+    "Upload proof of address",
+    e.url,
+  );
+}
+
+export function addressProofReminderHtml(e: AddressProofEmail): string {
+  return addressProofHtml({
+    subject: addressProofReminderSubject(),
+    preheader: "Your agreement is ready — we are only waiting for your proof of address.",
+    heading: "Just one step left",
+    intro: [
+      `Hi ${esc(firstNameOf(e.fullName))},`,
+      `Your agreement is ready &mdash; we are only waiting for your <strong style="color:${NAVY};">proof of address</strong> before we send you the final agreement. It takes a minute.`,
+    ],
+    buttonLabel: "Upload proof of address",
+    url: e.url,
+  });
+}
+
+export function addressProofReaskText(e: AddressProofReaskEmail): string {
+  return addressProofText(
+    [
+      `Hi ${firstNameOf(e.fullName)},`,
+      ``,
+      `Thank you for sending your proof of address. Unfortunately we could not accept the document you sent:`,
+      ``,
+      e.reason,
+      ``,
+      `Please upload a new document using the link below. Everything else is ready.`,
+    ],
+    "Upload a new document",
+    e.url,
+  );
+}
+
+export function addressProofReaskHtml(e: AddressProofReaskEmail): string {
+  return addressProofHtml({
+    subject: addressProofReaskSubject(),
+    preheader: "We could not accept the document you sent — please upload a new one.",
+    heading: "Please send a new proof of address",
+    intro: [
+      `Hi ${esc(firstNameOf(e.fullName))},`,
+      `Thank you for sending your proof of address. Unfortunately we could not accept the document you sent:`,
+    ],
+    reason: e.reason,
+    afterReason: "Please upload a new document using the link below. Everything else is ready.",
+    buttonLabel: "Upload a new document",
+    url: e.url,
+  });
+}
+
+/* -------------------------------------------------------------------------- */
 /* GSTIN request                                                               */
 /* -------------------------------------------------------------------------- */
 

@@ -30,6 +30,7 @@ function hidden(pathname: string | null): boolean {
     pathname.startsWith("/offer") ||
     pathname.startsWith("/verify") ||
     pathname === "/pan" ||
+    pathname === "/address" ||
     // The chat is a full-height app of its own, and a row of site links
     // above a live conversation is a way out mid-interview.
     pathname.startsWith("/chat")

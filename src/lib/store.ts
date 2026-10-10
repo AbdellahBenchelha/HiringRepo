@@ -39,6 +39,7 @@ export type { CandidateStatus, VoiceStatus };
 import { effectiveOffer, type Offer } from "@/lib/offer";
 import { panSentSince, type PanAnswer } from "@/lib/pan";
 import type { LiveReminder } from "@/lib/chat";
+import type { AddressDocType, AddressProofEvent, AddressProofSubmission } from "@/lib/addressProof";
 
 /** One "please re-upload your PAN card" email. */
 export interface PanReuploadRequest {
@@ -311,6 +312,23 @@ export interface Candidate {
   panReuploadReason?: string;
   panReuploadRequests?: PanReuploadRequest[];
   panReuploadedAt?: string;
+  /**
+   * Proof of address — a recent bill or bank statement, asked for as the last
+   * step before the final agreement. Optional; nothing waits on it. See
+   * lib/addressProof.
+   *
+   * `RequestedAt` is the newest request or new-document request (a reminder
+   * does not move it): a document counts as an answer only if it arrived
+   * after it. Every email is kept in `Events`, every upload in `Submissions`
+   * with the address they typed — which never overwrites confirmedDetails.
+   */
+  addressProofRequestedAt?: string;
+  addressProofReason?: string;
+  addressProofEvents?: AddressProofEvent[];
+  addressProofSubmittedAt?: string;
+  addressProofSubmissions?: AddressProofSubmission[];
+  addressProofApprovedAt?: string;
+  addressProofApprovedBy?: string;
   /**
    * The live identity check: a link created for this one candidate in Persona,
    * emailed to them by hand when photographs could not settle the question.
@@ -1536,6 +1554,83 @@ export function completePanReupload(
       c.gstinAddedVia = "pan-reupload";
     }
     return { list, result: { ok: true, candidate: c, first } };
+  });
+}
+
+/**
+ * A proof-of-address email went out. Written once the email is away — the
+ * link in it never retires, so there is nothing to check it against before.
+ * A request or a new-document request opens the step again; a reminder only
+ * adds to the list.
+ */
+export function recordAddressProofEmail(id: string, event: AddressProofEvent): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.addressProofEvents = [...(c.addressProofEvents ?? []), event];
+    if (event.kind === "request" || event.kind === "reask") {
+      c.addressProofRequestedAt = event.at;
+      if (event.kind === "reask" && event.reason) c.addressProofReason = event.reason;
+      else delete c.addressProofReason;
+      // A new document is wanted, so the old approval no longer describes it.
+      delete c.addressProofApprovedAt;
+      delete c.addressProofApprovedBy;
+    }
+    return { list, result: c };
+  });
+}
+
+/**
+ * The candidate sent their proof of address. Only once a PDF has arrived since
+ * the newest request — checked inside the write, so two quick presses cannot
+ * both count. A second press for the same request is answered ok and records
+ * nothing.
+ */
+export function completeAddressProof(
+  id: string,
+  input: { type: AddressDocType; address: string; onFile: string },
+): Promise<
+  | { ok: true; candidate: Candidate; first: boolean }
+  | { ok: false; reason: "not_found" | "not_asked" | "no_document" }
+> {
+  type R =
+    | { ok: true; candidate: Candidate; first: boolean }
+    | { ok: false; reason: "not_found" | "not_asked" | "no_document" };
+  return withWrite<R>((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: { ok: false, reason: "not_found" } };
+    const asked = c.addressProofRequestedAt;
+    if (!asked) return { list, result: { ok: false, reason: "not_asked" } };
+    if (c.addressProofSubmittedAt && c.addressProofSubmittedAt >= asked) {
+      return { list, result: { ok: true, candidate: c, first: false } };
+    }
+    const doc = currentDocument(c.documents, "addressProof");
+    if (!doc || doc.status === "blocked" || !doc.key || doc.uploadedAt <= asked) {
+      return { list, result: { ok: false, reason: "no_document" } };
+    }
+    const at = new Date().toISOString();
+    c.addressProofSubmissions = [
+      ...(c.addressProofSubmissions ?? []),
+      { at, type: input.type, address: input.address, onFile: input.onFile, key: doc.key },
+    ];
+    c.addressProofSubmittedAt = at;
+    return { list, result: { ok: true, candidate: c, first: true } };
+  });
+}
+
+/** Approve the proof of address on file, or take the approval back (null). */
+export function setAddressProofApproved(id: string, by: string | null): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    if (by === null) {
+      delete c.addressProofApprovedAt;
+      delete c.addressProofApprovedBy;
+    } else {
+      c.addressProofApprovedAt = new Date().toISOString();
+      c.addressProofApprovedBy = by;
+    }
+    return { list, result: c };
   });
 }
 
