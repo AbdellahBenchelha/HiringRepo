@@ -12,8 +12,16 @@ import {
 
 type Toggles = { analytics: boolean; preferences: boolean; marketing: boolean };
 
+/**
+ * The banner is part of the server-rendered page rather than appearing once
+ * the scripts have run: on a phone it is the largest thing on screen for a
+ * first visit, so waiting for JavaScript made every page "finish" seconds
+ * late. A visitor who already chose is hidden before the first paint by the
+ * one-line check in the root layout (html[data-consent]), and the banner is
+ * then removed here.
+ */
 export function CookieConsent() {
-  const [showBanner, setShowBanner] = useState(false);
+  const [showBanner, setShowBanner] = useState(true);
   const [showPreferences, setShowPreferences] = useState(false);
   const [toggles, setToggles] = useState<Toggles>({
     analytics: false,
@@ -29,8 +37,7 @@ export function CookieConsent() {
         preferences: existing.preferences,
         marketing: existing.marketing,
       });
-    } else {
-      setShowBanner(true);
+      setShowBanner(false);
     }
     const openPrefs = () => {
       const current = getConsent();
@@ -69,6 +76,7 @@ export function CookieConsent() {
           role="dialog"
           aria-label="Cookie consent"
           aria-describedby="cookie-consent-desc"
+          data-cookie-banner
           className="fixed inset-x-0 bottom-0 z-[70] border-t border-cream-400 bg-white p-4 shadow-card sm:p-6"
         >
           <div className="container-page flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

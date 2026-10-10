@@ -9,13 +9,24 @@ const avatarGradients = [
   "from-sky-400 to-sky-600",
 ];
 
+const STAR = "M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 20.5l1.4-6.8L2.2 9l6.9-.7L12 2Z";
+
+/** Five stars as one drawing rather than five, since every card carries them. */
 function Stars() {
   return (
-    <div className="flex gap-1 text-brand-500" role="img" aria-label="Rated 5 out of 5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Icon key={i} name="star" className="h-[18px] w-[18px]" />
+    <svg
+      viewBox="0 0 136 24"
+      width="102"
+      height="18"
+      fill="currentColor"
+      className="text-brand-500"
+      role="img"
+      aria-label="Rated 5 out of 5"
+    >
+      {[0, 28, 56, 84, 112].map((x) => (
+        <path key={x} d={STAR} transform={`translate(${x} 0)`} />
       ))}
-    </div>
+    </svg>
   );
 }
 

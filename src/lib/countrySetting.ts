@@ -40,8 +40,11 @@ export function createCountrySetting(
   key: string,
   defaults: readonly string[] = [],
 ): CountrySettingStore {
-  const dir = () => process.env.DATA_DIR || path.join(process.cwd(), "data");
-  const file = () => path.join(dir(), filename);
+  // The file name is a parameter, so the bundler cannot tell which file this
+  // reads and was copying the whole project into the server build. It is a
+  // runtime data file, never part of the build.
+  const dir = () => process.env.DATA_DIR || path.join(/*turbopackIgnore: true*/ process.cwd(), "data");
+  const file = () => path.join(/*turbopackIgnore: true*/ dir(), filename);
 
   // Writes to one file are serialised against each other, so two admins saving
   // at the same moment cannot interleave and truncate the file.
@@ -49,7 +52,7 @@ export function createCountrySetting(
 
   async function get(): Promise<CountrySettings> {
     try {
-      const raw = await fs.readFile(file(), "utf8");
+      const raw = await fs.readFile(/*turbopackIgnore: true*/ file(), "utf8");
       const data = JSON.parse(raw) as Record<string, unknown>;
       const stored = data[key];
       if (Array.isArray(stored)) {
@@ -81,7 +84,7 @@ export function createCountrySetting(
 
     const run = async () => {
       await writeFileAtomic(
-        file(),
+        /*turbopackIgnore: true*/ file(),
         JSON.stringify({ [key]: cleaned, updatedAt: new Date().toISOString() }, null, 2),
       );
       return { ok: true, settings: await get() };

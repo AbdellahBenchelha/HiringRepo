@@ -35,8 +35,13 @@ export function SectionLabel({ children, tone = "light" }: { children: ReactNode
  * Darker amber on light backgrounds: the bright brand amber is under 3:1 on
  * cream, which fails even for large text. On navy the bright one is used.
  */
+/**
+ * The highlighted words in a heading. Kept in the original amber (#b06e0c)
+ * rather than brand-700, which was darkened for small text: headings are large
+ * text, where this shade already has the contrast it needs.
+ */
 export function Accent({ children, tone = "light" }: { children: ReactNode; tone?: Tone }) {
-  return <span className={tone === "dark" ? "text-brand-400" : "text-brand-700"}>{children}</span>;
+  return <span className={tone === "dark" ? "text-brand-400" : "text-[#b06e0c]"}>{children}</span>;
 }
 
 export function SectionHeading({

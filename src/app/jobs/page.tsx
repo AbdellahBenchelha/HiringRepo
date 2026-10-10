@@ -20,8 +20,13 @@ export default function JobsPage() {
         title="Explore our open positions"
         description="Find the role that fits your skills and goals. A CV is optional — we welcome experienced candidates and motivated beginners alike."
       />
-      <section className="section bg-white">
+      <section className="section bg-white" aria-labelledby="all-positions">
         <div className="container-page">
+          {/* The cards' titles are h3s, as on the home page; this gives them
+              the h2 a screen reader's outline expects above them. */}
+          <h2 id="all-positions" className="sr-only">
+            All open positions
+          </h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {jobs.map((job) => (
               <JobCard key={job.slug} job={job} />

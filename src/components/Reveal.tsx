@@ -1,10 +1,15 @@
-"use client";
-
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 /**
- * Subtle on-scroll reveal. Respects prefers-reduced-motion (content is shown
- * immediately and no transform is applied for those users).
+ * Subtle on-scroll reveal, done in CSS (see `.reveal` in globals.css): the
+ * content fades up as it scrolls into view.
+ *
+ * No script, so nothing waits for JavaScript and nothing is invisible while it
+ * loads. Browsers without scroll-driven animations show the content as it is,
+ * and prefers-reduced-motion turns the movement off.
+ *
+ * `delay` (milliseconds, for staggering a row of cards) starts the fade a
+ * little later in the scroll rather than later in time.
  */
 export function Reveal({
   children,
@@ -15,38 +20,9 @@ export function Reveal({
   className?: string;
   delay?: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      setVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.12 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
+  const style = delay ? ({ "--reveal-shift": `${Math.round(delay / 10)}%` } as CSSProperties) : undefined;
   return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: visible ? `${delay}ms` : "0ms" }}
-      className={`transition-all duration-700 ease-out ${
-        visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-      } ${className}`}
-    >
+    <div className={`reveal ${className}`} style={style}>
       {children}
     </div>
   );

@@ -819,6 +819,9 @@ export function ApplicationForm({
                   onClick={() => (reachable ? goToStep(i) : undefined)}
                   disabled={!reachable}
                   aria-current={state === "current" ? "step" : undefined}
+                  // The button shows only an icon; the label under it is a
+                  // separate element, so the name has to be given here.
+                  aria-label={`Step ${i + 1}: ${s.label}${state === "complete" ? " (done)" : ""}`}
                   className={`relative z-10 flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold transition duration-200 ${
                     state === "complete"
                       ? "bg-navy-900 text-brand-400 hover:bg-navy-800"
@@ -872,9 +875,9 @@ export function ApplicationForm({
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
             Step {current + 1} of {STEPS.length}
           </p>
-          <h3 className="mt-1 font-display text-2xl font-extrabold tracking-[-0.025em] text-navy-900 sm:text-[1.75rem]">
+          <h2 className="mt-1 font-display text-2xl font-extrabold tracking-[-0.025em] text-navy-900 sm:text-[1.75rem]">
             {step.title}
-          </h3>
+          </h2>
           {/* The documents step is captioned "Optional" in the step list, which
               contradicts the banner below it once a CV is required. */}
           {step.id === "documents" && cvRequired ? (

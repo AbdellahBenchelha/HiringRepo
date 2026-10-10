@@ -15,7 +15,9 @@ const config: Config = {
           100: "#e8e8f1",
           200: "#cdcddf",
           300: "#a6a6c4",
-          400: "#7373a0",
+          // Darkened from #7373a0, which fell just short of the 4.5:1 contrast
+          // small text needs on white and cream.
+          400: "#656593",
           500: "#4f4f80",
           600: "#383864",
           700: "#26264c",
@@ -32,7 +34,10 @@ const config: Config = {
           400: "#f8b324",
           500: "#f5a623",
           600: "#db8b0a",
-          700: "#b06e0c",
+          // Darkened from #b06e0c (about 4:1 on white): this is the text
+          // colour for links and labels, which need 4.5:1 on every light
+          // background the site uses, peach included.
+          700: "#985f0a",
           800: "#8a570f",
           900: "#714710",
         },

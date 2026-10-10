@@ -14,7 +14,14 @@ import { Arc, DotGrid, Glow, SectionHeading } from "@/components/ui/marketing";
  * columns; swipe, drag, the arrow buttons and the arrow keys all move it.
  */
 export function Clients() {
-  const { ref, atStart, atEnd, grabbing, step, handlers } = useCarousel();
+  // Ten show at a time on a wide screen. The first twenty are drawn with the
+  // page and the rest as the visitor moves through them, so a hundred-odd
+  // cards do not all have to be built before the page can respond.
+  const { ref, atStart, atEnd, grabbing, step, handlers, count } = useCarousel({
+    total: clients.length,
+    initial: 20,
+    batch: 20,
+  });
 
   return (
     <section
@@ -64,7 +71,7 @@ export function Clients() {
               grabbing ? "cursor-grabbing select-none snap-none" : "cursor-grab snap-x snap-mandatory"
             }`}
           >
-            {clients.map((client, i) => (
+            {clients.slice(0, count).map((client, i) => (
               <article
                 key={client.name}
                 className="card-soft group flex min-w-0 snap-start items-center px-3 py-3.5 transition duration-300 hover:-translate-y-0.5 hover:shadow-lift-lg sm:px-4 sm:py-4"

@@ -101,6 +101,19 @@ const nextConfig = {
         headers: securityHeaders,
       },
       {
+        // The site's photos and logos. Served with max-age=0 by default, which
+        // made every visit ask the server again for each one. A week, then
+        // reused while a fresh copy is fetched in the background — so a
+        // replaced photo still shows within days. Give a changed image a new
+        // file name to have it show at once.
+        source: "/images/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }],
+      },
+      {
+        source: "/:file(logo\\.svg|logo-mark\\.svg|og-image\\.png)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }],
+      },
+      {
         // The admin panel and the assessment must never be cached by a proxy
         // or left in the back/forward cache on a shared machine.
         source: "/admin/:path*",

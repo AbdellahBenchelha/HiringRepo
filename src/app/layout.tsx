@@ -5,6 +5,7 @@ import { siteConfig } from "@/config/site";
 import { organizationJsonLd } from "@/lib/seo";
 import { SiteHeader, SiteFooter } from "@/components/layout/SiteChrome";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
+import { STORAGE_KEY as COOKIE_STORAGE_KEY } from "@/components/cookies/cookieConsent";
 import { Beacon } from "@/components/Beacon";
 
 const inter = Inter({
@@ -69,9 +70,25 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/**
+ * Marks a visitor who has already answered the cookie banner, before the first
+ * paint, so the server-rendered banner never flashes up for them. Inline and
+ * tiny on purpose: it has to run before the page is drawn, and anything that
+ * waits for the scripts is too late. See CookieConsent.
+ */
+const CONSENT_CHECK = `try{if(localStorage.getItem(${JSON.stringify(
+  COOKIE_STORAGE_KEY,
+)}))document.documentElement.setAttribute("data-consent","1")}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
+    // suppressHydrationWarning: the consent check adds an attribute here
+    // before React takes over, which is expected.
+    <html lang="en" className={`${inter.variable} ${jakarta.variable}`} suppressHydrationWarning>
+      <head>
+        {/* eslint-disable-next-line react/no-danger */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_CHECK }} />
+      </head>
       <body>
         <script
           type="application/ld+json"

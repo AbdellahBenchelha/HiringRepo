@@ -25,7 +25,13 @@ const highlights: { icon: IconName; title: string; text: string }[] = [
  * two on a tablet, one on a phone.
  */
 export function Testimonials() {
-  const { ref, atStart, atEnd, grabbing, step, handlers } = useCarousel();
+  // Three show at a time on a wide screen; the rest are drawn as the visitor
+  // moves through them.
+  const { ref, atStart, atEnd, grabbing, step, handlers, count } = useCarousel({
+    total: testimonials.length,
+    initial: 6,
+    batch: 6,
+  });
 
   return (
     <section
@@ -113,7 +119,7 @@ export function Testimonials() {
                 grabbing ? "cursor-grabbing select-none snap-none" : "cursor-grab snap-x snap-mandatory"
               }`}
             >
-              {testimonials.map((t, i) => (
+              {testimonials.slice(0, count).map((t, i) => (
                 <div
                   key={t.name}
                   className="w-[86%] shrink-0 snap-start sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3rem)/3)]"

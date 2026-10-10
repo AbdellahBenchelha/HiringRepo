@@ -326,3 +326,34 @@ html.nav-open .admin-nav-expand {
   height: calc(100vh - 10rem);
   height: calc(100dvh - 10rem);
 }
+
+/* A visitor who already answered the cookie banner: the server-rendered banner
+   stays hidden from the first paint. The flag is set by the inline check in the
+   root layout, before anything is drawn. */
+html[data-consent] [data-cookie-banner] {
+  display: none;
+}
+
+/* The scroll reveal (components/Reveal), done by the browser rather than by
+   script: content fades up as it scrolls into view. Nothing is ever hidden
+   while the scripts load, browsers without scroll timelines simply show it,
+   and anyone who asks for reduced motion gets no movement at all. */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry calc(4% + var(--reveal-shift, 0%)) entry calc(40% + var(--reveal-shift, 0%));
+    }
+  }
+}

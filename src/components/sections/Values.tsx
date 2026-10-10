@@ -76,7 +76,7 @@ export function ValueCard({
 }) {
   return (
     <article className="group h-full rounded-2xl bg-white p-6 shadow-[0_1px_3px_rgba(15,16,53,0.04),0_18px_44px_-24px_rgba(15,16,53,0.16)] ring-1 ring-cream-300/40 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_2px_6px_rgba(15,16,53,0.05),0_28px_56px_-26px_rgba(15,16,53,0.24)] sm:p-7">
-      <span aria-hidden="true" className="font-display text-base font-extrabold text-brand-600">
+      <span aria-hidden="true" className="font-display text-base font-extrabold text-brand-700">
         {String(number).padStart(2, "0")}
       </span>
       <div className="mt-4 flex items-start gap-5">

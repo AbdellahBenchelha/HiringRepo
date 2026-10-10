@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { jobs, getJobBySlug, salaryParts, type JobPosting } from "@/config/jobs";
 import { siteConfig } from "@/config/site";
+import { hiringCountries } from "@/config/hiringCountries";
 import { countryCode } from "@/config/countryCodes";
 import { benefits, recruitmentProcess } from "@/config/content";
 import { jobImage } from "@/config/images";
@@ -93,7 +94,7 @@ function jobPostingJsonLd(slug: string) {
     // code and answers "Invalid country code" for anything else — which
     // invalidates the whole listing, not just the one entry. A country with no
     // code on file is left out rather than sent as prose.
-    applicantLocationRequirements: siteConfig.hiringCountries
+    applicantLocationRequirements: hiringCountries
       .map((name) => countryCode(name))
       .filter((code): code is string => !!code)
       .map((code) => ({ "@type": "Country", name: code })),
@@ -547,19 +548,25 @@ function ListCard({
   );
 }
 
+/**
+ * One label and value in the facts list. The icon sits inside the <dt> and
+ * is positioned beside both, because a <dl> group may hold only <dt> and <dd>
+ * — a wrapper around them for the layout made the list unreadable to screen
+ * readers.
+ */
 function Fact({ icon, label, children }: { icon: IconName; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-3">
-      <span
-        aria-hidden="true"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFF1DC] text-brand-500"
-      >
-        <Icon name={icon} className="h-[18px] w-[18px]" />
-      </span>
-      <div className="min-w-0">
-        <dt className="text-xs font-semibold text-navy-500">{label}</dt>
-        <dd className="mt-0.5 text-sm font-medium leading-snug text-navy-900">{children}</dd>
-      </div>
+    <div className="relative min-h-[2.25rem] pl-12">
+      <dt className="text-xs font-semibold text-navy-500">
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-full bg-[#FFF1DC] text-brand-500"
+        >
+          <Icon name={icon} className="h-[18px] w-[18px]" />
+        </span>
+        {label}
+      </dt>
+      <dd className="mt-0.5 min-w-0 text-sm font-medium leading-snug text-navy-900">{children}</dd>
     </div>
   );
 }
