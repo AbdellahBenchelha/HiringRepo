@@ -58,12 +58,33 @@ async function lookup(domain: string): Promise<boolean | null> {
   }
 }
 
+/**
+ * Is DNS itself answering truthfully?
+ *
+ * A resolver that is down or misconfigured can answer "no such domain" for
+ * everything, and taken at its word that would turn every applicant away. So
+ * before a "no" is believed, a domain that certainly receives mail is asked
+ * too; if that one also "does not exist", the resolver is what is broken and
+ * nobody is blocked. Remembered briefly either way, so it costs one lookup.
+ */
+const CANARY = "gmail.com";
+const CANARY_MS = 5 * 60 * 1000;
+let canary: { at: number; ok: boolean } | null = null;
+
+async function resolverWorks(): Promise<boolean> {
+  if (canary && Date.now() - canary.at < CANARY_MS) return canary.ok;
+  const ok = (await lookup(CANARY)) === true;
+  canary = { at: Date.now(), ok };
+  return ok;
+}
+
 /** true: receives mail. false: definitely does not. null: could not tell. */
 export async function domainReceivesMail(domain: string): Promise<boolean | null> {
   const key = domain.toLowerCase();
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.receives;
-  const receives = await lookup(key);
+  let receives = await lookup(key);
+  if (receives === false && !(await resolverWorks())) receives = null;
   // An unknown answer is not cached: the next person should get a fresh try.
   if (receives !== null) {
     if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
