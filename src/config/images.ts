@@ -68,4 +68,26 @@ export const images = {
     508,
     "Four WorkRoute team members laughing together around a laptop",
   ),
+  techAgent: image(
+    "tech-agent",
+    504,
+    325,
+    "A smiling support agent in glasses and a headset explaining a solution to a customer",
+  ),
 } as const;
+
+/**
+ * The header photo for each open position, by slug, with where to anchor the
+ * crop so the face stays in frame. A new job falls back to the hero photo.
+ */
+export const jobImages: Record<string, { image: SiteImage; position: string }> = {
+  "customer-support-representative": { image: images.lookingFor, position: "36% center" },
+  "call-center-agent": { image: images.faq, position: "40% 30%" },
+  "live-chat-and-email-support-agent": { image: images.hero, position: "center 30%" },
+  "technical-support-representative": { image: images.techAgent, position: "45% center" },
+  "sales-and-retention-agent": { image: images.lifeTeam, position: "60% center" },
+};
+
+export function jobImage(slug: string): { image: SiteImage; position: string } {
+  return jobImages[slug] ?? { image: images.hero, position: "center 30%" };
+}

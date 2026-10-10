@@ -2,7 +2,7 @@ import Link from "next/link";
 import { salaryParts, type JobPosting } from "@/config/jobs";
 import { Icon, type IconName } from "@/components/Icon";
 
-const employmentLabels: Record<JobPosting["employmentType"], string> = {
+export const employmentLabels: Record<JobPosting["employmentType"], string> = {
   FULL_TIME: "Full-time",
   PART_TIME: "Part-time",
   CONTRACTOR: "Contract",
@@ -10,7 +10,7 @@ const employmentLabels: Record<JobPosting["employmentType"], string> = {
 };
 
 /** An icon for the kind of work, read from the slug so a new job still gets one. */
-function jobIcon(slug: string): IconName {
+export function jobIcon(slug: string): IconName {
   if (slug.includes("call-center")) return "phoneLine";
   if (slug.includes("chat") || slug.includes("email")) return "chatsLine";
   if (slug.includes("technical")) return "laptopLine";

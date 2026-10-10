@@ -17,7 +17,7 @@ import {
  * The six benefits on the home page, in the order of the approved design, each
  * with the icon that design gives it. The full list stays in config/content.
  */
-const SHOWN: { title: string; icon: IconName }[] = [
+export const SHOWN: { title: string; icon: IconName }[] = [
   { title: "Fully Remote Work", icon: "home" },
   { title: "Flexible Schedules", icon: "calendar" },
   { title: "Supportive Management", icon: "usersGroup" },

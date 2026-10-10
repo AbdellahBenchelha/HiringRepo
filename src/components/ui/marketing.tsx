@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
 import type { SiteImage } from "@/config/images";
 
@@ -152,11 +152,13 @@ export function ResponsiveImage({
   sizes,
   priority = false,
   className = "",
+  style,
 }: {
   image: SiteImage;
   sizes: string;
   priority?: boolean;
   className?: string;
+  style?: CSSProperties;
 }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- pre-sized WebP with its own srcset
@@ -171,6 +173,7 @@ export function ResponsiveImage({
       fetchPriority={priority ? "high" : "auto"}
       decoding="async"
       className={`h-full w-full object-cover ${className}`}
+      style={style}
     />
   );
 }
