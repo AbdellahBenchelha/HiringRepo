@@ -793,13 +793,13 @@ export function ApplicationForm({
   const progress = Math.round(((current + 1) / STEPS.length) * 100);
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
-      <div ref={topRef} />
+    <form onSubmit={handleSubmit} noValidate className="form-pro">
+      <div ref={topRef} className="scroll-mt-28" />
 
       {/* ---------- STEP NAVIGATION / PROGRESS ---------- */}
-      <div className="mb-8">
+      <div className="mb-8 rounded-2xl bg-[#FFFAF3] px-4 py-5 ring-1 ring-inset ring-[#F6E7D2] sm:px-6">
         {/* Desktop: full stepper */}
-        <ol className="hidden items-center md:flex" role="list" aria-label="Application progress">
+        <ol className="hidden items-start md:flex" role="list" aria-label="Application progress">
           {STEPS.map((s, i) => {
             const state = i < current ? "complete" : i === current ? "current" : "upcoming";
             const reachable = i <= maxReached;
@@ -809,8 +809,8 @@ export function ApplicationForm({
                 {i !== 0 ? (
                   <span
                     aria-hidden="true"
-                    className={`absolute right-1/2 top-5 h-0.5 w-full -translate-y-1/2 ${
-                      i <= current ? "bg-brand-600" : "bg-navy-200"
+                    className={`absolute right-1/2 top-[22px] h-[3px] w-full -translate-y-1/2 rounded-full ${
+                      i <= current ? "bg-brand-500" : "bg-cream-300"
                     }`}
                   />
                 ) : null}
@@ -819,23 +819,23 @@ export function ApplicationForm({
                   onClick={() => (reachable ? goToStep(i) : undefined)}
                   disabled={!reachable}
                   aria-current={state === "current" ? "step" : undefined}
-                  className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition ${
+                  className={`relative z-10 flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold transition duration-200 ${
                     state === "complete"
-                      ? "border-brand-600 bg-brand-600 text-white hover:bg-brand-700"
+                      ? "bg-navy-900 text-brand-400 hover:bg-navy-800"
                       : state === "current"
-                        ? "border-brand-600 bg-white text-brand-700 ring-4 ring-brand-100"
-                        : "border-cream-400 bg-white text-navy-400"
+                        ? "bg-gradient-to-br from-brand-400 to-brand-500 text-navy-900 shadow-amber ring-4 ring-brand-100"
+                        : "bg-white text-navy-300 ring-1 ring-inset ring-cream-400"
                   } ${reachable && state !== "current" ? "cursor-pointer" : ""} ${!reachable ? "cursor-not-allowed" : ""}`}
                 >
                   {state === "complete" ? (
-                    <Icon name="check" className="h-5 w-5" />
+                    <Icon name="checkThick" className="h-5 w-5" />
                   ) : (
                     <Icon name={s.icon} className="h-5 w-5" />
                   )}
                 </button>
                 <span
-                  className={`relative z-10 mt-2 max-w-[7rem] text-center text-xs font-medium ${
-                    state === "upcoming" ? "text-navy-400" : "text-navy-800"
+                  className={`relative z-10 mt-2.5 max-w-[7rem] text-center text-xs font-semibold ${
+                    state === "current" ? "text-navy-900" : state === "complete" ? "text-navy-700" : "text-navy-400"
                   }`}
                 >
                   {s.label}
@@ -848,14 +848,15 @@ export function ApplicationForm({
         {/* Mobile: compact progress bar */}
         <div className="md:hidden">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-brand-700">
+            <span className="font-bold text-navy-900">
               Step {current + 1} of {STEPS.length}
+              <span className="font-medium text-navy-500"> · {step.label}</span>
             </span>
-            <span className="text-navy-500">{progress}% complete</span>
+            <span className="font-semibold text-brand-700">{progress}%</span>
           </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-navy-100">
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-cream-300">
             <div
-              className="h-full rounded-full bg-brand-600 transition-all duration-300"
+              className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-500 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -863,13 +864,17 @@ export function ApplicationForm({
       </div>
 
       {/* ---------- STEP HEADER ---------- */}
-      <div className="mb-6 flex items-start gap-4 border-b border-cream-300 pb-5">
-        <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 sm:flex">
-          <Icon name={step.icon} className="h-6 w-6" />
+      <div className="mb-7 flex items-start gap-4 border-b border-cream-300 pb-6">
+        <span className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FFF3E0] to-[#FFE6C4] text-brand-500 sm:flex">
+          <Icon name={step.icon} className="h-7 w-7" />
         </span>
         <div>
-          <p className="eyebrow">Step {current + 1} of {STEPS.length}</p>
-          <h3 className="mt-1 text-2xl font-bold text-navy-900">{step.title}</h3>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+            Step {current + 1} of {STEPS.length}
+          </p>
+          <h3 className="mt-1 font-display text-2xl font-extrabold tracking-[-0.025em] text-navy-900 sm:text-[1.75rem]">
+            {step.title}
+          </h3>
           {/* The documents step is captioned "Optional" in the step list, which
               contradicts the banner below it once a CV is required. */}
           {step.id === "documents" && cvRequired ? (
@@ -884,7 +889,7 @@ export function ApplicationForm({
 
       {/* ---------- STEP-LEVEL ERROR BANNER ---------- */}
       {stepError ? (
-        <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm font-medium text-red-700">
           {stepError}
         </div>
       ) : null}
@@ -1290,27 +1295,35 @@ export function ApplicationForm({
       </div>
 
       {/* ---------- WIZARD NAVIGATION ---------- */}
-      <div className="mt-8 flex items-center justify-between gap-3 border-t border-cream-300 pt-6">
+      <div className="mt-10 flex items-center justify-between gap-3 border-t border-cream-300 pt-6">
         <button
           type="button"
           onClick={handleBack}
           disabled={current === 0}
-          className={`btn-secondary ${current === 0 ? "invisible" : ""}`}
+          className={`btn-line !min-h-[50px] ${current === 0 ? "invisible" : ""}`}
         >
           <Icon name="arrowRight" className="h-4 w-4 rotate-180" /> Back
         </button>
 
-        <span className="hidden text-sm text-navy-400 sm:block">
-          {current + 1} / {STEPS.length}
+        {/* One dot per step: where you are, at a glance */}
+        <span aria-hidden="true" className="hidden items-center gap-1.5 sm:flex">
+          {STEPS.map((s, i) => (
+            <span
+              key={s.id}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === current ? "w-6 bg-brand-500" : i < current ? "w-1.5 bg-navy-900" : "w-1.5 bg-cream-400"
+              }`}
+            />
+          ))}
         </span>
 
         {isLastStep ? (
-          <button type="submit" disabled={status === "submitting"} className="btn-primary sm:px-10">
+          <button type="submit" disabled={status === "submitting"} className="btn-brand !min-h-[50px] sm:px-10">
             {status === "submitting" ? "Submitting…" : "Submit Application"}
             {status !== "submitting" ? <Icon name="check" className="h-4 w-4" /> : null}
           </button>
         ) : (
-          <button type="submit" disabled={checking} className="btn-primary sm:px-10">
+          <button type="submit" disabled={checking} className="btn-brand !min-h-[50px] sm:px-10">
             {checking ? "Checking…" : "Next"}
             {checking ? null : <Icon name="arrowRight" className="h-4 w-4" />}
           </button>

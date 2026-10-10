@@ -195,6 +195,22 @@
     @apply flex shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-500;
   }
 
+  /* The application form's fields: taller, softer, with an amber focus.
+     Scoped to .form-pro so the admin panel keeps its own inputs. */
+  .form-pro .input,
+  .form-pro .select {
+    @apply min-h-[50px] border-cream-300 bg-white transition focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
+  }
+  .form-pro .textarea {
+    @apply border-cream-300 bg-white focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
+  }
+  .form-pro .label {
+    @apply text-[14px] font-semibold text-navy-800;
+  }
+  .form-pro .input-invalid {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-100;
+  }
+
   .prose-legal {
     @apply max-w-3xl;
   }

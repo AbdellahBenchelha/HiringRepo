@@ -246,7 +246,7 @@ export function FormSection({
 }) {
   return (
     <section className="border-t border-cream-300 pt-8 first:border-t-0 first:pt-0">
-      <h3 className="text-lg font-semibold text-navy-900">{title}</h3>
+      <h3 className="font-display text-lg font-extrabold tracking-[-0.015em] text-navy-900">{title}</h3>
       {description ? <p className="mt-1 text-sm text-navy-500">{description}</p> : null}
       <div className="mt-5 space-y-5">{children}</div>
     </section>
