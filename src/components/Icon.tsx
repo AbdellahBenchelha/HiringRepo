@@ -81,7 +81,8 @@ export type IconName =
   | "mailLine"
   | "clockLine"
   | "userLine"
-  | "chatLine";
+  | "chatLine"
+  | "checkThick";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -294,6 +295,9 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="M5 4.5h14A1.5 1.5 0 0 1 20.5 6v9a1.5 1.5 0 0 1-1.5 1.5h-8.5L6 20v-3.5H5A1.5 1.5 0 0 1 3.5 15V6A1.5 1.5 0 0 1 5 4.5Z" />
       <path d="M7.5 9h9M7.5 12h6" />
     </g>
+  ),
+  checkThick: (
+    <path fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="m5 12.5 4.5 4.5L19 7.5" />
   ),
   usersGroup: (
     <g>

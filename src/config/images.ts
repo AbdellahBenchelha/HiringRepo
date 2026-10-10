@@ -3,7 +3,7 @@
  * ------------------
  * Every photo of a person on the public site is a crop of the approved
  * design assets — the character sheet, and the photos in the approved Life
- * at WorkRoute and FAQ designs — never stock and never generated. Each section
+ * at WorkRoute, FAQ and Who We Are Looking For designs — never stock and never generated. Each section
  * uses different people so the page does not repeat itself.
  *
  * Each crop is published at its own size and at twice that size (upscaled
@@ -52,9 +52,9 @@ export const images = {
   ),
   lookingFor: image(
     "looking-for",
-    376,
-    200,
-    "A friendly support agent with a headset smiling at a computer",
+    600,
+    336,
+    "A friendly support agent in a headset smiling while working on a laptop",
   ),
   faq: image(
     "faq-agent",
