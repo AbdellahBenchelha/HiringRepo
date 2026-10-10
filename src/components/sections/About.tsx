@@ -42,10 +42,11 @@ export function About() {
             We help international brands build stronger relationships with their customers — and
             we help our people build rewarding careers.
           </p>
-          <div className="mt-5 space-y-4 text-pretty text-[15px] leading-relaxed text-navy-600">
-            <p>{company.description}</p>
-            <p>{company.descriptionExtended}</p>
-          </div>
+          <p className="mt-4 max-w-xl text-pretty text-[15px] leading-relaxed text-navy-600 sm:text-base">
+            Our teams provide phone, live chat, email, technical and sales support across
+            international markets — and we invest in training so you can succeed, whether you are
+            experienced or just starting out.
+          </p>
 
           <ul className="mt-8 grid gap-3 sm:grid-cols-2">
             {features.map((item) => (
