@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getManualInviteSettings } from "@/lib/manualInviteStore";
 import { countries } from "@/config/countries";
 import { CountryListEditor } from "@/components/admin/CountryListEditor";
+import { AFRICAN_COUNTRIES } from "@/config/regions";
 
 export const metadata: Metadata = {
   title: "Manual invitations",
@@ -34,6 +35,7 @@ export default async function AdminManualInvitePage() {
         description="Applicants from these countries have their assessment invitation held. Nothing is emailed until you press Send assessment link on their row under Candidates. Everyone else is invited automatically, as before."
         chipsLabel="Invited by hand"
         emptyText="No countries selected — everyone is invited automatically, as they are by default."
+        presets={[{ label: "African countries", countries: AFRICAN_COUNTRIES }]}
       />
 
       <div className="card mt-5 p-5 text-sm leading-relaxed text-navy-600 sm:p-6">

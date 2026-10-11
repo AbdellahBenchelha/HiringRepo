@@ -25,6 +25,7 @@ export function CountryListEditor({
   description,
   chipsLabel,
   emptyText,
+  presets = [],
 }: {
   countries: string[];
   initial: string[];
@@ -38,6 +39,11 @@ export function CountryListEditor({
   chipsLabel: string;
   /** Shown instead of chips when nothing is selected — say what that means. */
   emptyText: string;
+  /**
+   * Whole groups that can be added or removed in one press, e.g. every
+   * country in Africa. Nothing is saved until Save is pressed.
+   */
+  presets?: { label: string; countries: readonly string[] }[];
 }) {
   const [selected, setSelected] = useState<string[]>(initial);
   const [saved, setSaved] = useState<string[]>(initial);
@@ -56,6 +62,15 @@ export function CountryListEditor({
     if (!q) return [];
     return countries.filter((c) => c.toLowerCase().includes(q)).slice(0, 8);
   }, [countries, query]);
+
+  function addGroup(group: readonly string[]) {
+    const known = group.filter((c) => countries.includes(c));
+    setSelected((prev) => [...new Set([...prev, ...known])].sort());
+  }
+
+  function removeGroup(group: readonly string[]) {
+    setSelected((prev) => prev.filter((c) => !group.includes(c)));
+  }
 
   function toggle(country: string) {
     setSelected((prev) =>
@@ -136,6 +151,41 @@ export function CountryListEditor({
           </div>
         )}
       </div>
+
+      {/* Add or remove a whole group. */}
+      {presets.length ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {presets.map((p) => {
+            const known = p.countries.filter((c) => countries.includes(c));
+            const missing = known.filter((c) => !selected.includes(c)).length;
+            const present = known.length - missing;
+            return (
+              <span key={p.label} className="contents">
+                <button
+                  type="button"
+                  onClick={() => addGroup(known)}
+                  disabled={missing === 0}
+                  data-preset-add={p.label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-white px-3.5 py-1.5 text-xs font-bold text-navy-800 transition hover:bg-navy-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="plus" className="h-3.5 w-3.5" />
+                  {missing === 0 ? `All ${known.length} ${p.label} added` : `Add all ${p.label} (${missing} more)`}
+                </button>
+                {present > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeGroup(known)}
+                    data-preset-remove={p.label}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-navy-500 transition hover:bg-red-50 hover:text-red-700"
+                  >
+                    Remove all {p.label} ({present})
+                  </button>
+                ) : null}
+              </span>
+            );
+          })}
+        </div>
+      ) : null}
 
       {/* Add one. */}
       <div className="mt-4">
