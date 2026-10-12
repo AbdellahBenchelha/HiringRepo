@@ -152,6 +152,10 @@ export async function POST(req: NextRequest) {
       addressProofRequestedAt: c.addressProofRequestedAt,
       addressProofSubmittedAt: c.addressProofSubmittedAt,
       addressProofApprovedAt: c.addressProofApprovedAt,
+      country: c.country,
+      confirmedCountry: c.confirmedDetails?.country,
+      gstin: c.gstin,
+      gstinWaitingAt: c.gstinWaitingEmails?.at(-1)?.at,
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });

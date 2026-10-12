@@ -150,3 +150,35 @@ export function isValidGstin(raw: unknown): boolean {
   const g = normaliseGstin(raw);
   return GSTIN_RE.test(g) && gstinCheckChar(g.slice(0, 14)) === g[14];
 }
+
+/* ------------------------------------------------------------------------ */
+/* "Your place is waiting for your GSTIN"                                    */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Who the "place still waiting" email may go to: somebody living in India who
+ * accepted and has no GSTIN on file. Shared by the View info button, the
+ * Accepted tab's bulk list and the server, so all three agree.
+ */
+export type GstinWaitingRefusal = "no_email" | "not_accepted" | "not_india" | "already_has_gstin";
+
+export const GSTIN_WAITING_REFUSAL: Record<GstinWaitingRefusal, string> = {
+  no_email: "no email address",
+  not_accepted: "has not accepted an offer",
+  not_india: "does not live in India",
+  already_has_gstin: "already has a GSTIN",
+};
+
+export function gstinWaitingRefusal(c: {
+  email?: string;
+  offerAcceptedAt?: string;
+  gstin?: string;
+  country?: string;
+  confirmedDetails?: { country?: string };
+}): GstinWaitingRefusal | null {
+  if (!c.email?.includes("@")) return "no_email";
+  if (!c.offerAcceptedAt) return "not_accepted";
+  if (!panExpected(c.confirmedDetails?.country || c.country)) return "not_india";
+  if (c.gstin) return "already_has_gstin";
+  return null;
+}

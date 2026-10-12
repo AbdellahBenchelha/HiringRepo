@@ -305,6 +305,11 @@ export interface Candidate {
   /** "GSTIN needed" emails sent from View info, oldest first. */
   gstinRequests?: string[];
   /**
+   * "Your place is waiting — send us your GSTIN when ready" emails, oldest
+   * first, with who sent each (a person from View info, or a bulk batch).
+   */
+  gstinWaitingEmails?: { at: string; by?: string }[];
+  /**
    * PAN card re-upload: the newest request (and what the candidate was told),
    * every request with who sent it, and when new photos came back. See lib/pan.
    */
@@ -1640,6 +1645,16 @@ export function recordGstinRequest(id: string): Promise<Candidate | null> {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
     c.gstinRequests = [...(c.gstinRequests ?? []), new Date().toISOString()];
+    return { list, result: c };
+  });
+}
+
+/** A "your place is waiting for your GSTIN" email went out. */
+export function recordGstinWaiting(id: string, by?: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.gstinWaitingEmails = [...(c.gstinWaitingEmails ?? []), { at: new Date().toISOString(), ...(by ? { by } : {}) }];
     return { list, result: c };
   });
 }

@@ -67,6 +67,9 @@ import {
   gstinRequestHtml,
   gstinRequestSubject,
   gstinRequestText,
+  gstinWaitingHtml,
+  gstinWaitingSubject,
+  gstinWaitingText,
   panReuploadHtml,
   panReuploadSubject,
   panReuploadText,
@@ -519,6 +522,19 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     render: () => {
       const payload = { fullName: SAMPLE_NAME };
       return { subject: gstinRequestSubject(), html: gstinRequestHtml(payload), text: gstinRequestText(payload) };
+    },
+  },
+  {
+    id: "gstin-waiting",
+    name: "Waiting for the GSTIN — your place is held",
+    stage: "identity",
+    when:
+      "Sent by hand from View info → Company (PAN card & GSTIN) with Send “place still waiting” email, or to many at once from the Accepted tab (Remind: waiting for GSTIN), to a candidate in India who accepted and has no GSTIN yet. Tells them their agreement is ready and their place stays available until they have one. They reply with it, and you add it with the edit icon.",
+    kind: "campaign",
+    source: "gstinWaitingHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME };
+      return { subject: gstinWaitingSubject(), html: gstinWaitingHtml(payload), text: gstinWaitingText(payload) };
     },
   },
 

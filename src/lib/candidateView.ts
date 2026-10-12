@@ -131,6 +131,7 @@ export interface CandidateView {
   gstinAddedBy?: string;
   gstinAddedVia?: "pan-reupload";
   gstinRequests?: string[];
+  gstinWaitingEmails?: { at: string; by?: string }[];
   panReuploadRequestedAt?: string;
   panReuploadReason?: string;
   panReuploadRequests?: { at: string; by?: string; reason: string }[];
@@ -361,6 +362,7 @@ export function toCandidateView(
     gstinAddedBy: c.gstinAddedBy,
     gstinAddedVia: c.gstinAddedVia,
     gstinRequests: c.gstinRequests,
+    gstinWaitingEmails: c.gstinWaitingEmails,
     panReuploadRequestedAt: c.panReuploadRequestedAt,
     panReuploadReason: c.panReuploadReason,
     panReuploadRequests: c.panReuploadRequests,

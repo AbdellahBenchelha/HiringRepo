@@ -5,7 +5,7 @@ import { Icon } from "@/components/Icon";
 import { adminPost } from "@/lib/adminClient";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { CopyButton } from "@/components/admin/CopyButton";
-import { isValidGstin, normaliseGstin } from "@/lib/pan";
+import { gstinWaitingRefusal, isValidGstin, normaliseGstin } from "@/lib/pan";
 import type { CandidateView } from "@/lib/candidateView";
 
 /**
@@ -31,6 +31,7 @@ export function GstinRow({
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [asking, setAsking] = useState(false);
+  const [askingWaiting, setAskingWaiting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -39,6 +40,11 @@ export function GstinRow({
   const last = requests[requests.length - 1];
   const recent = !!last && Date.now() - Date.parse(last) < 24 * 60 * 60 * 1000;
   const hasEmail = !!candidate.email?.includes("@");
+  const waitingSent = candidate.gstinWaitingEmails ?? [];
+  const lastWaiting = waitingSent[waitingSent.length - 1];
+  const recentWaiting = !!lastWaiting && Date.now() - Date.parse(lastWaiting.at) < 24 * 60 * 60 * 1000;
+  // India, accepted, no GSTIN — the people the "place still waiting" email is for.
+  const canSendWaiting = gstinWaitingRefusal(candidate) === null;
   const typed = normaliseGstin(value);
   const typedError = typed && !isValidGstin(typed) ? "This doesn't look like a valid GSTIN — please check it." : "";
 
@@ -93,6 +99,40 @@ export function GstinRow({
     }
     setBusy(false);
     setAsking(false);
+  }
+
+  async function sendWaiting() {
+    if (busy) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await adminPost(`/api/admin/candidates/${candidate.id}/gstin`, { action: "waiting" });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean; error?: string; gstinWaitingEmails?: { at: string; by?: string }[];
+      };
+      if (data.ok) {
+        onChange?.({ gstinWaitingEmails: data.gstinWaitingEmails });
+        setMessage({ ok: true, text: "“Place still waiting” email sent." });
+      } else {
+        const why: Record<string, string> = {
+          warmup_limit: "today's sending limit is reached",
+          no_email: "no email address on file",
+          already_has_gstin: "they already have a GSTIN",
+          not_india: "they do not live in India",
+          not_accepted: "they have not accepted an offer",
+          too_soon: "one was sent less than a minute ago",
+          fake_recipient: "the email address is not a real mailbox",
+        };
+        setMessage({
+          ok: false,
+          text: `Not sent (${res.status === 401 ? "your admin session has expired — sign in again" : why[data.error ?? ""] ?? data.error ?? "failed"}).`,
+        });
+      }
+    } catch {
+      setMessage({ ok: false, text: "Not sent — could not reach the server." });
+    }
+    setBusy(false);
+    setAskingWaiting(false);
   }
 
   return (
@@ -163,7 +203,7 @@ export function GstinRow({
               <Icon name="pencil" className="h-3.5 w-3.5" />
             </button>
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {gstin ? (
               <CopyButton text={gstin} title="Copy GSTIN" />
             ) : (
@@ -178,6 +218,19 @@ export function GstinRow({
                 {requests.length ? "Request again" : "Request GSTIN"}
               </button>
             )}
+            {canSendWaiting ? (
+              <button
+                type="button"
+                onClick={() => setAskingWaiting(true)}
+                disabled={busy}
+                title="Tell them their agreement is ready and their place stays available until they have a GSTIN"
+                data-gstin-waiting
+                className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-white px-3 py-1 text-xs font-bold text-navy-800 transition hover:bg-navy-50 disabled:opacity-50"
+              >
+                <Icon name="clock" className="h-3.5 w-3.5" />
+                Send &ldquo;place still waiting&rdquo; email
+              </button>
+            ) : null}
           </div>
         </div>
       )}
@@ -198,6 +251,23 @@ export function GstinRow({
               <li key={at} className="flex gap-2">
                 <span className="font-semibold text-navy-400">{i + 1}.</span>
                 <span>{fmt(at)}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+
+      {waitingSent.length ? (
+        <div className="mt-2 text-xs text-navy-500" data-gstin-waiting-history>
+          <p className="font-semibold">&ldquo;Place still waiting&rdquo; emails sent</p>
+          <ol className="mt-0.5 space-y-0.5">
+            {waitingSent.map((w, i) => (
+              <li key={w.at} className="flex gap-2">
+                <span className="font-semibold text-navy-400">{i + 1}.</span>
+                <span>
+                  {fmt(w.at)}
+                  {w.by ? ` by ${w.by}` : ""}
+                </span>
               </li>
             ))}
           </ol>
@@ -227,6 +297,30 @@ export function GstinRow({
             ) : null}
             , with the subject &ldquo;Action Required: GSTIN Needed to Finalize Your Agreement&rdquo;.
             They reply with their GSTIN, and you add it here with the pencil.
+          </>
+        }
+      />
+
+      <ConfirmDialog
+        open={askingWaiting}
+        icon="mail"
+        title="Send the “place still waiting” email?"
+        confirmLabel={busy ? "Sending…" : "Send email"}
+        busy={busy}
+        warning={recentWaiting ? `This email already went out on ${fmt(lastWaiting?.at)}.` : undefined}
+        onCancel={() => setAskingWaiting(false)}
+        onConfirm={() => void sendWaiting()}
+        body={
+          <>
+            An email goes to <strong className="text-navy-900">{candidate.fullName || "this candidate"}</strong>
+            {candidate.email ? (
+              <>
+                {" "}at <span className="font-medium text-navy-800">{candidate.email}</span>
+              </>
+            ) : null}
+            , with the subject &ldquo;Your place is waiting for you — send us your GSTIN when ready&rdquo;.
+            It tells them their agreement is ready and their place stays available until they have a
+            GSTIN. They reply with it, and you add it here with the pencil.
           </>
         }
       />

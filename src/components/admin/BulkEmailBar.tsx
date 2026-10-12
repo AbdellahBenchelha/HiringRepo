@@ -55,6 +55,7 @@ const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCi
   chatReminder: "clock",
   verifiedAck: "checkCircle",
   addressProof: "home",
+  gstinWaiting: "clock",
 };
 
 export function useBulkEmail(
@@ -157,6 +158,10 @@ export function useBulkEmail(
         addressProofRequestedAt: c.addressProofRequestedAt,
         addressProofSubmittedAt: c.addressProofSubmittedAt,
         addressProofApprovedAt: c.addressProofApprovedAt,
+        country: c.country,
+        confirmedCountry: c.confirmedDetails?.country,
+        gstin: c.gstin,
+        gstinWaitingAt: c.gstinWaitingEmails?.at(-1)?.at,
       });
       const name = c.fullName || c.email || c.id;
       if (!verdict.include) skip.push({ name, reason: verdict.reason });

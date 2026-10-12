@@ -2053,6 +2053,149 @@ export function gstinRequestHtml({ fullName }: GstinRequestEmail): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Waiting for the GSTIN — your place is held                                  */
+/* -------------------------------------------------------------------------- */
+
+export interface GstinWaitingEmail {
+  fullName: string;
+}
+
+/**
+ * The gentle follow-up to the GSTIN request, for a candidate in India who has
+ * accepted but has no GSTIN yet: the agreement is ready, their place stays
+ * available and pending, and we will wait until they have one. Sent by hand
+ * from View info or in bulk from the Accepted tab. The answer comes back by
+ * reply, like the request — there is no link.
+ */
+export function gstinWaitingSubject(): string {
+  return "Your place is waiting for you — send us your GSTIN when ready";
+}
+
+export function gstinWaitingText({ fullName }: GstinWaitingEmail): string {
+  const name = firstNameOf(fullName);
+  return [
+    `Your agreement is ready, ${name}`,
+    ``,
+    `Your final agreement is ready and waiting for you. The only thing we still`,
+    `need is your GSTIN.`,
+    ``,
+    `Don't worry — your place is still available and pending. We are just waiting`,
+    `for your GSTIN to complete your application and send you the final agreement.`,
+    ``,
+    `Your place will always stay available and pending, so there is no rush. If`,
+    `you don't have your GSTIN yet, we will wait until you get it.`,
+    ``,
+    `When you get your GSTIN, simply reply to this email with your 15-character`,
+    `GSTIN. We will then complete your application and send you your final`,
+    `agreement.`,
+    ``,
+    `We will never ask you for your Aadhaar, a payment of any kind, your bank card`,
+    `details or a password.`,
+    ``,
+    `Kind regards,`,
+    `${siteConfig.company.name} Recruitment Team`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function gstinWaitingHtml({ fullName }: GstinWaitingEmail): string {
+  const name = esc(firstNameOf(fullName));
+  const company = esc(siteConfig.company.name);
+  const p = (html: string, bottom = 16) =>
+    `<p style="margin:0 0 ${bottom}px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">${html}</p>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(gstinWaitingSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your agreement is ready and your place is still available — we are just waiting for your GSTIN.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Your agreement is ready, ${name}
+        </h1>
+
+        ${p(`Your final agreement is ready and waiting for you. The only thing we still need is your
+          <strong style="color:${NAVY};">GSTIN</strong>.`, 22)}
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;margin:0 0 22px 0;">
+          <tr>
+            <td style="padding:18px 22px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${NAVY};">
+              <strong>Don&rsquo;t worry &mdash; your place is still available and pending.</strong>
+              We are just waiting for your GSTIN to complete your application and send you the final
+              agreement.
+            </td>
+          </tr>
+        </table>
+
+        ${p(`Your place will always stay available and pending, so there is no rush. If you don&rsquo;t
+          have your GSTIN yet, we will wait until you get it.`)}
+        ${p(`<strong style="color:${NAVY};">When you get your GSTIN, simply reply to this email with your
+          15-character GSTIN.</strong> We will then complete your application and send you your final
+          agreement.`, 24)}
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:16px 20px;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+              <strong style="color:${NAVY};">We will never ask you for</strong> your Aadhaar, a payment
+              of any kind, your bank card details or a password.
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Kind regards,<br>
+          <strong style="color:${NAVY};">${company} Recruitment Team</strong>
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Submission received                                                         */
 /* -------------------------------------------------------------------------- */
 

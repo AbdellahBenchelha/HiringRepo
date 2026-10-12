@@ -19,10 +19,11 @@ import { VERIFIED_ACK_REFUSAL, verifiedAckRefusal } from "@/lib/verifiedAck";
 import { canOffer, type Offer } from "@/lib/offer";
 import type { CandidateDocument } from "@/lib/documents";
 import { addressProofStatus } from "@/lib/addressProof";
+import { GSTIN_WAITING_REFUSAL, gstinWaitingRefusal } from "@/lib/pan";
 
 export const BULK_ACTIONS = [
   "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer", "chatReminder", "verifiedAck",
-  "addressProof",
+  "addressProof", "gstinWaiting",
 ] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
@@ -37,6 +38,7 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   chatReminder: "Remind to start chat",
   verifiedAck: "Tell them they’re verified",
   addressProof: "Ask for proof of address",
+  gstinWaiting: "Remind: waiting for GSTIN",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
@@ -52,7 +54,7 @@ export const FAVORITE_ACTIONS: readonly BulkAction[] = ["offerReminder"];
  * Accepted: chasing the final interview chat for those who never started it,
  * and asking for proof of address (the optional last step).
  */
-export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder", "addressProof"];
+export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder", "addressProof", "gstinWaiting"];
 
 /** Below this, a chat reminder sent again warns: two in a day read as spam. */
 const CHAT_REMINDER_WARN_MS = 24 * 60 * 60 * 1000;
@@ -138,6 +140,11 @@ export interface BulkCandidate {
   addressProofRequestedAt?: string;
   addressProofSubmittedAt?: string;
   addressProofApprovedAt?: string;
+  /** For the GSTIN reminder: where they live, whether one is on file, the last send. */
+  country?: string;
+  confirmedCountry?: string;
+  gstin?: string;
+  gstinWaitingAt?: string;
 }
 
 export type Eligibility =
@@ -171,6 +178,23 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
     });
     if (refusal) return { include: false, reason: VERIFIED_ACK_REFUSAL[refusal] ?? refusal };
     return c.verifiedAckSentAt ? { include: true, warn: "already told — this tells them again" } : { include: true };
+  }
+
+  // "Your place is waiting — send us your GSTIN when ready." India, accepted,
+  // no GSTIN; see lib/pan.
+  if (action === "gstinWaiting") {
+    const refusal = gstinWaitingRefusal({
+      email: c.email,
+      offerAcceptedAt: c.offerAcceptedAt,
+      gstin: c.gstin,
+      country: c.country,
+      confirmedDetails: { country: c.confirmedCountry },
+    });
+    if (refusal) return { include: false, reason: GSTIN_WAITING_REFUSAL[refusal] };
+    const last = c.gstinWaitingAt ? Date.parse(c.gstinWaitingAt) : NaN;
+    return Date.now() - last < 24 * 60 * 60 * 1000
+      ? { include: true, warn: "already sent in the last 24 hours — this sends another" }
+      : { include: true };
   }
 
   // "Your agreement is ready — please confirm your address." Only after

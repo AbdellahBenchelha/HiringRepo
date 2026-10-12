@@ -13,6 +13,7 @@ import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
 import { currentAllowance } from "@/lib/warmupStore";
 import { sendChatReminder } from "@/lib/chatReminderSend";
 import { sendAddressProofEmail } from "@/lib/addressProofSend";
+import { sendGstinWaitingEmail } from "@/lib/gstinWaitingSend";
 
 /**
  * SERVER-ONLY. Sends one candidate's email, waits, sends the next.
@@ -73,6 +74,12 @@ async function sendOne(batch: BatchState, id: string) {
         by: batch.startedBy,
         override: batch.override,
       });
+      return result.ok ? { ok: true as const } : result;
+    }
+    case "gstinWaiting": {
+      // Re-checked per person: somebody whose GSTIN was added while the batch
+      // waited is not written to.
+      const result = await sendGstinWaitingEmail(id, { by: batch.startedBy, override: batch.override });
       return result.ok ? { ok: true as const } : result;
     }
     case "offer": {

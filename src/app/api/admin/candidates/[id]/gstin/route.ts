@@ -6,12 +6,15 @@ import { sendEmail } from "@/lib/email";
 import { gstinRequestHtml, gstinRequestSubject, gstinRequestText } from "@/lib/emailTemplates";
 import { siteConfig } from "@/config/site";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
+import { sendGstinWaitingEmail } from "@/lib/gstinWaitingSend";
 
 /**
  * A candidate's GSTIN, from View info.
  *
  *   POST { action: "request" }        email "GSTIN needed" — only while none is on file
  *   POST { action: "set", gstin }     save one a candidate sent by reply (checked first)
+ *   POST { action: "waiting" }        email "your place is waiting — send us your GSTIN
+ *                                     when ready" (India, accepted, no GSTIN)
  *
  * The request is recorded only once the email has actually gone, so the panel
  * never shows a request that nobody received.
@@ -74,6 +77,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // eslint-disable-next-line no-console
     console.log(`[gstin] GSTIN requested from ${id} by ${by}`);
     return NextResponse.json({ ok: true, gstinRequests: updated?.gstinRequests ?? [] });
+  }
+
+  if (body.action === "waiting") {
+    const result = await sendGstinWaitingEmail(id, { by });
+    if (!result.ok) {
+      const status =
+        result.reason === "not_found" ? 404 : result.reason === "warmup_limit" ? 429 : result.reason === "no_email" ? 400 : 409;
+      return NextResponse.json({ ok: false, error: result.reason }, { status });
+    }
+    return NextResponse.json({ ok: true, gstinWaitingEmails: result.candidate.gstinWaitingEmails ?? [] });
   }
 
   return NextResponse.json({ ok: false, error: "bad_action" }, { status: 400 });
