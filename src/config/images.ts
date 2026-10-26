@@ -80,56 +80,56 @@ export const images = {
     1600,
     "Three WorkRoute team members in headsets smiling together at a computer",
   ),
-  /** The earlier home-page photos, kept for the job pages that show them. */
-  liveChatAgent: image(
-    "hero-agent",
-    980,
-    1086,
-    1600,
-    "A smiling customer-support agent wearing a headset, working on a laptop at home",
-  ),
-  salesTeam: image(
-    "life-team",
-    1300,
-    1016,
-    1600,
-    "Four WorkRoute team members laughing together around a laptop",
-  ),
+  /** One photo per job page, in the header beside the role's pay. */
   callAgent: image(
-    "call-agent",
-    544,
-    332,
-    1088,
-    "A smiling support agent holding her headset while talking with a customer on a call",
+    "call-agent-2",
+    720,
+    480,
+    1200,
+    "A smiling call-center agent in glasses and a headset talking with a customer at her computer",
   ),
-  supportAgent: image(
-    "support-agent",
-    716,
-    396,
-    1432,
-    "A cheerful support agent in a headset helping a customer at his laptop",
+  chatAgent: image(
+    "chat-agent-2",
+    720,
+    480,
+    1200,
+    "A smiling support agent in a headset at her desk, with colleagues answering customers behind her",
   ),
   techAgent: image(
-    "tech-agent",
-    1008,
-    650,
-    1600,
-"A smiling support agent in glasses and a headset explaining a solution to a customer",
+    "tech-agent-2",
+    720,
+    480,
+    1200,
+    "A smiling technical support agent in glasses and a headset at his computer",
+  ),
+  salesAgent: image(
+    "sales-agent-2",
+    720,
+    720,
+    1200,
+    "A sales agent in a headset laughing on a call while taking notes",
+  ),
+  supportAgent: image(
+    "support-agent-2",
+    720,
+    480,
+    1200,
+    "A customer support agent in a headset smiling while helping a customer at her computer",
   ),
 } as const;
 
 /**
  * The header photo for each open position, by slug, with where to anchor the
- * crop so the face stays in frame. A new job falls back to the hero photo.
+ * crop so the face stays in frame. A new job falls back to the support photo.
  */
 export const jobImages: Record<string, { image: SiteImage; position: string }> = {
-  "customer-support-representative": { image: images.supportAgent, position: "80% center" },
-  "call-center-agent": { image: images.callAgent, position: "45% center" },
-  "live-chat-and-email-support-agent": { image: images.liveChatAgent, position: "center 30%" },
-  "technical-support-representative": { image: images.techAgent, position: "45% center" },
-  "sales-and-retention-agent": { image: images.salesTeam, position: "60% center" },
+  "customer-support-representative": { image: images.supportAgent, position: "85% center" },
+  "call-center-agent": { image: images.callAgent, position: "85% center" },
+  "live-chat-and-email-support-agent": { image: images.chatAgent, position: "80% center" },
+  "technical-support-representative": { image: images.techAgent, position: "75% center" },
+  "sales-and-retention-agent": { image: images.salesAgent, position: "center 15%" },
 };
 
 export function jobImage(slug: string): { image: SiteImage; position: string } {
-  return jobImages[slug] ?? { image: images.liveChatAgent, position: "center 30%" };
+  return jobImages[slug] ?? { image: images.supportAgent, position: "85% center" };
 }
