@@ -86,6 +86,7 @@ export function Hero() {
               image={images.hero}
               priority
               sizes="(min-width: 1024px) 480px, (min-width: 640px) 448px, 88vw"
+              className="object-[65%_center]"
             />
           </div>
 

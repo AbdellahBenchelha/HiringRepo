@@ -79,7 +79,7 @@ export function Faq() {
                   <ResponsiveImage
                     image={images.faq}
                     sizes="(min-width: 1024px) 480px, 92vw"
-                    className="object-[44%_30%]"
+                    className="object-center"
                   />
                 </div>
               </div>

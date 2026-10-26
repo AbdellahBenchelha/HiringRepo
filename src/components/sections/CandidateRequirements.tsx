@@ -55,7 +55,7 @@ export function CandidateRequirements() {
               <ResponsiveImage
                 image={images.lookingFor}
                 sizes="(min-width: 1024px) 460px, 90vw"
-                className="object-[36%_center]"
+                className="object-[80%_center]"
               />
             </div>
           </div>

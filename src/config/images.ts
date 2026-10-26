@@ -39,18 +39,18 @@ function image(name: string, width: number, height: number, width2x: number, alt
 
 export const images = {
   hero: image(
-    "hero-agent",
-    980,
-    1086,
-    1600,
-"A smiling customer-support agent wearing a headset, working on a laptop at home",
+    "hero-agent-2",
+    720,
+    720,
+    1200,
+    "A smiling customer-support agent in a headset, with colleagues on calls behind her",
   ),
   aboutTeam: image(
-    "about-team",
-    1180,
-    680,
+    "about-team-2",
+    800,
+    534,
     1600,
-"Three WorkRoute team members with headsets smiling together at a desk",
+    "A team leader showing three smiling support agents in headsets something on a screen",
   ),
   whyJoin: image(
     "why-join",
@@ -60,25 +60,40 @@ export const images = {
 "A support agent in glasses and a headset smiling while talking with a customer",
   ),
   lookingFor: image(
-    "looking-for",
+    "looking-for-2",
+    720,
+    456,
     1200,
-    672,
-    1600,
-"A friendly support agent in a headset smiling while working on a laptop",
+    "A smiling support agent in a headset working at her computer",
   ),
   faq: image(
-    "faq-agent",
-    1072,
-    568,
-    1600,
-"A smiling support agent in a headset and blazer, talking with a customer",
+    "faq-agent-2",
+    720,
+    531,
+    1200,
+    "A support agent in a headset talking with a customer on a video call from home",
   ),
   lifeTeam: image(
+    "life-team-2",
+    860,
+    573,
+    1600,
+    "Three WorkRoute team members in headsets smiling together at a computer",
+  ),
+  /** The earlier home-page photos, kept for the job pages that show them. */
+  liveChatAgent: image(
+    "hero-agent",
+    980,
+    1086,
+    1600,
+    "A smiling customer-support agent wearing a headset, working on a laptop at home",
+  ),
+  salesTeam: image(
     "life-team",
     1300,
     1016,
     1600,
-"Four WorkRoute team members laughing together around a laptop",
+    "Four WorkRoute team members laughing together around a laptop",
   ),
   callAgent: image(
     "call-agent",
@@ -110,11 +125,11 @@ export const images = {
 export const jobImages: Record<string, { image: SiteImage; position: string }> = {
   "customer-support-representative": { image: images.supportAgent, position: "80% center" },
   "call-center-agent": { image: images.callAgent, position: "45% center" },
-  "live-chat-and-email-support-agent": { image: images.hero, position: "center 30%" },
+  "live-chat-and-email-support-agent": { image: images.liveChatAgent, position: "center 30%" },
   "technical-support-representative": { image: images.techAgent, position: "45% center" },
-  "sales-and-retention-agent": { image: images.lifeTeam, position: "60% center" },
+  "sales-and-retention-agent": { image: images.salesTeam, position: "60% center" },
 };
 
 export function jobImage(slug: string): { image: SiteImage; position: string } {
-  return jobImages[slug] ?? { image: images.hero, position: "center 30%" };
+  return jobImages[slug] ?? { image: images.liveChatAgent, position: "center 30%" };
 }

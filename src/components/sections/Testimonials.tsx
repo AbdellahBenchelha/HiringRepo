@@ -98,7 +98,7 @@ export function Testimonials() {
               <ResponsiveImage
                 image={images.lifeTeam}
                 sizes="(min-width: 1024px) 580px, 92vw"
-                className="object-[62%_center]"
+                className="object-[65%_center]"
               />
             </div>
           </div>
