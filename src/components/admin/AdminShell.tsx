@@ -30,6 +30,8 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   // Beside Warm-up because both are about the email rather than the people.
   // Read-only: the wording lives in code, where it is reviewed.
   { href: "/admin/emails", label: "Email templates", icon: "document" },
+  // Writing one email by hand, through the same sender as everything else.
+  { href: "/admin/send-email", label: "Send email", icon: "send" },
   // One entry, three sections behind it. As three items they sat among the
   // tabs where candidates are actually worked, making rules you change once a
   // month look like part of the daily round.

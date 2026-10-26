@@ -28,6 +28,7 @@ import {
   addressProofRequestSubject,
   addressProofRequestText,
   companyDetailsHtml,
+  composedEmailHtml,
   companyDetailsSubject,
   companyDetailsText,
   identityReminderHtml,
@@ -667,6 +668,25 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         subject: addressProofReaskSubject(),
         html: addressProofReaskHtml(payload),
         text: addressProofReaskText(payload),
+      };
+    },
+  },
+  {
+    id: "composed",
+    name: "Your own email (Send email tab)",
+    stage: "offer",
+    when:
+      "Written and sent by hand from the Send email tab, to one address at a time. The words, formatting and subject are yours; this shows the WorkRoute design around a sample message (a plain design without the logo and footer can be chosen instead).",
+    kind: "campaign",
+    source: "composedEmailHtml",
+    render: () => {
+      const subject = "A quick update about your application";
+      const bodyHtml =
+        '<div>Hi Amina,</div><div><br></div><div>Thank you for your patience. <strong>Your file is complete</strong> and our team will be in touch within the next few days.</div><div><br></div><div>Kind regards,<br>WorkRoute Recruitment Team</div>';
+      return {
+        subject,
+        html: composedEmailHtml({ subject, bodyHtml, design: "workroute" }),
+        text: "Hi Amina,\n\nThank you for your patience. Your file is complete and our team will be in touch within the next few days.\n\nKind regards,\nWorkRoute Recruitment Team",
       };
     },
   },

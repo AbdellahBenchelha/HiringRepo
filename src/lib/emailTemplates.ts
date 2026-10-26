@@ -2196,6 +2196,91 @@ export function gstinWaitingHtml({ fullName }: GstinWaitingEmail): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Your own email (the Send email tab)                                         */
+/* -------------------------------------------------------------------------- */
+
+export interface ComposedEmail {
+  subject: string;
+  /**
+   * The message as written in the editor, ALREADY CLEANED by
+   * lib/composeEmail — it is placed in the email as it is.
+   */
+  bodyHtml: string;
+  /** "workroute": logo, white card and footer. "plain": just the message. */
+  design: "workroute" | "plain";
+}
+
+/**
+ * A message written by hand in the Admin Panel, in the site's email design or
+ * as a plain letter. The words are entirely the recruiter's; this only frames
+ * them.
+ */
+export function composedEmailHtml(e: ComposedEmail): string {
+  const company = esc(siteConfig.company.name);
+  const base = `font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${MUTED}`;
+  const head = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(e.subject)}</title>
+</head>`;
+
+  if (e.design === "plain") {
+    return `${head}
+<body style="margin:0;padding:0;background:#ffffff;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td style="padding:24px 16px;">
+  <div style="${base};max-width:640px;word-wrap:break-word;">
+${e.bodyHtml}
+  </div>
+</td></tr>
+</table>
+</body>
+</html>`;
+  }
+
+  return `${head}
+<body style="margin:0;padding:0;background:${CREAM};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:34px 32px;${base};word-wrap:break-word;">
+${e.bodyHtml}
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Submission received                                                         */
 /* -------------------------------------------------------------------------- */
 
