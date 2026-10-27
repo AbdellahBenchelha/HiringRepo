@@ -156,6 +156,7 @@ export async function POST(req: NextRequest) {
       confirmedCountry: c.confirmedDetails?.country,
       gstin: c.gstin,
       gstinWaitingAt: c.gstinWaitingEmails?.at(-1)?.at,
+      gstinRequestAt: c.gstinRequests?.at(-1),
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });

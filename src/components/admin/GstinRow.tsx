@@ -90,7 +90,13 @@ export function GstinRow({
                 ? "no email address on file"
                 : data.error === "already_has_gstin"
                   ? "they already have a GSTIN"
-                  : data.error ?? "failed"
+                  : data.error === "too_soon"
+                    ? "one was sent less than a minute ago"
+                    : data.error === "not_india"
+                      ? "they do not live in India"
+                      : data.error === "not_accepted"
+                        ? "they have not accepted an offer"
+                        : data.error ?? "failed"
           }).`,
         });
       }

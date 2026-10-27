@@ -1,6 +1,6 @@
 "use client";
 
-import { panExpected } from "@/lib/pan";
+import { gstinAsked, panExpected } from "@/lib/pan";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { FULL_VERIFIED, REJECTED } from "@/lib/candidateStatus";
@@ -58,6 +58,22 @@ function fmt(iso?: string) {
   });
 }
 
+/**
+ * Where an accepted candidate stands on the GSTIN, for the filter and the row
+ * tag: null when it does not apply (outside India, or a GSTIN is on file),
+ * otherwise whether any GSTIN email — "Request GSTIN" or "Your place is
+ * waiting" — has been sent.
+ */
+function gstinGroup(c: CandidateView): "asked" | "never" | null {
+  if (c.gstin || !panExpected(c.confirmedDetails?.country ?? c.country)) return null;
+  return gstinAsked(c).count > 0 ? "asked" : "never";
+}
+
+function fmtDay(iso?: string) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
 function fmtDate(iso?: string) {
   if (!iso) return "—";
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
@@ -75,7 +91,7 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
   const [engagedAs, setEngagedAs] = useState<"all" | "Individual" | "Company">("all");
   // GSTIN is only asked of people in India, so "empty" means somebody in India
   // without one — the people a Request GSTIN email is for — not everyone else.
-  const [gstin, setGstin] = useState<"all" | "yes" | "no">("all");
+  const [gstin, setGstin] = useState<"all" | "yes" | "no" | "asked" | "never">("all");
   // The final interview is the live chat: has its link been emailed yet?
   const [chatSent, setChatSent] = useState<"all" | "yes" | "notStarted" | "no">("all");
   const [addressProof, setAddressProof] = useState<"all" | AddressProofStatus>("all");
@@ -126,7 +142,9 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       if (verified === "no" && c.status === FULL_VERIFIED) return false;
       if (engagedAs !== "all" && c.confirmedDetails?.engagedAs !== engagedAs) return false;
       if (gstin === "yes" && !c.gstin) return false;
-      if (gstin === "no" && (c.gstin || !panExpected(c.confirmedDetails?.country ?? c.country))) return false;
+      if (gstin === "no" && gstinGroup(c) === null) return false;
+      if (gstin === "asked" && gstinGroup(c) !== "asked") return false;
+      if (gstin === "never" && gstinGroup(c) !== "never") return false;
       if (chatSent === "yes" && !c.chatLinkSentAt) return false;
       if (chatSent === "no" && c.chatLinkSentAt) return false;
       // The people the "start your chat" reminder is for.
@@ -135,6 +153,16 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
       return true;
     });
   }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent, addressProof]);
+
+  /** How many each GSTIN choice would show, among the people not hidden by country. */
+  const gstinCounts = useMemo(() => {
+    const visible = live.filter((c) => !hiddenCountries.isHidden(c.country));
+    return {
+      provided: visible.filter((c) => !!c.gstin).length,
+      asked: visible.filter((c) => gstinGroup(c) === "asked").length,
+      never: visible.filter((c) => gstinGroup(c) === "never").length,
+    };
+  }, [live, hiddenCountries]);
 
   /** How many rows the hidden countries are keeping off the table. */
   const hiddenCount = useMemo(
@@ -277,8 +305,10 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
               onChange={(e) => setGstin(e.target.value as typeof gstin)}
             >
               <option value="all">All</option>
-              <option value="yes">Provided</option>
-              <option value="no">Empty (India)</option>
+              <option value="yes">Provided ({gstinCounts.provided})</option>
+              <option value="no">Empty (India) ({gstinCounts.asked + gstinCounts.never})</option>
+              <option value="asked">Empty — already asked ({gstinCounts.asked})</option>
+              <option value="never">Empty — never asked ({gstinCounts.never})</option>
             </select>
           </label>
 
@@ -499,6 +529,23 @@ export function AcceptedTable({ rows }: { rows: CandidateView[] }) {
                           {d.companyName}
                         </span>
                       ) : null}
+                      {(() => {
+                        const g = gstinGroup(c);
+                        if (!g) return null;
+                        const asked = gstinAsked(c);
+                        return (
+                          <span
+                            data-gstin-tag={g}
+                            title={g === "asked" ? "“Request GSTIN” and “place still waiting” emails sent" : "No GSTIN email sent yet"}
+                            className={`mt-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                              g === "asked" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-navy-200 bg-navy-50 text-navy-600"
+                            }`}
+                          >
+                            <Icon name="mail" className="h-3 w-3" />
+                            {g === "asked" ? `GSTIN asked ${asked.count}× · last ${fmtDay(asked.last)}` : "GSTIN never asked"}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy-800">{d?.country || c.country || "—"}</p>

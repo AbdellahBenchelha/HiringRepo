@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
-import { getCandidate, recordGstinRequest, setGstinByRecruiter } from "@/lib/store";
+import { getCandidate, setGstinByRecruiter } from "@/lib/store";
 import { isValidGstin, normaliseGstin } from "@/lib/pan";
-import { sendEmail } from "@/lib/email";
-import { gstinRequestHtml, gstinRequestSubject, gstinRequestText } from "@/lib/emailTemplates";
-import { siteConfig } from "@/config/site";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
-import { sendGstinWaitingEmail } from "@/lib/gstinWaitingSend";
+import { sendGstinRequestEmail, sendGstinWaitingEmail } from "@/lib/gstinSend";
 
 /**
  * A candidate's GSTIN, from View info.
  *
- *   POST { action: "request" }        email "GSTIN needed" — only while none is on file
+ *   POST { action: "request" }        email "GSTIN needed" (India, accepted, no GSTIN)
  *   POST { action: "set", gstin }     save one a candidate sent by reply (checked first)
  *   POST { action: "waiting" }        email "your place is waiting — send us your GSTIN
  *                                     when ready" (India, accepted, no GSTIN)
  *
- * The request is recorded only once the email has actually gone, so the panel
- * never shows a request that nobody received.
+ * Both emails are sent by lib/gstinSend, shared with the Accepted tab's bulk
+ * buttons, and recorded only once the email has actually gone.
  */
 
 export const runtime = "nodejs";
@@ -53,30 +50,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   if (body.action === "request") {
-    if (candidate.gstin) return NextResponse.json({ ok: false, error: "already_has_gstin" }, { status: 409 });
-    const email = (candidate.email || "").trim();
-    if (!email.includes("@")) return NextResponse.json({ ok: false, error: "no_email" }, { status: 400 });
-
-    const payload = { fullName: candidate.confirmedDetails?.firstName || candidate.fullName || "Candidate" };
-    const result = await sendEmail({
-      to: email,
-      toName: candidate.fullName || undefined,
-      subject: gstinRequestSubject(),
-      html: gstinRequestHtml(payload),
-      text: gstinRequestText(payload),
-      replyTo: siteConfig.contact.recruitmentEmail,
-      kind: "campaign",
-    });
+    const result = await sendGstinRequestEmail(id, { by });
     if (!result.ok) {
-      const reason = "skipped" in result ? result.skipped : result.error;
-      // eslint-disable-next-line no-console
-      console.warn(`[gstin] request to ${id} not sent: ${reason}`);
-      return NextResponse.json({ ok: false, error: reason }, { status: 502 });
+      const status =
+        result.reason === "not_found" ? 404 : result.reason === "warmup_limit" ? 429 : result.reason === "no_email" ? 400 : 409;
+      return NextResponse.json({ ok: false, error: result.reason }, { status });
     }
-    const updated = await recordGstinRequest(id);
-    // eslint-disable-next-line no-console
-    console.log(`[gstin] GSTIN requested from ${id} by ${by}`);
-    return NextResponse.json({ ok: true, gstinRequests: updated?.gstinRequests ?? [] });
+    return NextResponse.json({ ok: true, gstinRequests: result.candidate.gstinRequests ?? [] });
   }
 
   if (body.action === "waiting") {

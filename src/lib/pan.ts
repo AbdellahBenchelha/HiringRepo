@@ -182,3 +182,16 @@ export function gstinWaitingRefusal(c: {
   if (c.gstin) return "already_has_gstin";
   return null;
 }
+
+/**
+ * Every GSTIN email a candidate has been sent — "Request GSTIN" and "Your
+ * place is waiting" both count — and when the last one went. Drives the
+ * Accepted tab's "already asked / never asked" filter and its row tag.
+ */
+export function gstinAsked(c: {
+  gstinRequests?: string[];
+  gstinWaitingEmails?: { at: string }[];
+}): { count: number; last?: string } {
+  const dates = [...(c.gstinRequests ?? []), ...(c.gstinWaitingEmails ?? []).map((w) => w.at)].sort();
+  return { count: dates.length, last: dates.at(-1) };
+}

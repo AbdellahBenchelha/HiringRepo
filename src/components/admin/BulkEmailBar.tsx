@@ -55,6 +55,7 @@ const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCi
   chatReminder: "clock",
   verifiedAck: "checkCircle",
   addressProof: "home",
+  gstinRequest: "mail",
   gstinWaiting: "clock",
 };
 
@@ -162,6 +163,7 @@ export function useBulkEmail(
         confirmedCountry: c.confirmedDetails?.country,
         gstin: c.gstin,
         gstinWaitingAt: c.gstinWaitingEmails?.at(-1)?.at,
+        gstinRequestAt: c.gstinRequests?.at(-1),
       });
       const name = c.fullName || c.email || c.id;
       if (!verdict.include) skip.push({ name, reason: verdict.reason });

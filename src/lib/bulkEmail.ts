@@ -23,7 +23,7 @@ import { GSTIN_WAITING_REFUSAL, gstinWaitingRefusal } from "@/lib/pan";
 
 export const BULK_ACTIONS = [
   "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer", "chatReminder", "verifiedAck",
-  "addressProof", "gstinWaiting",
+  "addressProof", "gstinRequest", "gstinWaiting",
 ] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
@@ -38,6 +38,7 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   chatReminder: "Remind to start chat",
   verifiedAck: "Tell them they’re verified",
   addressProof: "Ask for proof of address",
+  gstinRequest: "Request GSTIN",
   gstinWaiting: "Remind: waiting for GSTIN",
 };
 
@@ -54,7 +55,7 @@ export const FAVORITE_ACTIONS: readonly BulkAction[] = ["offerReminder"];
  * Accepted: chasing the final interview chat for those who never started it,
  * and asking for proof of address (the optional last step).
  */
-export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder", "addressProof", "gstinWaiting"];
+export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder", "addressProof", "gstinRequest", "gstinWaiting"];
 
 /** Below this, a chat reminder sent again warns: two in a day read as spam. */
 const CHAT_REMINDER_WARN_MS = 24 * 60 * 60 * 1000;
@@ -145,6 +146,8 @@ export interface BulkCandidate {
   confirmedCountry?: string;
   gstin?: string;
   gstinWaitingAt?: string;
+  /** For the GSTIN request: when the last "GSTIN needed" email went. */
+  gstinRequestAt?: string;
 }
 
 export type Eligibility =
@@ -180,8 +183,22 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
     return c.verifiedAckSentAt ? { include: true, warn: "already told — this tells them again" } : { include: true };
   }
 
-  // "Your place is waiting — send us your GSTIN when ready." India, accepted,
-  // no GSTIN; see lib/pan.
+  // Both GSTIN emails: India, accepted, no GSTIN; see lib/pan. Each warns when
+  // the same email went in the last 24 hours.
+  if (action === "gstinRequest") {
+    const refusal = gstinWaitingRefusal({
+      email: c.email,
+      offerAcceptedAt: c.offerAcceptedAt,
+      gstin: c.gstin,
+      country: c.country,
+      confirmedDetails: { country: c.confirmedCountry },
+    });
+    if (refusal) return { include: false, reason: GSTIN_WAITING_REFUSAL[refusal] };
+    const last = c.gstinRequestAt ? Date.parse(c.gstinRequestAt) : NaN;
+    return Date.now() - last < 24 * 60 * 60 * 1000
+      ? { include: true, warn: "GSTIN already requested in the last 24 hours — this asks again" }
+      : { include: true };
+  }
   if (action === "gstinWaiting") {
     const refusal = gstinWaitingRefusal({
       email: c.email,

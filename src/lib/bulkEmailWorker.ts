@@ -13,7 +13,7 @@ import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
 import { currentAllowance } from "@/lib/warmupStore";
 import { sendChatReminder } from "@/lib/chatReminderSend";
 import { sendAddressProofEmail } from "@/lib/addressProofSend";
-import { sendGstinWaitingEmail } from "@/lib/gstinWaitingSend";
+import { sendGstinRequestEmail, sendGstinWaitingEmail } from "@/lib/gstinSend";
 
 /**
  * SERVER-ONLY. Sends one candidate's email, waits, sends the next.
@@ -74,6 +74,11 @@ async function sendOne(batch: BatchState, id: string) {
         by: batch.startedBy,
         override: batch.override,
       });
+      return result.ok ? { ok: true as const } : result;
+    }
+    case "gstinRequest": {
+      // Re-checked per person, like the reminder below.
+      const result = await sendGstinRequestEmail(id, { by: batch.startedBy, override: batch.override });
       return result.ok ? { ok: true as const } : result;
     }
     case "gstinWaiting": {
