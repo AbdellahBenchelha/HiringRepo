@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { adminDelete, adminPost } from "@/lib/adminClient";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 async function problemOf(res: Response): Promise<string> {
   try {
@@ -58,7 +59,7 @@ export function AdminAction({
       }
       const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       onDone?.(data);
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setError("No connection.");
     } finally {
@@ -135,7 +136,7 @@ export function AdminForm({
       }
       if (!keep) form.reset();
       setOk(true);
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setError("No connection.");
     } finally {
@@ -212,7 +213,7 @@ export function AdminDelete({ url, confirm, children = "Delete" }: { url: string
         setBusy(true);
         try {
           await adminDelete(url);
-          router.refresh();
+          refreshAfterSave(router);
         } finally {
           setBusy(false);
         }

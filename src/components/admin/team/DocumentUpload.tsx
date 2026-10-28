@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { csrfToken } from "@/lib/adminClient";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 /** Share a PDF or image with one member; it shows on their Documents page. */
 export function DocumentUpload({ memberId }: { memberId: string }) {
@@ -27,7 +28,7 @@ export function DocumentUpload({ memberId }: { memberId: string }) {
         return;
       }
       form.reset();
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setError("No connection.");
     } finally {

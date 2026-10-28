@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { problemOf, teamPost } from "@/lib/teamClient";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 /**
  * One button that posts one thing to the portal's API, then refreshes the
@@ -39,7 +40,7 @@ export function ActionButton({
         return;
       }
       if (after) router.replace(after);
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setError("No connection. Please try again.");
     } finally {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { adminPost } from "@/lib/adminClient";
 import { DAY_KEYS, DAY_LABELS, START_TIMES, endTimeFor, knownTimeZones, type DayKey } from "@/lib/availability";
 import { BANK_IDS, BANKS, type BankId } from "@/lib/teamShared";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 export interface MemberFormValues {
   candidateId?: string;
@@ -67,7 +68,7 @@ export function MemberForm({ mode, memberId, initial }: { mode: "new" | "edit"; 
       if (mode === "new" && data.id) router.push(`/admin/team/${data.id}`);
       else {
         setSaved(true);
-        router.refresh();
+        refreshAfterSave(router);
       }
     } catch {
       setProblems(["No connection."]);

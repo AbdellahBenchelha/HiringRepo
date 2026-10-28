@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { adminPost } from "@/lib/adminClient";
 import type { PaydaySchedule } from "@/lib/teamShared";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -34,7 +35,7 @@ export function TeamSettingsForm({
       const res = await adminPost("/api/admin/team/settings", { action: "settings", payday, rulesText, mailboxUrl, mailboxHelp });
       const d = (await res.json().catch(() => ({}))) as { problems?: string[] };
       setMsg(res.ok ? { ok: true, text: "Saved." } : { ok: false, text: d.problems?.[0] ?? "Could not save." });
-      if (res.ok) router.refresh();
+      if (res.ok) refreshAfterSave(router);
     } catch {
       setMsg({ ok: false, text: "No connection." });
     } finally {

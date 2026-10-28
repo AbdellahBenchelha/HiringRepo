@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { problemOf, teamPost } from "@/lib/teamClient";
 import { BANKS, bicFor, checkIban, formatIban, ibanBankWarning, type BankId } from "@/lib/teamShared";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 /**
  * Add or change the account payments go to: one of the banks allowed for
@@ -46,7 +47,7 @@ export function BankForm({ allowed, hasAccount }: { allowed: BankId[]; hasAccoun
       }
       setSent(true);
       setIban("");
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setError("No connection. Please try again.");
     } finally {

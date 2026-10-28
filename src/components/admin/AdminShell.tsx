@@ -7,6 +7,7 @@ import { Icon, type IconName } from "@/components/Icon";
 import { Logo } from "@/components/layout/Logo";
 import { ChatNavBadge } from "@/components/admin/chat/ChatNavBadge";
 import { TeamNavBadge } from "@/components/admin/team/TeamNavBadge";
+import { isTeamAdminPath } from "@/lib/teamHost";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin", label: "Dashboard", icon: "trendingUp" },
@@ -33,20 +34,28 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/emails", label: "Email templates", icon: "document" },
   // Writing one email by hand, through the same sender as everything else.
   { href: "/admin/send-email", label: "Send email", icon: "send" },
-  // The team portal (workroute.team): the people already working with us.
-  // After the hiring tabs, because it begins where hiring ends.
-  { href: "/admin/team", label: "Team", icon: "usersGroup" },
-  { href: "/admin/team-tickets", label: "Team tickets", icon: "chatDots" },
-  { href: "/admin/team-phone", label: "Team phone", icon: "phone" },
-  { href: "/admin/team-pay", label: "Hours & pay", icon: "wallet" },
   // One entry, three sections behind it. As three items they sat among the
   // tabs where candidates are actually worked, making rules you change once a
   // month look like part of the daily round.
   { href: "/admin/settings", label: "Settings", icon: "settings" },
 ];
 
+/**
+ * The team panel, at workroute.team/admin: the people already working with
+ * us. A separate panel from the hiring one, on its own domain with its own
+ * sign-in — see lib/teamHost.
+ */
+const TEAM_NAV: { href: string; label: string; icon: IconName }[] = [
+  { href: "/admin/team", label: "Team", icon: "usersGroup" },
+  { href: "/admin/team-tickets", label: "Team tickets", icon: "chatDots" },
+  { href: "/admin/team-phone", label: "Team phone", icon: "phone" },
+  { href: "/admin/team-pay", label: "Hours & pay", icon: "wallet" },
+];
+
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const team = isTeamAdminPath(pathname);
+  const nav = team ? TEAM_NAV : NAV;
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -81,7 +90,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const navLinks = (
     <nav className="space-y-1">
-      {NAV.map((item) => (
+      {nav.map((item) => (
         <Link
           key={item.href}
           href={item.href}
@@ -145,8 +154,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <div className="admin-nav-head flex items-start justify-between gap-2 px-2 pb-6">
             <div className="admin-nav-label min-w-0">
               <Logo className="h-8 w-auto" />
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-navy-400">
-                Admin Panel
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-navy-400" data-panel={team ? "team" : "hiring"}>
+                {team ? "Team Admin" : "Admin Panel"}
               </p>
             </div>
             <button

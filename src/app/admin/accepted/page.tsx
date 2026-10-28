@@ -8,6 +8,7 @@ import { listSessions } from "@/lib/chatStore";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AcceptedTable } from "@/components/admin/AcceptedTable";
 import { listMembers } from "@/lib/teamStore";
+import { teamPortalUrl } from "@/lib/teamHost";
 
 export const metadata: Metadata = { title: "Accepted", robots: { index: false, follow: false } };
 
@@ -53,7 +54,7 @@ export default async function AdminAcceptedPage() {
         </p>
       </header>
 
-      <AcceptedTable rows={rows} teamMembers={teamMembers} />
+      <AcceptedTable rows={rows} teamMembers={teamMembers} teamAdminUrl={teamPortalUrl()} />
     </AdminShell>
   );
 }

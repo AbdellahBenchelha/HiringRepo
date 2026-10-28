@@ -142,8 +142,9 @@ export async function sendDayOffDecision(m: TeamMember, d: DayOff) {
 /* Telegram                                                                    */
 /* -------------------------------------------------------------------------- */
 
+/** The team admin panel lives on the team domain. */
 function adminUrl(path: string): string {
-  return `${(process.env.PUBLIC_BASE_URL || siteConfig.url).replace(/\/$/, "")}${path}`;
+  return `${teamPortalUrl()}${path}`;
 }
 
 /**

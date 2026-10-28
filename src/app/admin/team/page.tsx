@@ -6,7 +6,7 @@ import { memberRows } from "@/lib/teamAdminData";
 import { bankCryptoReady } from "@/lib/teamCrypto";
 import { MEMBER_STATUS_LABEL, formatDateTime, formatUsd } from "@/lib/teamShared";
 import { currentRate } from "@/lib/teamStore";
-import { teamPortalUrl } from "@/lib/teamEmailTemplates";
+import { teamPortalUrl } from "@/lib/teamHost";
 import { TeamFilter } from "@/components/admin/team/TeamFilter";
 
 export const metadata: Metadata = { title: "Team", robots: { index: false, follow: false } };
@@ -41,7 +41,7 @@ export default async function AdminTeamPage({ searchParams }: { searchParams: Pr
             <a href={teamPortalUrl()} className="link" target="_blank" rel="noopener noreferrer">
               {teamPortalUrl().replace(/^https?:\/\//, "")}
             </a>
-            . Add someone from the Accepted tab (Add to team), or by hand.
+            . Add someone with Add to team on the hiring panel&rsquo;s Accepted tab, or by hand.
           </p>
         </div>
         <div className="flex gap-2">
@@ -129,7 +129,7 @@ export default async function AdminTeamPage({ searchParams }: { searchParams: Pr
             ) : (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center text-navy-500">
-                  {all.length ? "Nobody matches." : "Nobody on the team yet. Use Add to team on the Accepted tab."}
+                  {all.length ? "Nobody matches." : "Nobody on the team yet. Use Add to team on the hiring panel’s Accepted tab."}
                 </td>
               </tr>
             )}

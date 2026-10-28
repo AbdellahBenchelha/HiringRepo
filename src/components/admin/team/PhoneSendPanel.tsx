@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { adminPost } from "@/lib/adminClient";
 import { MAX_PHONE_MESSAGE } from "@/lib/teamShared";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 /**
  * Type in a message that arrived on a member's work number. It lands in
@@ -31,7 +32,7 @@ export function PhoneSendPanel({ members }: { members: { id: string; fullName: s
       }
       setBody("");
       setMsg({ ok: true, text: `Sent to ${chosen?.fullName}.` });
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setMsg({ ok: false, text: "No connection." });
     } finally {

@@ -26,7 +26,8 @@ import {
   formatUsd,
 } from "@/lib/teamShared";
 import { formatAvailability, windowInCompanyTime } from "@/lib/availability";
-import { teamPortalUrl } from "@/lib/teamEmailTemplates";
+import { teamPortalUrl } from "@/lib/teamHost";
+import { siteConfig } from "@/config/site";
 import { bankCryptoReady } from "@/lib/teamCrypto";
 import { MemberForm } from "@/components/admin/team/MemberForm";
 import { AdminAction, AdminDelete, AdminForm } from "@/components/admin/team/AdminAction";
@@ -76,6 +77,7 @@ export default async function AdminTeamMemberPage({
   const pending = bankView(m.bankPending);
   const unread = tickets.filter((x) => ticketUnread(x, "admin")).length;
   const api = `/api/admin/team/members/${id}`;
+  const hiringAdmin = (process.env.PUBLIC_BASE_URL || siteConfig.url).replace(/\/$/, "");
 
   return (
     <AdminShell>
@@ -96,9 +98,9 @@ export default async function AdminTeamMemberPage({
             {MEMBER_STATUS_LABEL[m.status]}
           </span>
           {m.candidateId ? (
-            <Link href={`/admin/accepted`} className="text-xs font-semibold text-navy-500 hover:underline">
-              From Accepted
-            </Link>
+            <a href={`${hiringAdmin}/admin/accepted`} className="text-xs font-semibold text-navy-500 hover:underline">
+              From Accepted (hiring panel)
+            </a>
           ) : null}
         </div>
         <p className="mt-1 text-sm text-navy-500">

@@ -8,6 +8,7 @@
  * behind a sign-in. An inbox is easy to forward; the portal is not.
  */
 import { siteConfig } from "@/config/site";
+import { teamPortalUrl } from "@/lib/teamHost";
 
 const NAVY = "#0f1035";
 const CREAM = "#faf9f5";
@@ -23,9 +24,7 @@ function firstNameOf(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || "there";
 }
 
-export function teamPortalUrl(): string {
-  return (process.env.TEAM_PORTAL_URL?.trim() || "https://workroute.team").replace(/\/$/, "");
-}
+export { teamPortalUrl };
 
 interface Shell {
   subject: string;

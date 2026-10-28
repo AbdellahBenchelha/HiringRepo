@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { problemOf, teamPost } from "@/lib/teamClient";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 /** Ask for one of your work days off. */
 export function DayOffForm({ min }: { min: string }) {
@@ -27,7 +28,7 @@ export function DayOffForm({ min }: { min: string }) {
       setDate("");
       setReason("");
       setDone(true);
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setError("No connection. Please try again.");
     } finally {

@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { problemOf } from "@/lib/teamClient";
 import { TICKET_PRIORITIES, TICKET_PRIORITY_LABEL, MAX_TICKET_BODY, MAX_TICKET_SUBJECT } from "@/lib/teamShared";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 function csrfFrom(cookie: string): string {
   if (typeof document === "undefined") return "";
@@ -60,7 +61,7 @@ export function TicketForm({
       formRef.current?.reset();
       setFiles([]);
       if (after) router.push(mode === "new" && data.id ? `${after}/${data.id}` : after);
-      router.refresh();
+      refreshAfterSave(router);
     } catch {
       setError("No connection. Please try again.");
     } finally {

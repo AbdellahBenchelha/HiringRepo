@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { FULL_VERIFIED, REJECTED } from "@/lib/candidateStatus";
 import { rowTone, stickyTone, rowEdge } from "@/components/admin/rowTone";
-import Link from "next/link";
 import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { RefreshButton } from "@/components/admin/RefreshButton";
@@ -85,10 +84,13 @@ function fmtDate(iso?: string) {
 export function AcceptedTable({
   rows,
   teamMembers = {},
+  teamAdminUrl = "",
 }: {
   rows: CandidateView[];
   /** Candidate id → team member id, for those already on the team. */
   teamMembers?: Record<string, string>;
+  /** The team panel lives on its own domain (workroute.team). */
+  teamAdminUrl?: string;
 }) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
@@ -620,25 +622,25 @@ export function AcceptedTable({
                       <div className="flex items-center gap-2">
                         <CandidateInfoButton onOpen={() => openProfile(c)} />
                         {teamMembers[c.id] ? (
-                          <Link
-                            href={`/admin/team/${teamMembers[c.id]}`}
+                          <a
+                            href={`${teamAdminUrl}/admin/team/${teamMembers[c.id]}`}
                             data-team-link
                             title="On the team — open their team page"
                             className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs font-semibold text-green-800 hover:bg-green-100"
                           >
                             <Icon name="usersGroup" className="h-3.5 w-3.5" />
                             Team
-                          </Link>
+                          </a>
                         ) : (
-                          <Link
-                            href={`/admin/team/new?candidate=${encodeURIComponent(c.id)}`}
+                          <a
+                            href={`${teamAdminUrl}/admin/team/new?candidate=${encodeURIComponent(c.id)}`}
                             data-add-to-team
-                            title="Give them a team portal on workroute.team"
+                            title="Opens the team admin panel on workroute.team"
                             className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-navy-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50"
                           >
                             <Icon name="plus" className="h-3.5 w-3.5" />
                             Add to team
-                          </Link>
+                          </a>
                         )}
                         <DeleteCandidateButton candidate={c} onDeleted={dropRow} />
                       </div>

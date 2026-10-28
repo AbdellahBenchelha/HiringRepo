@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminPost } from "@/lib/adminClient";
 import { WORK_STATUSES, WORK_STATUS_LABEL, formatDay, formatHours, formatUsd, isPaidStatus, round2, type WorkStatus } from "@/lib/teamShared";
+import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 export interface EntryRowData {
   id: string;
@@ -37,7 +38,7 @@ export function EntryRow({ e }: { e: EntryRowData }) {
         setError(d.problems?.[0] ?? "Could not save.");
         return false;
       }
-      router.refresh();
+      refreshAfterSave(router);
       return true;
     } catch {
       setError("No connection.");

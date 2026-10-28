@@ -1,0 +1,112 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Icon } from "@/components/Icon";
+import { Logo } from "@/components/layout/Logo";
+import { safeAdminNext } from "@/lib/teamHost";
+
+/**
+ * The admin sign-in. The same form for both panels; `panel` only changes the
+ * label, so it is plain which of the two you are signing in to.
+ */
+export function AdminLoginForm({ panel }: { panel: "hiring" | "team" }) {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<
+    "idle" | "submitting" | "error" | "rate_limited" | "misconfigured"
+  >("idle");
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (status === "submitting") return;
+    setStatus("submitting");
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) {
+        if (res.status === 429) setStatus("rate_limited");
+        else if (res.status === 503) setStatus("misconfigured");
+        else setStatus("error");
+        return;
+      }
+      // Back to the page that sent you here, if it was an admin page.
+      const next = safeAdminNext(new URLSearchParams(window.location.search).get("next"));
+      router.replace(next ?? (panel === "team" ? "/admin/team" : "/admin"));
+      router.refresh();
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-navy-50 to-white px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <Logo className="h-9 w-auto" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-navy-400" data-panel={panel}>
+            {panel === "team" ? "Team Admin — workroute.team" : "Admin Panel"}
+          </p>
+        </div>
+        <form onSubmit={onSubmit} className="card space-y-4">
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-navy-900">Sign in</h1>
+            <p className="mt-1 text-sm text-navy-500">Enter your administrator credentials.</p>
+          </div>
+
+          <div>
+            <label htmlFor="username" className="label">Username</label>
+            <input
+              id="username"
+              className="input"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="label">Password</label>
+            <input
+              id="password"
+              type="password"
+              className="input"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          {status === "error" ? (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              Invalid username or password.
+            </p>
+          ) : null}
+
+          {status === "rate_limited" ? (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              Too many sign-in attempts. Please wait a few minutes and try again.
+            </p>
+          ) : null}
+
+          {status === "misconfigured" ? (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              Admin access is disabled until the server is configured. See the server logs for
+              the required environment variables.
+            </p>
+          ) : null}
+
+          <button type="submit" disabled={status === "submitting"} className="btn-primary w-full">
+            {status === "submitting" ? "Signing in…" : "Sign In"}
+            {status !== "submitting" ? <Icon name="arrowRight" className="h-4 w-4" /> : null}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
