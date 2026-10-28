@@ -26,7 +26,20 @@ if (!rawTarget) {
   console.error("[gateway] TARGET_URL is not set — e.g. http://${{WorkRoute.RAILWAY_PRIVATE_DOMAIN}}:8080");
   process.exit(1);
 }
-const target = new URL(rawTarget);
+// A Railway reference like ${{Main.RAILWAY_PRIVATE_DOMAIN}} that names the
+// wrong service comes through empty — "http://:8080" — so say exactly that
+// instead of crashing with a bare "Invalid URL".
+let target;
+try {
+  target = new URL(rawTarget);
+  if (!target.hostname) throw new Error("no host");
+} catch {
+  console.error(
+    `[gateway] TARGET_URL "${rawTarget}" has no address in it. Put the main service's private address there, ` +
+      "e.g. http://hiringrepo.railway.internal:8080 (main service → Settings → Networking → Private Networking).",
+  );
+  process.exit(1);
+}
 const ALLOWED = (process.env.ALLOWED_HOSTS || "workroute.team,www.workroute.team")
   .split(",")
   .map((h) => h.trim().toLowerCase())
