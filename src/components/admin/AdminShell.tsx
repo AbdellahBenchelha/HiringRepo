@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Icon, type IconName } from "@/components/Icon";
 import { Logo } from "@/components/layout/Logo";
 import { ChatNavBadge } from "@/components/admin/chat/ChatNavBadge";
+import { TeamNavBadge } from "@/components/admin/team/TeamNavBadge";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin", label: "Dashboard", icon: "trendingUp" },
@@ -32,6 +33,12 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/emails", label: "Email templates", icon: "document" },
   // Writing one email by hand, through the same sender as everything else.
   { href: "/admin/send-email", label: "Send email", icon: "send" },
+  // The team portal (workroute.team): the people already working with us.
+  // After the hiring tabs, because it begins where hiring ends.
+  { href: "/admin/team", label: "Team", icon: "usersGroup" },
+  { href: "/admin/team-tickets", label: "Team tickets", icon: "chatDots" },
+  { href: "/admin/team-phone", label: "Team phone", icon: "phone" },
+  { href: "/admin/team-pay", label: "Hours & pay", icon: "wallet" },
   // One entry, three sections behind it. As three items they sat among the
   // tabs where candidates are actually worked, making rules you change once a
   // month look like part of the daily round.
@@ -43,8 +50,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
+  // A whole path segment, so /admin/team is not lit up on /admin/team-pay.
   const isActive = (href: string) =>
-    href === "/admin" ? pathname === "/admin" : pathname?.startsWith(href);
+    href === "/admin" ? pathname === "/admin" : pathname === href || !!pathname?.startsWith(`${href}/`);
 
   /**
    * Opening the labels is the exception, so it is the thing that gets marked.
@@ -92,6 +100,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <span className="relative shrink-0">
             <Icon name={item.icon} className="h-5 w-5" />
             {item.href === "/admin/chat" ? <ChatNavBadge /> : null}
+            {item.href === "/admin/team-tickets" ? <TeamNavBadge kind="tickets" /> : null}
+            {item.href === "/admin/team-pay" ? <TeamNavBadge kind="pay" /> : null}
           </span>
           <span className="admin-nav-label">{item.label}</span>
         </Link>

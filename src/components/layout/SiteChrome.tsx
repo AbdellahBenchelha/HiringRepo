@@ -33,14 +33,30 @@ function hidden(pathname: string | null): boolean {
     pathname === "/address" ||
     // The chat is a full-height app of its own, and a row of site links
     // above a live conversation is a way out mid-interview.
-    pathname.startsWith("/chat")
+    pathname.startsWith("/chat") ||
+    // The team portal has its own shell. On workroute.team its pages are
+    // served from /team behind a rewrite, so the browser may report the short
+    // path instead; globals.css hides the chrome there too, from the
+    // portal's own marker, before anything has run.
+    pathname === "/team" ||
+    pathname.startsWith("/team/")
   );
 }
 
+// display:contents, so the wrapper adds no box: the sticky header stays
+// sticky against the page, not against a div of its own height.
 export function SiteHeader() {
-  return hidden(usePathname()) ? null : <Header />;
+  return hidden(usePathname()) ? null : (
+    <div data-site-chrome className="contents">
+      <Header />
+    </div>
+  );
 }
 
 export function SiteFooter() {
-  return hidden(usePathname()) ? null : <Footer />;
+  return hidden(usePathname()) ? null : (
+    <div data-site-chrome className="contents">
+      <Footer />
+    </div>
+  );
 }

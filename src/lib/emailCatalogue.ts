@@ -92,6 +92,30 @@ import {
   voiceReminderSubject,
   voiceReminderText,
 } from "@/lib/emailTemplates";
+import {
+  teamBankHtml,
+  teamBankSubject,
+  teamBankText,
+  teamCodeHtml,
+  teamCodeSubject,
+  teamCodeText,
+  teamDayOffHtml,
+  teamDayOffSubject,
+  teamDayOffText,
+  teamInviteHtml,
+  teamInviteSubject,
+  teamInviteText,
+  teamPaymentHtml,
+  teamPaymentSubject,
+  teamPaymentText,
+  teamPhoneHtml,
+  teamPhoneSubject,
+  teamPhoneText,
+  teamPortalUrl,
+  teamTicketHtml,
+  teamTicketSubject,
+  teamTicketText,
+} from "@/lib/teamEmailTemplates";
 import { effectiveOffer, formatRate, type Offer } from "@/lib/offer";
 import { deadlineFrom, formatDeadline } from "@/lib/offerReminder";
 import { sampleAgreement } from "@/lib/sampleAgreement";
@@ -100,16 +124,17 @@ import { RESIDENCE_REASONS } from "@/lib/residence";
 import { ADDRESS_REASK_REASONS } from "@/lib/addressProof";
 import { CHAT_LINK_TTL_DAYS, DEFAULT_HOURS } from "@/lib/chat";
 
-export type EmailStage = "application" | "voice" | "identity" | "offer";
+export type EmailStage = "application" | "voice" | "identity" | "offer" | "team";
 
 export const STAGE_LABEL: Record<EmailStage, string> = {
   application: "Application & assessment",
   voice: "Voice assessment",
   identity: "Identity & residence",
   offer: "Offer & agreement",
+  team: "Team portal (workroute.team)",
 };
 
-export const STAGE_ORDER: readonly EmailStage[] = ["application", "voice", "identity", "offer"];
+export const STAGE_ORDER: readonly EmailStage[] = ["application", "voice", "identity", "offer", "team"];
 
 export interface CatalogueEntry {
   /** Stable, used in the URL: /admin/emails?t=offer */
@@ -688,6 +713,94 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         html: composedEmailHtml({ subject, bodyHtml, design: "workroute" }),
         text: "Hi Amina,\n\nThank you for your patience. Your file is complete and our team will be in touch within the next few days.\n\nKind regards,\nWorkRoute Recruitment Team",
       };
+    },
+  },
+
+  /* ---------------------------------------------------------------- */
+  /* Team portal                                                        */
+  /* ---------------------------------------------------------------- */
+  {
+    id: "team-invite",
+    name: "Welcome to the team — portal invitation",
+    stage: "team",
+    when: "Sent when you add someone to the team (Accepted → Add to team, or Team → Add member), or press Send the invitation again on their Team page.",
+    kind: "reactive",
+    source: "teamInviteHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, loginEmail: "amina.example@gmail.com", portalUrl: teamPortalUrl() };
+      return { subject: teamInviteSubject(), html: teamInviteHtml(e), text: teamInviteText(e) };
+    },
+  },
+  {
+    id: "team-code",
+    name: "Sign-in code",
+    stage: "team",
+    when: "Sent every time a member asks to sign in to the portal. The code works for 10 minutes.",
+    kind: "reactive",
+    source: "teamCodeHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, code: "482913" };
+      return { subject: teamCodeSubject(e.code), html: teamCodeHtml(e), text: teamCodeText(e) };
+    },
+  },
+  {
+    id: "team-ticket",
+    name: "New ticket / new reply",
+    stage: "team",
+    when: "Sent when you send a member a ticket, and when you reply on one (replies at most one email every 10 minutes). The ticket itself is only shown in the portal.",
+    kind: "reactive",
+    source: "teamTicketHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, number: 1042, subject: "Training session on Monday", kind: "new" as const, url: `${teamPortalUrl()}/tickets/EXAMPLE` };
+      return { subject: teamTicketSubject(e), html: teamTicketHtml(e), text: teamTicketText(e) };
+    },
+  },
+  {
+    id: "team-phone",
+    name: "New message on the work number",
+    stage: "team",
+    when: "Sent when you add a message to a member's Phone inbox (at most one email every 10 minutes). The message itself is only shown in the portal.",
+    kind: "reactive",
+    source: "teamPhoneHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, url: `${teamPortalUrl()}/phone` };
+      return { subject: teamPhoneSubject(), html: teamPhoneHtml(e), text: teamPhoneText(e) };
+    },
+  },
+  {
+    id: "team-payment",
+    name: "Payment sent",
+    stage: "team",
+    when: "Sent when you record a payment on Hours & pay with “Email them that it was sent” ticked.",
+    kind: "reactive",
+    source: "teamPaymentHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, amount: "$520.00", date: "Fri 6 Nov 2026", sentTo: "Wise BE •••• 4821", reference: "Oct 2026", url: teamPortalUrl() };
+      return { subject: teamPaymentSubject(e.amount), html: teamPaymentHtml(e), text: teamPaymentText(e) };
+    },
+  },
+  {
+    id: "team-bank",
+    name: "Bank account approved / not approved",
+    stage: "team",
+    when: "Sent when you approve or refuse the bank details a member added or changed (Team → member → Bank).",
+    kind: "reactive",
+    source: "teamBankHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, approved: true, bank: "Revolut", masked: "LT •••• 8901", url: `${teamPortalUrl()}/bank` };
+      return { subject: teamBankSubject(true), html: teamBankHtml(e), text: teamBankText(e) };
+    },
+  },
+  {
+    id: "team-dayoff",
+    name: "Day off approved / not approved",
+    stage: "team",
+    when: "Sent when you answer a member's day-off request.",
+    kind: "reactive",
+    source: "teamDayOffHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, approved: true, date: "Mon 16 Nov 2026", url: teamPortalUrl() };
+      return { subject: teamDayOffSubject(true, e.date), html: teamDayOffHtml(e), text: teamDayOffText(e) };
     },
   },
 ];

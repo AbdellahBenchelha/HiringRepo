@@ -31,6 +31,8 @@ export function Beacon() {
     // The admin panel is not the website; the server drops these too, but
     // there is no reason to send them.
     if (pathname === "/admin" || pathname.startsWith("/admin/")) return;
+    // Nor is the team portal: it is private, and not part of the site's visits.
+    if (pathname.startsWith("/team") || document.querySelector("[data-portal]")) return;
     lastSent.current = pathname;
 
     const body = JSON.stringify({

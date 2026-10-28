@@ -20,4 +20,13 @@ export async function register() {
     // eslint-disable-next-line no-console
     console.warn("[bulk] could not resume a batch on start:", err);
   }
+  // The team portal's automatic work hours: catch up on any day that ended
+  // while the server was down, then keep counting.
+  try {
+    const { ensureTeamWorker } = await import("@/lib/teamWorker");
+    ensureTeamWorker();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[team] could not start the work-hours timer:", err);
+  }
 }

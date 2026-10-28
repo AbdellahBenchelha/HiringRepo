@@ -357,3 +357,12 @@ html[data-consent] [data-cookie-banner] {
     }
   }
 }
+
+/* The team portal (workroute.team) brings its own shell: no site header,
+   footer or cookie banner — it sets only the sign-in cookie it needs. Keyed on
+   the portal's own marker rather than the path, because behind the
+   workroute.team rewrite the browser's path is not /team/…. */
+html:has([data-portal]) [data-site-chrome],
+html:has([data-portal]) [data-cookie-banner] {
+  display: none !important;
+}

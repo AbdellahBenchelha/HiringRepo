@@ -7,6 +7,7 @@ import { toCandidateView } from "@/lib/candidateView";
 import { listSessions } from "@/lib/chatStore";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AcceptedTable } from "@/components/admin/AcceptedTable";
+import { listMembers } from "@/lib/teamStore";
 
 export const metadata: Metadata = { title: "Accepted", robots: { index: false, follow: false } };
 
@@ -20,12 +21,14 @@ async function baseUrl(): Promise<string> {
 
 export default async function AdminAcceptedPage() {
   await requireAdmin();
-  const [all, required, base, sessions] = await Promise.all([
+  const [all, required, base, sessions, members] = await Promise.all([
     listCandidates(),
     requiredCountries(),
     baseUrl(),
     listSessions(),
+    listMembers(),
   ]);
+  const teamMembers = Object.fromEntries(members.filter((m) => m.candidateId).map((m) => [m.candidateId!, m.id]));
 
   // Accepted is accepted, however it was recorded: through the link in the
   // offer email, or by the recruiter after a call.
@@ -50,7 +53,7 @@ export default async function AdminAcceptedPage() {
         </p>
       </header>
 
-      <AcceptedTable rows={rows} />
+      <AcceptedTable rows={rows} teamMembers={teamMembers} />
     </AdminShell>
   );
 }
