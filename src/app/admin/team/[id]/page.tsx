@@ -35,6 +35,8 @@ import { BankReveal } from "@/components/admin/team/BankReveal";
 import { EntryRow } from "@/components/admin/team/EntryRow";
 import { DocumentUpload } from "@/components/admin/team/DocumentUpload";
 import { TicketForm } from "@/components/team/TicketForm";
+import { MailList } from "@/components/team/MailList";
+import { listMail } from "@/lib/teamMail";
 import { Empty, PriorityLabel, Section, Stat, TicketStatusPill } from "@/components/team/ui";
 
 export const metadata: Metadata = { title: "Team member", robots: { index: false, follow: false } };
@@ -46,6 +48,7 @@ const TABS = [
   { id: "phone", label: "Phone" },
   { id: "tickets", label: "Tickets" },
   { id: "documents", label: "Documents" },
+  { id: "mail", label: "Mail" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
@@ -64,11 +67,12 @@ export default async function AdminTeamMemberPage({
   const m = await getMember(id);
   if (!m) notFound();
 
-  const [work, settings, tickets, phone] = await Promise.all([
+  const [work, settings, tickets, phone, mail] = await Promise.all([
     getWork(id),
     getTeamSettings(),
     listTickets({ memberId: id }),
     listPhoneMessages(id),
+    listMail(id),
   ]);
   const t = totals(work.entries, work.adjustments, work.payments);
   const today = localDate(m.schedule.timeZone);
@@ -567,6 +571,48 @@ export default async function AdminTeamMemberPage({
           </Section>
           <Section title="Send a new ticket">
             <TicketForm url="/api/admin/team/tickets" side="admin" mode="new" memberIds={[id]} after="/admin/team-tickets" />
+          </Section>
+        </div>
+      ) : null}
+
+      {tab === "mail" ? (
+        <div className="space-y-6">
+          <p className="rounded-xl border border-navy-100 bg-navy-50 p-3 text-sm text-navy-700">
+            Read-only. Every email you open here is recorded below, with your name and the time.
+            {m.workEmail ? (
+              <>
+                {" "}Address: <strong>{m.workEmail}</strong>.
+              </>
+            ) : (
+              " This member has no professional email yet — add one under Profile & access → Details."
+            )}
+          </p>
+          <Section title={`Inbox (${mail.filter((x) => x.folder === "inbox").length})`}>
+            <MailList
+              messages={mail.filter((x) => x.folder === "inbox").slice(0, 200)}
+              hrefFor={(x) => `/admin/team/${id}/mail/${x.id}`}
+              empty="No email received yet."
+            />
+          </Section>
+          <Section title={`Sent (${mail.filter((x) => x.folder === "sent").length})`}>
+            <MailList
+              messages={mail.filter((x) => x.folder === "sent").slice(0, 200)}
+              hrefFor={(x) => `/admin/team/${id}/mail/${x.id}`}
+              empty="No email sent yet."
+            />
+          </Section>
+          <Section title="Emails opened by the team admin">
+            {(m.mailViews ?? []).length ? (
+              <ul className="text-sm text-navy-600" data-mail-views>
+                {(m.mailViews ?? []).slice(0, 50).map((v) => (
+                  <li key={`${v.at}-${v.mailId}`}>
+                    {formatDateTime(v.at)} — {v.by} opened “{v.subject}”
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>None yet.</Empty>
+            )}
           </Section>
         </div>
       ) : null}

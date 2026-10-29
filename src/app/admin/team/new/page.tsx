@@ -3,10 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getCandidate } from "@/lib/store";
-import { getMemberByCandidate } from "@/lib/teamStore";
+import { getMemberByCandidate, listMembers } from "@/lib/teamStore";
+import { teamMailDomain } from "@/lib/teamHost";
 import { effectiveOffer } from "@/lib/offer";
 import { COMPANY_TIME_ZONE, MAX_HOURS_PER_DAY, REQUIRED_DAYS } from "@/lib/availability";
-import { defaultBanksFor } from "@/lib/teamShared";
+import { defaultBanksFor, emailLocalPart, uniqueAddress } from "@/lib/teamShared";
 import { localDate } from "@/lib/teamHours";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { MemberForm, type MemberFormValues } from "@/components/admin/team/MemberForm";
@@ -36,6 +37,13 @@ export default async function AdminTeamNewPage({ searchParams }: { searchParams:
   const hourlyUsd = offer && offer.unit === "HOUR" && offer.currency === "USD" ? offer.rate : 0;
   const timeZone = c?.availability?.timeZone || COMPANY_TIME_ZONE;
 
+  // firstname.lastname@workroute.team, with a number added if it is taken.
+  const first = d?.firstName ?? c?.firstName ?? "";
+  const last = d?.lastName ?? c?.lastName ?? "";
+  const local = c ? emailLocalPart(first, last) : null;
+  const taken = (await listMembers()).map((m) => m.workEmail ?? "").filter(Boolean);
+  const workEmail = local ? uniqueAddress(local, teamMailDomain(), taken) : "";
+
   const initial: MemberFormValues = {
     candidateId: c?.id,
     fullName: c ? `${d?.firstName ?? c.firstName ?? ""} ${d?.lastName ?? c.lastName ?? ""}`.trim() || c.fullName : "",
@@ -43,7 +51,7 @@ export default async function AdminTeamNewPage({ searchParams }: { searchParams:
     personalPhone: d?.phone || c?.phone || "",
     country,
     position: offer?.position || c?.position || "",
-    workEmail: "",
+    workEmail,
     phoneNumber: "",
     days,
     startTime: c?.availability?.startTime || "09:00",

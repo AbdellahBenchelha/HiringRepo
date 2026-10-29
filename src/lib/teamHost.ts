@@ -51,3 +51,8 @@ export function isSharedAdminApi(pathname: string): boolean {
 export function safeAdminNext(next: string | null | undefined): string | null {
   return next && next.startsWith("/admin") && !next.startsWith("//") ? next : null;
 }
+
+/** The domain of the built-in mailboxes. TEAM_MAIL_DOMAIN overrides it. */
+export function teamMailDomain(): string {
+  return (process.env.TEAM_MAIL_DOMAIN?.trim() || "workroute.team").toLowerCase();
+}

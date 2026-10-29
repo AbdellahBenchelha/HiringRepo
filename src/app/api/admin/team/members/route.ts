@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { getCandidate } from "@/lib/store";
-import { createMember, recordInvite } from "@/lib/teamStore";
+import { createMember, listMembers, recordInvite } from "@/lib/teamStore";
 import { sendTeamInvite } from "@/lib/teamNotify";
 import { readBanks, readDate, readEmail, readHours, readMoney, readPhone, readSchedule, readText } from "@/lib/teamValidate";
 
@@ -41,6 +41,9 @@ export async function POST(req: NextRequest) {
   if (!firstWorkDay) problems.push("Choose the first work day.");
   const allowedBanks = readBanks(b.allowedBanks);
   if (!allowedBanks.length) problems.push("Tick at least one bank they can use.");
+  if (workEmail && (await listMembers()).some((m) => m.workEmail?.toLowerCase() === workEmail.toLowerCase())) {
+    problems.push("Another member already has this professional email.");
+  }
   if (problems.length || !schedule || !hoursPerDay || !rate || !firstWorkDay || !loginEmail) {
     return NextResponse.json({ ok: false, problems }, { status: 400 });
   }

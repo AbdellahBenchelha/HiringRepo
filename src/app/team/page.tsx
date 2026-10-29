@@ -24,7 +24,7 @@ import { Icon } from "@/components/Icon";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-const STEP_LINK = { profile: "/profile", mailbox: "/profile#mailbox", bank: "/bank", rules: "/rules" } as const;
+const STEP_LINK = { profile: "/profile", mailbox: "/mail", bank: "/bank", rules: "/rules" } as const;
 
 export default async function TeamDashboard() {
   const signedIn = await requireMember();

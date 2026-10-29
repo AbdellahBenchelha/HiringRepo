@@ -28,6 +28,7 @@ export function AdminAction({
   ask,
   askField = "reason",
   onDone,
+  after,
 }: {
   url: string;
   body: Record<string, unknown>;
@@ -37,6 +38,8 @@ export function AdminAction({
   ask?: string;
   askField?: string;
   onDone?: (data: Record<string, unknown>) => void;
+  /** Go here afterwards (the thing changed may no longer be on this page). */
+  after?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -59,6 +62,7 @@ export function AdminAction({
       }
       const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       onDone?.(data);
+      if (after) router.replace(after);
       refreshAfterSave(router);
     } catch {
       setError("No connection.");
@@ -103,6 +107,7 @@ export function AdminForm({
   submit,
   keep,
   done,
+  after,
 }: {
   url: string;
   body?: Record<string, unknown>;
@@ -110,6 +115,8 @@ export function AdminForm({
   submit: string;
   keep?: boolean;
   done?: string;
+  /** Go here afterwards. */
+  after?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -136,6 +143,7 @@ export function AdminForm({
       }
       if (!keep) form.reset();
       setOk(true);
+      if (after) router.replace(after);
       refreshAfterSave(router);
     } catch {
       setError("No connection.");

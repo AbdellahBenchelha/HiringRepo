@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireMember } from "@/lib/teamAuth";
-import { getTeamSettings } from "@/lib/teamStore";
 import { formatDateTime, formatDay } from "@/lib/teamShared";
 import { formatDays, formatWindow, windowInCompanyTime } from "@/lib/availability";
 import { PortalShell } from "@/components/team/PortalShell";
@@ -21,7 +21,6 @@ function Row({ label, value }: { label: string; value?: string | null }) {
 
 export default async function TeamProfilePage() {
   const member = await requireMember();
-  const settings = await getTeamSettings();
   const o = member.onboarding ?? {};
 
   return (
@@ -60,25 +59,16 @@ export default async function TeamProfilePage() {
                 </p>
                 <CopyButton text={member.workEmail} title="Copy your professional email" />
               </div>
-              {settings.mailboxHelp ? <p className="mt-3 whitespace-pre-line text-sm text-navy-600">{settings.mailboxHelp}</p> : null}
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {settings.mailboxUrl ? (
-                  <a href={settings.mailboxUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary">
-                    Open my mailbox
-                  </a>
-                ) : null}
-                {o.mailboxOpenedAt ? (
-                  <span className="text-sm text-green-700">You opened your mailbox — thank you.</span>
-                ) : (
-                  <ActionButton url="/api/team/account" body={{ action: "mailbox_opened" }}>
-                    I have opened my mailbox
-                  </ActionButton>
-                )}
+              <p className="mt-3 text-sm text-navy-600">Your mailbox is in the Mail tab of this portal — read and reply there.</p>
+              <div className="mt-4">
+                <Link href="/mail" className="btn-secondary">
+                  Open Mail
+                </Link>
               </div>
             </>
           ) : (
             <p className="mt-2 text-sm text-navy-500">
-              Your @workroute.team address is being set up. It will appear here, and we will tell you how to open it.
+              Your @workroute.team address is being set up. It will appear here, with your mailbox in the Mail tab.
             </p>
           )}
         </section>

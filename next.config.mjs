@@ -97,7 +97,12 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        // Everything except the two pages that show an email from a team
+        // mailbox: those send their own, stricter policy (no scripts at all,
+        // a sandbox, and pictures only when the reader asks — see
+        // src/lib/teamMailHtml.ts). Two policies on one page would combine,
+        // and this one's picture rule would hide what the reader asked to see.
+        source: "/((?!api/team/mail/view|api/admin/team/mail/view).*)",
         headers: securityHeaders,
       },
       {

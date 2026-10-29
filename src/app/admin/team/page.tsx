@@ -8,6 +8,7 @@ import { MEMBER_STATUS_LABEL, formatDateTime, formatUsd } from "@/lib/teamShared
 import { currentRate } from "@/lib/teamStore";
 import { teamPortalUrl } from "@/lib/teamHost";
 import { TeamFilter } from "@/components/admin/team/TeamFilter";
+import { listMail } from "@/lib/teamMail";
 
 export const metadata: Metadata = { title: "Team", robots: { index: false, follow: false } };
 
@@ -15,6 +16,7 @@ export default async function AdminTeamPage({ searchParams }: { searchParams: Pr
   await requireAdmin();
   const { q = "", status = "active" } = await searchParams;
   const all = await memberRows();
+  const unknownMail = (await listMail(null, "inbox")).length;
   const needle = q.trim().toLowerCase();
   const rows = all.filter(
     (r) =>
@@ -44,7 +46,10 @@ export default async function AdminTeamPage({ searchParams }: { searchParams: Pr
             . Add someone with Add to team on the hiring panel&rsquo;s Accepted tab, or by hand.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/team/unknown-mail" className="btn-secondary py-2.5" data-unknown-mail>
+            Mail to unknown addresses{unknownMail ? ` (${unknownMail})` : ""}
+          </Link>
           <Link href="/admin/team/settings" className="btn-secondary py-2.5">
             Settings & announcements
           </Link>

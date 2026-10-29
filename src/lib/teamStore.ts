@@ -114,7 +114,9 @@ export interface TeamMember {
   onboarding?: { profileConfirmedAt?: string; mailboxOpenedAt?: string; rulesReadAt?: string };
   dismissedAnnouncements?: string[];
   /** The last "you have something new" email of each kind, to space them out. */
-  alertSentAt?: Partial<Record<"ticket" | "phone", string>>;
+  alertSentAt?: Partial<Record<"ticket" | "phone" | "mail", string>>;
+  /** Each time a recruiter opened one of this member's emails (read-only). */
+  mailViews?: { at: string; by: string; mailId: string; subject: string }[];
   documents?: MemberDocument[];
   notes?: string;
 }
@@ -439,7 +441,7 @@ export function currentRate(m: TeamMember): number {
   return rateOn(m.rates, localDate(m.schedule.timeZone));
 }
 
-export function markAlertSent(id: string, kind: "ticket" | "phone"): Promise<TeamMember | null> {
+export function markAlertSent(id: string, kind: "ticket" | "phone" | "mail"): Promise<TeamMember | null> {
   return mutateMember(id, (m) => {
     m.alertSentAt = { ...(m.alertSentAt ?? {}), [kind]: nowIso() };
   });

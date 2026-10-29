@@ -397,3 +397,39 @@ export function teamDayOffHtml(e: TeamDayOffEmail): string {
     button: { label: "Open my portal", url: e.url },
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/* New mail in the portal mailbox                                              */
+/* -------------------------------------------------------------------------- */
+
+export interface TeamMailAlertEmail {
+  fullName: string;
+  workEmail: string;
+  url: string;
+}
+
+export function teamMailAlertSubject(): string {
+  return "You have new email in your WorkRoute mailbox";
+}
+
+export function teamMailAlertText(e: TeamMailAlertEmail): string {
+  return text([
+    `Hi ${firstNameOf(e.fullName)},`,
+    "",
+    `New email has arrived for ${e.workEmail}.`,
+    `Sign in to read it: ${e.url}`,
+  ]);
+}
+
+export function teamMailAlertHtml(e: TeamMailAlertEmail): string {
+  return shell({
+    subject: teamMailAlertSubject(),
+    preheader: "Sign in to your portal to read it.",
+    heading: "You have new email",
+    paragraphs: [
+      `Hi ${esc(firstNameOf(e.fullName))},`,
+      `New email has arrived for <strong style="color:${NAVY};">${esc(e.workEmail)}</strong>. It is in the Mail tab of your team portal.`,
+    ],
+    button: { label: "Open my mail", url: e.url },
+  });
+}

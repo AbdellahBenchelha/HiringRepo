@@ -8,7 +8,7 @@ import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-/** Payday, team rules and mailbox instructions. */
+/** Payday and team rules. */
 export function TeamSettingsForm({
   initial,
 }: {
@@ -20,8 +20,9 @@ export function TeamSettingsForm({
   const [anchor, setAnchor] = useState(initial.payday.kind === "biweekly" ? initial.payday.anchor : new Date().toISOString().slice(0, 10));
   const [day, setDay] = useState(initial.payday.kind === "monthly" ? initial.payday.day : 5);
   const [rulesText, setRules] = useState(initial.rulesText);
-  const [mailboxUrl, setMailboxUrl] = useState(initial.mailboxUrl);
-  const [mailboxHelp, setMailboxHelp] = useState(initial.mailboxHelp);
+  // No longer edited here — mailboxes are built into the portal now — but
+  // sent back unchanged so saving the form does not wipe them.
+  const { mailboxUrl, mailboxHelp } = initial;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -73,29 +74,6 @@ export function TeamSettingsForm({
         )}
         <p className="self-center text-xs text-navy-400">Members see “Next payday” on their dashboard.</p>
       </fieldset>
-
-      <div>
-        <label htmlFor="ts-mailbox-url" className="mb-1 block text-sm font-bold text-navy-900">
-          Mailbox sign-in link
-        </label>
-        <input
-          id="ts-mailbox-url"
-          value={mailboxUrl}
-          onChange={(e) => setMailboxUrl(e.target.value)}
-          placeholder="e.g. https://mail.zoho.eu"
-          className="input py-2 text-sm"
-        />
-        <label htmlFor="ts-mailbox-help" className="mb-1 mt-3 block text-xs font-semibold text-navy-600">
-          How to open the mailbox (shown on their Profile)
-        </label>
-        <textarea
-          id="ts-mailbox-help"
-          value={mailboxHelp}
-          onChange={(e) => setMailboxHelp(e.target.value)}
-          placeholder="e.g. Sign in with your @workroute.team address and the temporary password we sent you, then choose your own."
-          className="textarea text-sm"
-        />
-      </div>
 
       <div>
         <label htmlFor="ts-rules" className="mb-1 block text-sm font-bold text-navy-900">

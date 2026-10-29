@@ -5,6 +5,7 @@ import {
   decideBank,
   getMember,
   getMemberByEmail,
+  listMembers,
   mutateMember,
   recordInvite,
   revealBank,
@@ -55,6 +56,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }
       const workEmail = readEmail(b.workEmail);
       if (workEmail === null) problems.push("The professional email does not look right.");
+      else if (workEmail && (await listMembers()).some((x) => x.id !== id && x.workEmail?.toLowerCase() === workEmail.toLowerCase())) {
+        problems.push("Another member already has this professional email.");
+      }
       const phoneNumber = readPhone(b.phoneNumber);
       if (phoneNumber === null) problems.push("The work phone number does not look right.");
       const personalPhone = readPhone(b.personalPhone);

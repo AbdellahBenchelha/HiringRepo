@@ -105,7 +105,7 @@ export function MemberForm({ mode, memberId, initial }: { mode: "new" | "edit"; 
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-2 text-sm font-bold text-navy-900">What we provide</legend>
-        {input("workEmail", "Professional email (e.g. name@workroute.team)", { type: "email", placeholder: "Leave empty until the mailbox exists" })}
+        {input("workEmail", "Professional email — their portal mailbox", { type: "email", placeholder: "firstname.lastname@workroute.team" })}
         {input("phoneNumber", "Work phone number (full, with country code)", { placeholder: "+44 7700 900123" })}
       </fieldset>
 

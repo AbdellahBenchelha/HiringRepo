@@ -105,6 +105,9 @@ import {
   teamInviteHtml,
   teamInviteSubject,
   teamInviteText,
+  teamMailAlertHtml,
+  teamMailAlertSubject,
+  teamMailAlertText,
   teamPaymentHtml,
   teamPaymentSubject,
   teamPaymentText,
@@ -765,6 +768,18 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     render: () => {
       const e = { fullName: SAMPLE_NAME, url: `${teamPortalUrl()}/phone` };
       return { subject: teamPhoneSubject(), html: teamPhoneHtml(e), text: teamPhoneText(e) };
+    },
+  },
+  {
+    id: "team-mail",
+    name: "New email in the portal mailbox",
+    stage: "team",
+    when: "Sent to the member's personal email when mail arrives at their @workroute.team address. The mail is in their Mail tab at once; this note is sent at most once every 10 minutes.",
+    kind: "reactive",
+    source: "teamMailAlertHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, workEmail: "amina.diallo@workroute.team", url: `${teamPortalUrl()}/mail` };
+      return { subject: teamMailAlertSubject(), html: teamMailAlertHtml(e), text: teamMailAlertText(e) };
     },
   },
   {

@@ -29,6 +29,9 @@ import {
   teamInviteHtml,
   teamInviteSubject,
   teamInviteText,
+  teamMailAlertHtml,
+  teamMailAlertSubject,
+  teamMailAlertText,
   teamPaymentHtml,
   teamPaymentSubject,
   teamPaymentText,
@@ -78,7 +81,7 @@ export async function sendLoginCode(m: TeamMember, code: string) {
   return r;
 }
 
-function spaced(m: TeamMember, kind: "ticket" | "phone"): boolean {
+function spaced(m: TeamMember, kind: "ticket" | "phone" | "mail"): boolean {
   const last = m.alertSentAt?.[kind];
   return !last || Date.now() - Date.parse(last) >= ALERT_GAP_MS;
 }
@@ -98,6 +101,19 @@ export async function alertPhone(m: TeamMember) {
   const r = await send(m, teamPhoneSubject(), teamPhoneHtml(e), teamPhoneText(e));
   if (r.ok) await markAlertSent(m.id, "phone");
   log("phone message", m, r.ok, errorOf(r));
+}
+
+/**
+ * New mail in the portal mailbox. The mail itself is in the Mail tab at
+ * once; this note to the personal address is spaced ten minutes apart, so a
+ * busy hour is one or two notes rather than one per email.
+ */
+export async function alertMail(m: TeamMember) {
+  if (!spaced(m, "mail")) return;
+  const e = { fullName: m.fullName, workEmail: m.workEmail ?? "", url: `${teamPortalUrl()}/mail` };
+  const r = await send(m, teamMailAlertSubject(), teamMailAlertHtml(e), teamMailAlertText(e));
+  if (r.ok) await markAlertSent(m.id, "mail");
+  log("new mail", m, r.ok, errorOf(r));
 }
 
 export async function sendPaymentEmail(m: TeamMember, p: Payment) {

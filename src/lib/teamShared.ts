@@ -347,7 +347,51 @@ export const ONBOARDING_STEPS = ["profile", "mailbox", "bank", "rules"] as const
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 export const ONBOARDING_LABEL: Record<OnboardingStep, string> = {
   profile: "Check your profile",
-  mailbox: "Open your workroute.team mailbox",
+  mailbox: "Open your Mail tab",
   bank: "Add your bank account",
   rules: "Read the team rules",
 };
+
+/* -------------------------------------------------------------------------- */
+/* Mail                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** Letters that do not lose their accent by decomposition alone. */
+const SPECIAL_LETTERS: Record<string, string> = { ß: "ss", æ: "ae", œ: "oe", ø: "o", ł: "l", đ: "d", ð: "d", þ: "th", ı: "i" };
+
+function addressPart(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[ßæœøłđðþı]/g, (c) => SPECIAL_LETTERS[c] ?? c)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/['’`]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30);
+}
+
+/**
+ * "firstname.lastname" for a professional address: José Pérez → jose.perez,
+ * Mary-Jane Van Dyke → mary-jane.van-dyke. Null when the name has no Latin
+ * letters to make one from — the address is then typed by hand.
+ */
+export function emailLocalPart(firstName: string, lastName: string): string | null {
+  const parts = [addressPart(firstName), addressPart(lastName)].filter(Boolean);
+  return parts.length ? parts.join(".") : null;
+}
+
+/** The first of local@domain, local2@domain, local3@domain… not already taken. */
+export function uniqueAddress(local: string, domain: string, taken: string[]): string {
+  const used = new Set(taken.map((t) => t.toLowerCase()));
+  for (let n = 1; n < 1000; n++) {
+    const candidate = `${local}${n === 1 ? "" : n}@${domain}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  return `${local}.${Date.now()}@${domain}`;
+}
+
+export const MAX_MAIL_RECIPIENTS = 10;
+export const MAX_MAIL_BODY = 50_000;
+export const MAX_MAIL_ATTACHMENTS_BYTES = 10 * 1024 * 1024;
+export const MAIL_DAILY_LIMIT = 100;
