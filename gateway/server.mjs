@@ -69,6 +69,8 @@ const agent = new http.Agent({ keepAlive: false, maxSockets: 256 });
 
 /** How long to wait for the main service to accept a connection. */
 const CONNECT_TIMEOUT_MS = 10_000;
+/** How long to wait, once connected, for the first byte of its answer. */
+const ANSWER_TIMEOUT_MS = 60_000;
 
 /**
  * A connection to the main service that gives up after CONNECT_TIMEOUT_MS
@@ -87,6 +89,15 @@ function withConnectTimeout(request) {
     socket.once("connect", () => clearTimeout(timer));
     socket.once("close", () => clearTimeout(timer));
   });
+  // Connected, but no answer: give up rather than leave the visitor waiting
+  // until Cloudflare or the browser does (Cloudflare's 524).
+  const answer = setTimeout(() => {
+    const err = new Error(`${target.host} accepted the connection but sent no answer within ${ANSWER_TIMEOUT_MS / 1000}s`);
+    err.code = "ANSWER_TIMEOUT";
+    request.destroy(err);
+  }, ANSWER_TIMEOUT_MS);
+  request.once("response", () => clearTimeout(answer));
+  request.once("close", () => clearTimeout(answer));
   return request;
 }
 
@@ -120,8 +131,10 @@ async function check(res) {
     r.on("error", (err) =>
       resolve(
         err.code === "CONNECT_TIMEOUT" || err.code === "ECONNREFUSED"
-          ? `NO answer on port ${target.port || 80} (${err.code}). The port is probably wrong: use the number in the main service's deploy log line "Local: http://localhost:____".`
-          : `Failed: ${err.code || err.message}`,
+          ? `NO answer on port ${target.port || 80} (${err.code}). The port is probably wrong: use the number in the main service's deploy log line "Local: http://localhost:____". If the port is right, set the main service's start command to: npx next start -H ::`
+          : err.code === "ANSWER_TIMEOUT"
+            ? "Connected to the main service, but it did not answer. Check the main service's deploy logs for errors."
+            : `Failed: ${err.code || err.message}`,
       ),
     );
     r.end();
