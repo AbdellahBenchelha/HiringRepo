@@ -77,6 +77,12 @@ export const DOCUMENT_KINDS = [
    * are kept when a new one is asked for. See lib/addressProof.
    */
   "addressProof",
+  /**
+   * The final agreement, signed and sent back: a PDF, or photos of the
+   * printed pages. Several files may make one copy, and earlier copies are
+   * kept when a new one is asked for. See lib/agreement.
+   */
+  "signedAgreement",
 ] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
@@ -101,6 +107,7 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   panFront: "PAN card — front",
   panBack: "PAN card — back",
   addressProof: "Proof of address",
+  signedAgreement: "Signed agreement",
 };
 
 /** Short form for the table chips, where three of them share one cell. */
@@ -121,6 +128,7 @@ export const DOCUMENT_SHORT: Record<DocumentKind, string> = {
   panFront: "PAN",
   panBack: "PAN back",
   addressProof: "Address",
+  signedAgreement: "Agreement",
 };
 
 /** The identity pair, which the application documents column does not show. */
@@ -223,12 +231,19 @@ export function isPanDocumentKind(kind: DocumentKind): boolean {
 export const COMPANY_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"] as const;
 export const COMPANY_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
+/**
+ * A signed agreement: a scanned PDF of all its pages can run past the image
+ * limit, so it gets more room.
+ */
+export const MAX_SIGNED_AGREEMENT_BYTES = 10 * 1024 * 1024;
+
 /** Proof of address: PDF only, as the page tells the candidate. */
 export const PDF_EXTENSIONS = [".pdf"] as const;
 export const PDF_MIME = ["application/pdf"] as const;
 
 export function maxBytesFor(kind: DocumentKind): number {
   if (isAudioKind(kind)) return MAX_AUDIO_BYTES;
+  if (kind === "signedAgreement") return MAX_SIGNED_AGREEMENT_BYTES;
   // A scanned certificate runs to several pages, and a phone photograph of one
   // is no smaller than a photograph of a passport. A bank statement PDF is
   // several pages too.
@@ -239,7 +254,7 @@ export function maxBytesFor(kind: DocumentKind): number {
 export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_EXTENSIONS;
   if (isPanDocumentKind(kind)) return IMAGE_EXTENSIONS;
-  if (isCompanyKind(kind)) return COMPANY_EXTENSIONS;
+  if (isCompanyKind(kind) || kind === "signedAgreement") return COMPANY_EXTENSIONS;
   if (kind === "addressProof") return PDF_EXTENSIONS;
   return isImageKind(kind) ? IMAGE_EXTENSIONS : ALLOWED_EXTENSIONS;
 }
@@ -247,7 +262,7 @@ export function allowedExtensionsFor(kind: DocumentKind): readonly string[] {
 export function allowedMimeFor(kind: DocumentKind): readonly string[] {
   if (isAudioKind(kind)) return AUDIO_MIME;
   if (isPanDocumentKind(kind)) return IMAGE_MIME;
-  if (isCompanyKind(kind)) return COMPANY_MIME;
+  if (isCompanyKind(kind) || kind === "signedAgreement") return COMPANY_MIME;
   if (kind === "addressProof") return PDF_MIME;
   return isImageKind(kind) ? IMAGE_MIME : ALLOWED_MIME;
 }
@@ -273,7 +288,8 @@ export function keepsHistory(kind: DocumentKind): boolean {
     isAudioKind(kind) ||
     isCompanyKind(kind) ||
     isPanDocumentKind(kind) ||
-    kind === "addressProof"
+    kind === "addressProof" ||
+    kind === "signedAgreement"
   );
 }
 

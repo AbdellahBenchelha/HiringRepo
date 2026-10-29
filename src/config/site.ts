@@ -183,6 +183,29 @@ export const siteConfig = {
   },
 
   /** ----------------------------------------------------------------------- */
+  /** FINAL AGREEMENT — the terms that are the same for every contractor.     */
+  /** ----------------------------------------------------------------------- */
+  /**
+   * Filled into the schedule of the Independent Contractor Agreement sent to a
+   * Full verified candidate (see lib/agreementPdf). Everything personal —
+   * name, address, rate, hours, start date, window and days — comes from the
+   * candidate's accepted offer and confirmed details instead.
+   *
+   * Changing a value here changes agreements sent from then on. Ones already
+   * sent keep the copy that was emailed.
+   */
+  agreement: {
+    /** "Within N working days of a correct invoice." */
+    paymentWorkingDays: 15,
+    /** "N days, by either party, in writing." */
+    noticeDays: 14,
+    governingLaw: "England and Wales",
+    /** Who signs for the Company. */
+    signatoryName: "Patrick Meyer",
+    signatoryTitle: "Director",
+  },
+
+  /** ----------------------------------------------------------------------- */
   /** COMPANY STATISTICS — REVIEW & VERIFY before publishing.                 */
   /** These are illustrative placeholders only.                               */
   /** ----------------------------------------------------------------------- */

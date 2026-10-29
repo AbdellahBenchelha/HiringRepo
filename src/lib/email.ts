@@ -74,6 +74,8 @@ export async function sendEmail(opts: {
   kind: EmailKind;
   /** Send past the cap anyway, recording that it happened. */
   override?: boolean;
+  /** Files sent with the message (ZeptoMail allows 15 MB in all). */
+  attachments?: { name: string; mimeType: string; content: Uint8Array }[];
 }): Promise<EmailResult> {
   const rawToken = process.env.ZEPTOMAIL_TOKEN;
   const from = process.env.ZEPTOMAIL_FROM_ADDRESS?.trim();
@@ -116,6 +118,13 @@ export async function sendEmail(opts: {
         subject: opts.subject,
         htmlbody: opts.html,
         textbody: opts.text,
+        attachments: opts.attachments?.length
+          ? opts.attachments.map((a) => ({
+              name: a.name,
+              mime_type: a.mimeType,
+              content: Buffer.from(a.content).toString("base64"),
+            }))
+          : undefined,
       }),
     });
 

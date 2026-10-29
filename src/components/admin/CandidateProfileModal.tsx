@@ -14,6 +14,7 @@ import {
 } from "@/components/admin/VerificationPanel";
 import { ResidencePanel } from "@/components/admin/ResidencePanel";
 import { AddressProofPanel } from "@/components/admin/AddressProofPanel";
+import { AgreementPanel } from "@/components/admin/AgreementPanel";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
 import { PhoneCountryFlag } from "@/components/admin/PhoneCountryFlag";
@@ -56,6 +57,7 @@ const TABS = [
   { id: "id", label: "ID check", icon: "shield" },
   { id: "company", label: "Company", icon: "briefcase" },
   { id: "offer", label: "Offer", icon: "handshake" },
+  { id: "agreement", label: "Agreement", icon: "fileCheck" },
   { id: "assessment", label: "Assessment", icon: "microphone" },
   { id: "notes", label: "Notes", icon: "document" },
 ] as const satisfies readonly { id: string; label: string; icon: IconName }[];
@@ -76,6 +78,11 @@ type TabId = (typeof TABS)[number]["id"];
  * for.
  */
 let lastTab: TabId = "profile";
+
+/** Open the next profile on this tab — for a row button that is about one section. */
+export function openProfileOn(tab: TabId): void {
+  lastTab = tab;
+}
 
 /**
  * Everything known about one candidate, in a dialog.
@@ -386,6 +393,12 @@ export function CandidateProfileModal({
                     title="Something here is waiting on you"
                   />
                 ) : null}
+                {t.id === "agreement" && candidate.agreementStatus === "signed" ? (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500"
+                    title="A signed agreement is waiting to be checked"
+                  />
+                ) : null}
                 {t.id === "notes" && candidate.notes ? (
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-navy-300" title="Has notes" />
                 ) : null}
@@ -676,6 +689,10 @@ export function CandidateProfileModal({
           initial={candidate.companyCheck}
           hasDob={!!(candidate.dob || candidate.confirmedDetails?.dob)}
         />
+        </div>
+
+        <div hidden={tab !== "agreement"}>
+          <AgreementPanel candidate={candidate} onOpenDocument={onOpenDocument} onChange={onChange} />
         </div>
 
         <div hidden={tab !== "notes"}>

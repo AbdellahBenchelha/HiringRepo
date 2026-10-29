@@ -222,6 +222,44 @@ export function readPanReuploadToken(token: string | undefined | null): PanReupl
 }
 
 /**
+ * Link a candidate to the page where they send back their signed agreement.
+ *
+ * Same rules as the proof-of-address link below, with its own marker: never
+ * expires, and every link we sent shows the same page, which reads where the
+ * candidate stands now.
+ */
+export interface AgreementLink {
+  id: string;
+  sentAt: string;
+}
+
+export function createAgreementToken(link: AgreementLink): string {
+  const body = b64url(Buffer.from(JSON.stringify({ v: "agreement", i: link.id, s: link.sentAt })));
+  return `${body}.${sign(body)}`;
+}
+
+export type AgreementTokenResult = { ok: true; link: AgreementLink } | { ok: false; reason: "invalid" };
+
+export function readAgreementToken(token: string | undefined | null): AgreementTokenResult {
+  if (!token || typeof token !== "string" || !token.includes(".") || token.length > 600) {
+    return { ok: false, reason: "invalid" };
+  }
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return { ok: false, reason: "invalid" };
+  const a = Buffer.from(sig);
+  const b = Buffer.from(sign(body));
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
+  try {
+    const obj = JSON.parse(fromB64url(body).toString("utf8")) as { v?: unknown; i?: unknown; s?: unknown };
+    if (obj.v !== "agreement" || typeof obj.i !== "string" || !obj.i) return { ok: false, reason: "invalid" };
+    if (typeof obj.s !== "string" || !obj.s || Number.isNaN(Date.parse(obj.s))) return { ok: false, reason: "invalid" };
+    return { ok: true, link: { id: obj.i, sentAt: obj.s } };
+  } catch {
+    return { ok: false, reason: "invalid" };
+  }
+}
+
+/**
  * Link a candidate to the proof-of-address page.
  *
  * Its own marker, like the others, so no other link can open it. Never

@@ -13,6 +13,7 @@ import { nextGapMs, type BatchState } from "@/lib/bulkEmail";
 import { currentAllowance } from "@/lib/warmupStore";
 import { sendChatReminder } from "@/lib/chatReminderSend";
 import { sendAddressProofEmail } from "@/lib/addressProofSend";
+import { sendAgreementEmail } from "@/lib/agreementSend";
 import { sendGstinRequestEmail, sendGstinWaitingEmail } from "@/lib/gstinSend";
 
 /**
@@ -71,6 +72,17 @@ async function sendOne(batch: BatchState, id: string) {
       // candidate who uploads while the batch waits is not asked again.
       const result = await sendAddressProofEmail(id, baseUrl(), {
         kind: "request",
+        by: batch.startedBy,
+        override: batch.override,
+      });
+      return result.ok ? { ok: true as const } : result;
+    }
+    case "agreementSend":
+    case "agreementReminder": {
+      // The same send as the buttons in View info, re-checked per person: a
+      // candidate who uploads while the batch waits is not reminded.
+      const result = await sendAgreementEmail(id, baseUrl(), {
+        kind: batch.action === "agreementSend" ? "sent" : "reminder",
         by: batch.startedBy,
         override: batch.override,
       });

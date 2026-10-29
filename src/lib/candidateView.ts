@@ -38,6 +38,13 @@ import {
   type AddressProofStatus,
   type AddressProofSubmission,
 } from "@/lib/addressProof";
+import {
+  agreementMissing,
+  agreementStatus,
+  type AgreementEvent,
+  type AgreementStatus,
+  type AgreementSubmission,
+} from "@/lib/agreement";
 
 export interface CandidateView {
   id: string;
@@ -148,6 +155,19 @@ export interface CandidateView {
   addressProofApprovedBy?: string;
   /** Derived, so the table, the filter and the panel cannot disagree. */
   addressProofStatus: AddressProofStatus;
+  /** The final agreement — see lib/agreement. */
+  agreementSentAt?: string;
+  agreementRef?: string;
+  agreementReason?: string;
+  agreementEvents?: AgreementEvent[];
+  agreementSignedAt?: string;
+  agreementSubmissions?: AgreementSubmission[];
+  agreementApprovedAt?: string;
+  agreementApprovedBy?: string;
+  /** Worked out on the server. */
+  agreementStatus: AgreementStatus;
+  /** Why an agreement cannot be drawn up yet; empty when it can. */
+  agreementMissing: string[];
   /** The live identity check: what was sent, and how far they got with it. */
   liveVerificationUrl?: string;
   liveVerificationSentAt?: string;
@@ -377,6 +397,16 @@ export function toCandidateView(
     addressProofApprovedAt: c.addressProofApprovedAt,
     addressProofApprovedBy: c.addressProofApprovedBy,
     addressProofStatus: addressProofStatus(c),
+    agreementSentAt: c.agreementSentAt,
+    agreementRef: c.agreementRef,
+    agreementReason: c.agreementReason,
+    agreementEvents: c.agreementEvents,
+    agreementSignedAt: c.agreementSignedAt,
+    agreementSubmissions: c.agreementSubmissions,
+    agreementApprovedAt: c.agreementApprovedAt,
+    agreementApprovedBy: c.agreementApprovedBy,
+    agreementStatus: agreementStatus(c),
+    agreementMissing: agreementMissing(c),
     liveVerificationUrl: c.liveVerificationUrl,
     liveVerificationSentAt: c.liveVerificationSentAt,
     liveVerificationCount: c.liveVerificationCount,

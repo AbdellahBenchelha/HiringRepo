@@ -40,6 +40,7 @@ import { effectiveOffer, type Offer } from "@/lib/offer";
 import { panSentSince, type PanAnswer } from "@/lib/pan";
 import type { LiveReminder } from "@/lib/chat";
 import type { AddressDocType, AddressProofEvent, AddressProofSubmission } from "@/lib/addressProof";
+import type { AgreementEvent, AgreementSubmission } from "@/lib/agreement";
 
 /** One "please re-upload your PAN card" email. */
 export interface PanReuploadRequest {
@@ -334,6 +335,22 @@ export interface Candidate {
   addressProofSubmissions?: AddressProofSubmission[];
   addressProofApprovedAt?: string;
   addressProofApprovedBy?: string;
+  /**
+   * The final agreement — see lib/agreement. `agreementSentAt` is the newest
+   * send or new-copy request (a reminder does not move it); the signed copy
+   * counts only if it came after it.
+   */
+  agreementSentAt?: string;
+  /** Reference and stored PDF of the newest agreement sent. */
+  agreementRef?: string;
+  agreementKey?: string;
+  /** Shown on their page when a new signed copy is asked for. */
+  agreementReason?: string;
+  agreementEvents?: AgreementEvent[];
+  agreementSignedAt?: string;
+  agreementSubmissions?: AgreementSubmission[];
+  agreementApprovedAt?: string;
+  agreementApprovedBy?: string;
   /**
    * The live identity check: a link created for this one candidate in Persona,
    * emailed to them by hand when photographs could not settle the question.
@@ -1634,6 +1651,91 @@ export function setAddressProofApproved(id: string, by: string | null): Promise<
     } else {
       c.addressProofApprovedAt = new Date().toISOString();
       c.addressProofApprovedBy = by;
+    }
+    return { list, result: c };
+  });
+}
+
+/**
+ * An agreement email went out. Written once the email is away. Sending (or
+ * asking for a new signed copy) opens the step again; a reminder only adds to
+ * the list.
+ */
+export function recordAgreementEmail(id: string, event: AgreementEvent): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.agreementEvents = [...(c.agreementEvents ?? []), event];
+    if (event.kind === "sent" || event.kind === "reask") {
+      c.agreementSentAt = event.at;
+      if (event.kind === "sent") {
+        if (event.ref) c.agreementRef = event.ref;
+        if (event.key) c.agreementKey = event.key;
+        else delete c.agreementKey;
+      }
+      if (event.kind === "reask" && event.reason) c.agreementReason = event.reason;
+      else delete c.agreementReason;
+      // A new signed copy is wanted, so the old acceptance no longer describes it.
+      delete c.agreementApprovedAt;
+      delete c.agreementApprovedBy;
+    }
+    return { list, result: c };
+  });
+}
+
+/**
+ * The signed agreement came back. From the candidate's page: every clean
+ * signed file uploaded since the newest send, checked inside the write so two
+ * quick presses cannot both count. From a recruiter: the keys they uploaded.
+ * A second press for the same send is answered ok and records nothing.
+ */
+export function completeAgreement(
+  id: string,
+  input: { via: "upload" } | { via: "admin"; by: string; keys: string[] },
+): Promise<
+  | { ok: true; candidate: Candidate; first: boolean }
+  | { ok: false; reason: "not_found" | "not_sent" | "no_document" }
+> {
+  type R =
+    | { ok: true; candidate: Candidate; first: boolean }
+    | { ok: false; reason: "not_found" | "not_sent" | "no_document" };
+  return withWrite<R>((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: { ok: false, reason: "not_found" } };
+    const sent = c.agreementSentAt;
+    if (!sent) return { list, result: { ok: false, reason: "not_sent" } };
+    if (input.via === "upload" && c.agreementSignedAt && c.agreementSignedAt >= sent) {
+      return { list, result: { ok: true, candidate: c, first: false } };
+    }
+    const keys =
+      input.via === "admin"
+        ? input.keys
+        : (c.documents ?? [])
+            .filter((d) => d.kind === "signedAgreement" && d.status !== "blocked" && d.key && d.uploadedAt > sent)
+            .map((d) => d.key!);
+    if (!keys.length) return { list, result: { ok: false, reason: "no_document" } };
+    const at = new Date().toISOString();
+    c.agreementSubmissions = [
+      ...(c.agreementSubmissions ?? []),
+      { at, keys, via: input.via, ...(input.via === "admin" ? { by: input.by } : {}) },
+    ];
+    c.agreementSignedAt = at;
+    delete c.agreementReason;
+    return { list, result: { ok: true, candidate: c, first: true } };
+  });
+}
+
+/** Accept the signed agreement on file, or take the acceptance back (null). */
+export function setAgreementApproved(id: string, by: string | null): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    if (by === null) {
+      delete c.agreementApprovedAt;
+      delete c.agreementApprovedBy;
+    } else {
+      c.agreementApprovedAt = new Date().toISOString();
+      c.agreementApprovedBy = by;
     }
     return { list, result: c };
   });

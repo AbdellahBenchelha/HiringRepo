@@ -9,7 +9,7 @@ import { CandidateInfoButton } from "@/components/admin/CandidateInfoButton";
 import { DeleteCandidateButton } from "@/components/admin/DeleteCandidateButton";
 import { RefreshButton } from "@/components/admin/RefreshButton";
 import { VerificationBadge } from "@/components/admin/VerificationPanel";
-import { CandidateProfileModal } from "@/components/admin/CandidateProfileModal";
+import { CandidateProfileModal, openProfileOn } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import {
@@ -27,6 +27,7 @@ import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateStatus } from "@/lib/candidateStatus";
 import type { CandidateView } from "@/lib/candidateView";
 import { ADDRESS_STATUS_LABEL, type AddressProofStatus } from "@/lib/addressProof";
+import { AGREEMENT_STATUS_LABEL, type AgreementStatus } from "@/lib/agreement";
 
 /** The proof-of-address tag's colour, by where it stands. */
 const ADDRESS_TAG: Record<AddressProofStatus, string> = {
@@ -34,6 +35,14 @@ const ADDRESS_TAG: Record<AddressProofStatus, string> = {
   asked: "border-amber-200 bg-amber-50 text-amber-800",
   received: "border-blue-200 bg-blue-50 text-blue-800",
   approved: "border-green-200 bg-green-50 text-green-800",
+};
+
+/** The final-agreement button's look, by where it stands. */
+const AGREEMENT_BUTTON: Record<AgreementStatus, { label: string; cls: string; icon: "send" | "clock" | "fileCheck" | "checkCircle" }> = {
+  not_sent: { label: "Send agreement", cls: "border-brand-300 bg-brand-500 text-navy-900 hover:bg-brand-400", icon: "send" },
+  sent: { label: "Agreement sent", cls: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100", icon: "clock" },
+  signed: { label: "Check signed", cls: "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100", icon: "fileCheck" },
+  approved: { label: "Agreement", cls: "border-green-200 bg-green-50 text-green-800 hover:bg-green-100", icon: "checkCircle" },
 };
 
 /**
@@ -105,6 +114,7 @@ export function AcceptedTable({
   // The final interview is the live chat: has its link been emailed yet?
   const [chatSent, setChatSent] = useState<"all" | "yes" | "notStarted" | "no">("all");
   const [addressProof, setAddressProof] = useState<"all" | AddressProofStatus>("all");
+  const [agreement, setAgreement] = useState<"all" | AgreementStatus>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -160,9 +170,10 @@ export function AcceptedTable({
       // The people the "start your chat" reminder is for.
       if (chatSent === "notStarted" && (!c.chatLinkSentAt || c.chatStarted)) return false;
       if (addressProof !== "all" && (c.addressProofStatus ?? "not_asked") !== addressProof) return false;
+      if (agreement !== "all" && (c.agreementStatus ?? "not_sent") !== agreement) return false;
       return true;
     });
-  }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent, addressProof]);
+  }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent, addressProof, agreement]);
 
   /** How many each GSTIN choice would show, among the people not hidden by country. */
   const gstinCounts = useMemo(() => {
@@ -243,7 +254,7 @@ export function AcceptedTable({
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, hiddenCountries.hidden, verified, engagedAs, gstin, chatSent, addressProof, pageSize]);
+  }, [search, country, hiddenCountries.hidden, verified, engagedAs, gstin, chatSent, addressProof, agreement, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -354,6 +365,22 @@ export function AcceptedTable({
           </label>
 
           <label className="block">
+            <span className="label">Agreement</span>
+            <select
+              id="agreement"
+              className="select"
+              value={agreement}
+              onChange={(e) => setAgreement(e.target.value as typeof agreement)}
+            >
+              <option value="all">All</option>
+              <option value="not_sent">Not sent</option>
+              <option value="sent">Sent – waiting</option>
+              <option value="signed">Signed – to check</option>
+              <option value="approved">Accepted</option>
+            </select>
+          </label>
+
+          <label className="block">
             <span className="label">Country</span>
             <select id="country" className="select" value={country} onChange={(e) => setCountry(e.target.value)}>
               <option value="all">All countries</option>
@@ -396,6 +423,7 @@ export function AcceptedTable({
                 setGstin("all");
                 setChatSent("all");
                 setAddressProof("all");
+                setAgreement("all");
               }}
               className="rounded-full px-3 py-1 text-xs font-semibold text-navy-600 transition hover:bg-navy-100"
             >
@@ -611,6 +639,16 @@ export function AcceptedTable({
                           Address {ADDRESS_STATUS_LABEL[c.addressProofStatus].toLowerCase()}
                         </span>
                       ) : null}
+                      {c.agreementStatus && c.agreementStatus !== "not_sent" ? (
+                        <span
+                          data-agreement-tag={c.agreementStatus}
+                          title="Final agreement — see View info → Agreement"
+                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${AGREEMENT_BUTTON[c.agreementStatus].cls}`}
+                        >
+                          <Icon name="fileCheck" className="h-3 w-3" />
+                          Agreement {AGREEMENT_STATUS_LABEL[c.agreementStatus].toLowerCase()}
+                        </span>
+                      ) : null}
                       </div>
                     </td>
                     <td
@@ -621,6 +659,21 @@ export function AcceptedTable({
                     >
                       <div className="flex items-center gap-2">
                         <CandidateInfoButton onOpen={() => openProfile(c)} />
+                        {c.status === FULL_VERIFIED || (c.agreementStatus && c.agreementStatus !== "not_sent") ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openProfileOn("agreement");
+                              openProfile(c);
+                            }}
+                            data-agreement-button={c.agreementStatus ?? "not_sent"}
+                            title="Open View info → Agreement"
+                            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${AGREEMENT_BUTTON[c.agreementStatus ?? "not_sent"].cls}`}
+                          >
+                            <Icon name={AGREEMENT_BUTTON[c.agreementStatus ?? "not_sent"].icon} className="h-3.5 w-3.5" />
+                            {AGREEMENT_BUTTON[c.agreementStatus ?? "not_sent"].label}
+                          </button>
+                        ) : null}
                         {teamMembers[c.id] ? (
                           <a
                             href={`${teamAdminUrl}/admin/team/${teamMembers[c.id]}`}

@@ -122,6 +122,21 @@ import {
 import { effectiveOffer, formatRate, type Offer } from "@/lib/offer";
 import { deadlineFrom, formatDeadline } from "@/lib/offerReminder";
 import { sampleAgreement } from "@/lib/sampleAgreement";
+import { AGREEMENT_REASK_REASONS } from "@/lib/agreement";
+import {
+  agreementReaskHtml,
+  agreementReaskSubject,
+  agreementReaskText,
+  agreementReceivedHtml,
+  agreementReceivedSubject,
+  agreementReceivedText,
+  agreementReminderHtml,
+  agreementReminderSubject,
+  agreementReminderText,
+  agreementSentHtml,
+  agreementSentSubject,
+  agreementSentText,
+} from "@/lib/agreementEmails";
 import { REUPLOAD_REASONS } from "@/lib/verification";
 import { RESIDENCE_REASONS } from "@/lib/residence";
 import { ADDRESS_REASK_REASONS } from "@/lib/addressProof";
@@ -697,6 +712,62 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
         html: addressProofReaskHtml(payload),
         text: addressProofReaskText(payload),
       };
+    },
+  },
+  {
+    id: "agreement-sent",
+    name: "Final agreement — please sign",
+    stage: "offer",
+    when:
+      "Sent with Send final agreement, from View info → Agreement or the Accepted tab (one candidate or many), to a Full verified candidate. The agreement PDF, filled with their details, is attached. They sign it and upload it with the link, or reply to the email. You get a Telegram message when they upload.",
+    kind: "campaign",
+    source: "agreementSentHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME, url: link("/agreement?t=EXAMPLE"), ref: "WR-EXAMPLE-20261029" };
+      return { subject: agreementSentSubject(), html: agreementSentHtml(payload), text: agreementSentText(payload) };
+    },
+  },
+  {
+    id: "agreement-reminder",
+    name: "Final agreement reminder",
+    stage: "offer",
+    when:
+      "Sent with Send reminder in View info → Agreement, or in bulk from the Accepted tab, to somebody who was sent the agreement and has not sent it back. The same agreement PDF is attached again.",
+    kind: "campaign",
+    source: "agreementReminderHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME, url: link("/agreement?t=EXAMPLE"), ref: "WR-EXAMPLE-20261029" };
+      return { subject: agreementReminderSubject(), html: agreementReminderHtml(payload), text: agreementReminderText(payload) };
+    },
+  },
+  {
+    id: "agreement-reask",
+    name: "Final agreement — send it again",
+    stage: "offer",
+    when:
+      "Sent from Ask again in View info → Agreement when the signed copy will not do. The highlighted box carries the reason you choose; this preview shows the first preset. The agreement is attached again.",
+    kind: "campaign",
+    source: "agreementReaskHtml",
+    render: () => {
+      const payload = {
+        fullName: SAMPLE_NAME,
+        url: link("/agreement?t=EXAMPLE"),
+        ref: "WR-EXAMPLE-20261029",
+        reason: AGREEMENT_REASK_REASONS[0].message,
+      };
+      return { subject: agreementReaskSubject(), html: agreementReaskHtml(payload), text: agreementReaskText(payload) };
+    },
+  },
+  {
+    id: "agreement-received",
+    name: "Signed agreement received",
+    stage: "offer",
+    when: "Sent automatically when a candidate uploads their signed agreement on their page.",
+    kind: "reactive",
+    source: "agreementReceivedHtml",
+    render: () => {
+      const payload = { fullName: SAMPLE_NAME, ref: "WR-EXAMPLE-20261029" };
+      return { subject: agreementReceivedSubject(), html: agreementReceivedHtml(payload), text: agreementReceivedText(payload) };
     },
   },
   {

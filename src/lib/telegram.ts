@@ -244,6 +244,28 @@ export function buildAddressProofMessage(
   ].join("\n");
 }
 
+/** A candidate sent back their signed agreement. */
+export function buildAgreementSignedMessage(
+  name: string,
+  email: string | undefined,
+  country: string | undefined,
+  adminUrl: string,
+  ref: string,
+  files: number,
+  again: boolean,
+): string {
+  return [
+    again ? "✍️ <b>New signed agreement received</b>" : "✍️ <b>Signed agreement received</b>",
+    "",
+    ...whoLines(name, email, country),
+    "",
+    `<b>Agreement:</b> ${escapeHtml(ref || "—")}`,
+    `<b>Files:</b> ${files}`,
+    "Please check it is signed and dated, then press Accept in View info.",
+    `<a href="${escapeHtml(adminUrl).replace(/"/g, "&quot;")}">Open in the Admin Panel</a>`,
+  ].join("\n");
+}
+
 /** Build the "Personal information" message (sent after the first step). */
 export function buildPersonalMessage(fields: Record<string, unknown>): string | null {
   const lines = PERSONAL_FIELDS.flatMap(({ key, label }) => {

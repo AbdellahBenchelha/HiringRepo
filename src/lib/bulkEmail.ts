@@ -20,10 +20,11 @@ import { canOffer, type Offer } from "@/lib/offer";
 import type { CandidateDocument } from "@/lib/documents";
 import { addressProofStatus } from "@/lib/addressProof";
 import { GSTIN_WAITING_REFUSAL, gstinWaitingRefusal } from "@/lib/pan";
+import type { AgreementStatus } from "@/lib/agreement";
 
 export const BULK_ACTIONS = [
   "assessment", "reminder", "voice", "voiceReminder", "voiceAck", "offerReminder", "offer", "chatReminder", "verifiedAck",
-  "addressProof", "gstinRequest", "gstinWaiting",
+  "addressProof", "gstinRequest", "gstinWaiting", "agreementSend", "agreementReminder",
 ] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 
@@ -40,6 +41,8 @@ export const ACTION_LABEL: Record<BulkAction, string> = {
   addressProof: "Ask for proof of address",
   gstinRequest: "Request GSTIN",
   gstinWaiting: "Remind: waiting for GSTIN",
+  agreementSend: "Send final agreement",
+  agreementReminder: "Agreement reminder",
 };
 
 /** Which buttons each tab offers, since the two lists hold different people. */
@@ -55,7 +58,9 @@ export const FAVORITE_ACTIONS: readonly BulkAction[] = ["offerReminder"];
  * Accepted: chasing the final interview chat for those who never started it,
  * and asking for proof of address (the optional last step).
  */
-export const ACCEPTED_ACTIONS: readonly BulkAction[] = ["chatReminder", "addressProof", "gstinRequest", "gstinWaiting"];
+export const ACCEPTED_ACTIONS: readonly BulkAction[] = [
+  "chatReminder", "addressProof", "gstinRequest", "gstinWaiting", "agreementSend", "agreementReminder",
+];
 
 /** Below this, a chat reminder sent again warns: two in a day read as spam. */
 const CHAT_REMINDER_WARN_MS = 24 * 60 * 60 * 1000;
@@ -148,6 +153,9 @@ export interface BulkCandidate {
   gstinWaitingAt?: string;
   /** For the GSTIN request: when the last "GSTIN needed" email went. */
   gstinRequestAt?: string;
+  /** For the final agreement: where it stands, and what stops it being drawn up. */
+  agreementStatus?: AgreementStatus;
+  agreementMissing?: string[];
 }
 
 export type Eligibility =
@@ -212,6 +220,19 @@ export function eligibility(action: BulkAction, c: BulkCandidate): Eligibility {
     return Date.now() - last < 24 * 60 * 60 * 1000
       ? { include: true, warn: "already sent in the last 24 hours — this sends another" }
       : { include: true };
+  }
+
+  // The final agreement, drawn up per person from what they accepted. Refused
+  // for anybody it cannot be drawn up for yet, or who has sent it back signed:
+  // asking again is one person at a time, with the reason, in View info.
+  if (action === "agreementSend" || action === "agreementReminder") {
+    const status = c.agreementStatus ?? "not_sent";
+    if (status === "signed" || status === "approved") return { include: false, reason: "has already sent it back signed" };
+    if (action === "agreementReminder") {
+      return status === "sent" ? { include: true } : { include: false, reason: "has not been sent the agreement" };
+    }
+    if (c.agreementMissing?.length) return { include: false, reason: `cannot be sent yet: ${c.agreementMissing[0]}` };
+    return status === "sent" ? { include: true, warn: "already sent — this sends a new copy" } : { include: true };
   }
 
   // "Your agreement is ready — please confirm your address." Only after

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { agreementMissing, agreementStatus } from "@/lib/agreement";
 import { verifyAdminRequest, getAdminSession } from "@/lib/adminAuth";
 import { getCandidate } from "@/lib/store";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
@@ -157,6 +158,8 @@ export async function POST(req: NextRequest) {
       gstin: c.gstin,
       gstinWaitingAt: c.gstinWaitingEmails?.at(-1)?.at,
       gstinRequestAt: c.gstinRequests?.at(-1),
+      agreementStatus: agreementStatus(c),
+      agreementMissing: agreementMissing(c),
     });
     if (!verdict.include) {
       skipped.push({ name, reason: verdict.reason });

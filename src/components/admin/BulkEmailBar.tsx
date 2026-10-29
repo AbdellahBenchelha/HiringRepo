@@ -44,7 +44,7 @@ function fmtTime(iso?: string) {
 }
 
 /** The icon each action wears, so the two buttons never look interchangeable. */
-const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCircle" | "handshake" | "home"> = {
+const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCircle" | "handshake" | "home" | "fileCheck"> = {
   assessment: "mail",
   reminder: "clock",
   voice: "microphone",
@@ -57,6 +57,8 @@ const ACTION_ICON: Record<BulkAction, "mail" | "clock" | "microphone" | "checkCi
   addressProof: "home",
   gstinRequest: "mail",
   gstinWaiting: "clock",
+  agreementSend: "fileCheck",
+  agreementReminder: "clock",
 };
 
 export function useBulkEmail(
@@ -164,6 +166,8 @@ export function useBulkEmail(
         gstin: c.gstin,
         gstinWaitingAt: c.gstinWaitingEmails?.at(-1)?.at,
         gstinRequestAt: c.gstinRequests?.at(-1),
+        agreementStatus: c.agreementStatus,
+        agreementMissing: c.agreementMissing,
       });
       const name = c.fullName || c.email || c.id;
       if (!verdict.include) skip.push({ name, reason: verdict.reason });
