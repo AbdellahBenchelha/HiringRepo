@@ -21,6 +21,7 @@ import {
   type AgreementEvent,
 } from "@/lib/agreement";
 import { agreementPdf } from "@/lib/agreementPdf";
+import { loadSeal } from "@/lib/agreementSeal";
 import {
   agreementFileName,
   agreementReaskHtml,
@@ -81,7 +82,8 @@ export async function draftAgreement(
 ): Promise<{ pdf: Uint8Array; ref: string } | null> {
   const terms = agreementTerms(c);
   if (!terms) return null;
-  return { pdf: await agreementPdf({ terms, ref, issuedAt }), ref };
+  const seal = await loadSeal();
+  return { pdf: await agreementPdf({ terms, ref, issuedAt, seal }), ref };
 }
 
 /**

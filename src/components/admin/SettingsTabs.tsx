@@ -23,6 +23,7 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/settings/cv", label: "CV requirement", icon: "upload" },
   { href: "/admin/settings/manual-invite", label: "Manual invitations", icon: "clock" },
   { href: "/admin/settings/chat", label: "Live chat", icon: "headset" },
+  { href: "/admin/settings/agreement", label: "Agreement", icon: "fileCheck" },
 ];
 
 export function SettingsTabs() {

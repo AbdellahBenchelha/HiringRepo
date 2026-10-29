@@ -122,9 +122,19 @@ export interface AgreementPdfInput {
   ref: string;
   /** ISO time the agreement is issued; the Company's signing date. */
   issuedAt: string;
+  /**
+   * The director's signature and the company stamp (see lib/agreementSeal).
+   * Without a signature the signatory's name is typed instead.
+   */
+  seal?: { signature?: SealImageBytes | null; stamp?: SealImageBytes | null };
 }
 
-export async function agreementPdf({ terms, ref, issuedAt }: AgreementPdfInput): Promise<Uint8Array> {
+export interface SealImageBytes {
+  bytes: Uint8Array;
+  type: "image/png" | "image/jpeg";
+}
+
+export async function agreementPdf({ terms, ref, issuedAt, seal }: AgreementPdfInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const legal = siteConfig.legal;
   doc.setTitle(safe(`Independent Contractor Agreement — ${terms.contractorName}`));
@@ -136,6 +146,17 @@ export async function agreementPdf({ terms, ref, issuedAt }: AgreementPdfInput):
   const italic = await doc.embedFont(StandardFonts.HelveticaOblique);
   const w = new Writer(doc, font, bold, italic);
   const issued = formatAgreementDate(issuedAt);
+  const embed = async (img?: SealImageBytes | null) => {
+    if (!img) return null;
+    try {
+      return img.type === "image/png" ? await doc.embedPng(img.bytes) : await doc.embedJpg(img.bytes);
+    } catch {
+      // A damaged image is left out rather than stopping the agreement.
+      return null;
+    }
+  };
+  const signatureImg = await embed(seal?.signature);
+  const stampImg = await embed(seal?.stamp);
 
   // Title
   w.text(`${siteConfig.company.name.toUpperCase()} · ${siteConfig.company.descriptor.toUpperCase()}`, LEFT, {
@@ -214,7 +235,11 @@ export async function agreementPdf({ terms, ref, issuedAt }: AgreementPdfInput):
   const boxW = (RIGHT - LEFT - 16) / 2;
   const boxH = 175;
   const boxTop = w.y + 4;
-  const box = (x: number, title: string, lines: { label: string; value?: string; sign?: boolean; tall?: boolean }[]) => {
+  const box = (
+    x: number,
+    title: string,
+    lines: { label: string; value?: string; sign?: boolean; tall?: boolean; image?: typeof signatureImg }[],
+  ) => {
     w.page.drawRectangle({ x, y: boxTop - boxH, width: boxW, height: boxH, borderColor: LINE, borderWidth: 0.8 });
     let y = boxTop - 20;
     w.page.drawText(safe(title), { x: x + 12, y, size: 9.5, font: bold, color: NAVY });
@@ -223,7 +248,11 @@ export async function agreementPdf({ terms, ref, issuedAt }: AgreementPdfInput):
       w.page.drawText(safe(l.label), { x: x + 12, y, size: 8, font: bold, color: MUTED });
       // Room to write a signature by hand.
       y -= l.tall ? 40 : 15;
-      if (l.value) {
+      if (l.image) {
+        // The handwritten signature, standing on the line.
+        const scale = Math.min(34 / l.image.height, (boxW - 24) / l.image.width);
+        w.page.drawImage(l.image, { x: x + 12, y: y - 3, width: l.image.width * scale, height: l.image.height * scale });
+      } else if (l.value) {
         w.page.drawText(safe(l.value), { x: x + 12, y, size: l.sign ? 13 : 9.5, font: l.sign ? italic : font, color: NAVY });
       }
       w.page.drawLine({ start: { x: x + 12, y: y - 4 }, end: { x: x + boxW - 12, y: y - 4 }, thickness: 0.5, color: LINE });
@@ -232,7 +261,7 @@ export async function agreementPdf({ terms, ref, issuedAt }: AgreementPdfInput):
   };
   box(LEFT, `For and on behalf of ${legal.registeredName}`, [
     { label: "Name", value: `${terms.signatoryName}, ${terms.signatoryTitle}` },
-    { label: "Signature", value: terms.signatoryName, sign: true, tall: true },
+    { label: "Signature", value: terms.signatoryName, sign: true, tall: true, image: signatureImg },
     { label: "Date", value: issued },
   ]);
   box(LEFT + boxW + 16, terms.companyName ? `The Contractor (${terms.companyName})` : "The Contractor", [
@@ -240,6 +269,12 @@ export async function agreementPdf({ terms, ref, issuedAt }: AgreementPdfInput):
     { label: "Signature", tall: true },
     { label: "Date" },
   ]);
+  if (stampImg) {
+    // The company stamp, pressed over the lower right of the Company's box.
+    const size = 92;
+    const h = (stampImg.height / stampImg.width) * size;
+    w.page.drawImage(stampImg, { x: LEFT + boxW - size - 4, y: boxTop - boxH + 4, width: size, height: h, opacity: 0.92 });
+  }
   w.y = boxTop - boxH - 20;
   w.para(
     `Please sign and date where it says “The Contractor”, then send every page back to us. Questions? Write to ${siteConfig.contact.recruitmentEmail}.`,
