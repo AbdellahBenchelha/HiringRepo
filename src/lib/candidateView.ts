@@ -156,6 +156,7 @@ export interface CandidateView {
   /** Derived, so the table, the filter and the panel cannot disagree. */
   addressProofStatus: AddressProofStatus;
   /** The final agreement — see lib/agreement. */
+  agreementStartDate?: string;
   agreementSentAt?: string;
   agreementRef?: string;
   agreementReason?: string;
@@ -397,6 +398,7 @@ export function toCandidateView(
     addressProofApprovedAt: c.addressProofApprovedAt,
     addressProofApprovedBy: c.addressProofApprovedBy,
     addressProofStatus: addressProofStatus(c),
+    agreementStartDate: c.agreementStartDate,
     agreementSentAt: c.agreementSentAt,
     agreementRef: c.agreementRef,
     agreementReason: c.agreementReason,

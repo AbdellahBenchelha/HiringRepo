@@ -42,6 +42,8 @@ export interface AgreementCandidate {
   country?: string;
   offer?: Offer;
   offerAcceptedAt?: string;
+  /** Set by a recruiter in the Agreement tab when the offer had none (yyyy-mm-dd). */
+  agreementStartDate?: string;
   confirmedDetails?: ConfirmedDetails;
   companyDetails?: CompanyDetails;
   availability?: Availability;
@@ -121,6 +123,22 @@ function money(amount: number, currency: string): string {
 
 const UNIT_WORDS: Record<string, string> = { HOUR: "hour worked", DAY: "day", WEEK: "week", MONTH: "month", YEAR: "year" };
 
+/**
+ * The start date for the agreement: the one set in the Agreement tab, or the
+ * one in the offer. The offer itself is never changed — it is a record of
+ * what was sent.
+ */
+export function agreementStart(c: Pick<AgreementCandidate, "agreementStartDate" | "offer">): string | undefined {
+  return c.agreementStartDate || c.offer?.startDate || undefined;
+}
+
+/** A yyyy-mm-dd a recruiter typed, or null if it is not a real date. */
+export function readStartDate(v: unknown): string | null {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(`${v}T12:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v ? v : null;
+}
+
 /** "2 November 2026". */
 export function formatAgreementDate(iso: string): string {
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00Z` : iso);
@@ -137,7 +155,7 @@ export function agreementMissing(c: AgreementCandidate): string[] {
   if (!c.offer || !c.offerAcceptedAt) out.push("no accepted offer");
   else {
     if (!effectiveOffer(c.offer).hoursPerWeek) out.push("the offer has no weekly hours");
-    if (!c.offer.startDate) out.push("the offer has no start date");
+    if (!agreementStart(c)) out.push("no start date (add one in the Agreement tab)");
   }
   if (!contractorName(c)) out.push("no name");
   if (!contractorAddress(c) && !companyOf(c)?.address) out.push("no address");
@@ -148,7 +166,8 @@ export function agreementMissing(c: AgreementCandidate): string[] {
 
 /** The filled terms, or null when something in agreementMissing is missing. */
 export function agreementTerms(c: AgreementCandidate): AgreementTerms | null {
-  if (!c.offer || !c.availability || !c.offer.startDate) return null;
+  const start = agreementStart(c);
+  if (!c.offer || !c.availability || !start) return null;
   const offer = effectiveOffer(c.offer);
   if (!offer.hoursPerWeek) return null;
   const name = contractorName(c);
@@ -174,7 +193,7 @@ export function agreementTerms(c: AgreementCandidate): AgreementTerms | null {
     contractorName: name,
     contractorParty: party,
     companyName: company?.name,
-    startDate: formatAgreementDate(offer.startDate!),
+    startDate: formatAgreementDate(start),
     services: offer.position,
     fee: `${money(offer.rate, currency)} per ${UNIT_WORDS[offer.unit] ?? "hour worked"}, in ${currencyName}`,
     guaranteedHours: `${offer.hoursPerWeek} hours per week, guaranteed under clause 6`,

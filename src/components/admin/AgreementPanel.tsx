@@ -11,6 +11,7 @@ import {
   MAX_AGREEMENT_REASON,
   MAX_SIGNED_FILES,
   agreementReaskMessage,
+  formatAgreementDate,
   type AgreementStatus,
 } from "@/lib/agreement";
 import type { CandidateView } from "@/lib/candidateView";
@@ -50,6 +51,7 @@ const ERRORS: Record<string, string> = {
   bad_type: "only PDF, JPG or PNG files",
   blocked: "a file did not pass the file check",
   storage_unavailable: "file storage is not available",
+  bad_date: "choose a valid date",
 };
 
 function fmt(iso?: string): string {
@@ -59,7 +61,7 @@ function fmt(iso?: string): string {
 
 type Patch = Partial<CandidateView>;
 const PATCH_KEYS = [
-  "agreementSentAt", "agreementRef", "agreementReason", "agreementEvents", "agreementSignedAt",
+  "agreementStartDate", "agreementSentAt", "agreementRef", "agreementReason", "agreementEvents", "agreementSignedAt",
   "agreementSubmissions", "agreementApprovedAt", "agreementApprovedBy", "agreementStatus", "agreementMissing", "documents",
 ] as const;
 
@@ -80,6 +82,9 @@ export function AgreementPanel({
   const [marking, setMarking] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const offerStart = candidate.offer?.startDate ?? "";
+  const currentStart = candidate.agreementStartDate || offerStart;
+  const [startDate, setStartDate] = useState(currentStart);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const status = candidate.agreementStatus ?? "not_sent";
@@ -151,6 +156,20 @@ export function AgreementPanel({
     }
   }
 
+  async function saveStartDate() {
+    if (busy || !startDate) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await adminPost(api, { action: "startDate", date: startDate });
+      await handle(res, "Start date saved.");
+    } catch {
+      setResult({ ok: false, text: "Could not reach the server." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function markSigned() {
     if (busy || !files.length) return;
     setBusy(true);
@@ -201,6 +220,48 @@ export function AgreementPanel({
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {/* Start date: from the offer, or set here when the offer has none */}
+      {status === "not_sent" ? (
+        <div
+          className={`mt-4 rounded-xl border p-3.5 ${currentStart ? "border-cream-300 bg-white" : "border-2 border-brand-300 bg-brand-50/50"}`}
+          data-agreement-start
+        >
+          <label htmlFor={`agreement-start-${candidate.id}`} className="text-xs font-bold uppercase tracking-wide text-navy-500">
+            Start date
+          </label>
+          <p className="mt-0.5 text-xs text-navy-500">
+            {currentStart
+              ? candidate.agreementStartDate
+                ? `Set here${offerStart ? ` (the offer said ${formatAgreementDate(offerStart)})` : " — the offer had none"}.`
+                : "From the offer. Change it here if it has moved."
+              : "The offer has no start date. Choose one — it goes into the agreement (the offer itself is not changed)."}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              id={`agreement-start-${candidate.id}`}
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900"
+              data-agreement-start-input
+            />
+            <button
+              type="button"
+              disabled={busy || !startDate || startDate === currentStart}
+              onClick={() => void saveStartDate()}
+              className={`${btn} bg-navy-900 text-white hover:bg-navy-800`}
+              data-agreement-start-save
+            >
+              Save start date
+            </button>
+          </div>
+        </div>
+      ) : currentStart ? (
+        <p className="mt-3 text-xs text-navy-500" data-agreement-start>
+          Start date in the agreement: <strong className="text-navy-800">{formatAgreementDate(currentStart)}</strong>
+        </p>
       ) : null}
 
       {candidate.agreementSentAt ? (

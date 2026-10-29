@@ -341,6 +341,8 @@ export interface Candidate {
    * counts only if it came after it.
    */
   agreementSentAt?: string;
+  /** Start date for the agreement, set by a recruiter when the offer had none. */
+  agreementStartDate?: string;
   /** Reference and stored PDF of the newest agreement sent. */
   agreementRef?: string;
   agreementKey?: string;
@@ -1722,6 +1724,17 @@ export function completeAgreement(
     c.agreementSignedAt = at;
     delete c.agreementReason;
     return { list, result: { ok: true, candidate: c, first: true } };
+  });
+}
+
+/** The agreement's start date, set in the Agreement tab (null clears it). */
+export function setAgreementStartDate(id: string, date: string | null): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    if (date) c.agreementStartDate = date;
+    else delete c.agreementStartDate;
+    return { list, result: c };
   });
 }
 

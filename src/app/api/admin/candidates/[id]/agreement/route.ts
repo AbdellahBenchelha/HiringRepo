@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest, getAdminSession } from "@/lib/adminAuth";
-import { addDocument, completeAgreement, getCandidate, setAgreementApproved, type Candidate } from "@/lib/store";
+import {
+  addDocument,
+  completeAgreement,
+  getCandidate,
+  setAgreementApproved,
+  setAgreementStartDate,
+  type Candidate,
+} from "@/lib/store";
 import {
   MAX_SIGNED_FILES,
   agreementMissing,
   agreementReaskMessage,
   agreementStatus,
   contractorName,
+  readStartDate,
 } from "@/lib/agreement";
 import {
   AGREEMENT_REFUSAL_STATUS,
@@ -38,6 +46,8 @@ import { createHash } from "node:crypto";
  *     reask      "please send it again", with the reason
  *     approve    accept the signed copy on file
  *     unapprove  take the acceptance back
+ *     startDate  { date } the start date for the agreement, when the offer
+ *                has none (or a new one); used from the next copy sent
  *
  *   POST multipart    action=signed, files=… — a signed copy that came back by
  *                     email, uploaded by the recruiter
@@ -55,6 +65,7 @@ function baseUrl(req: NextRequest): string {
 /** What the panel needs back to redraw itself. */
 function patchOf(c: Candidate) {
   return {
+    agreementStartDate: c.agreementStartDate ?? null,
     agreementSentAt: c.agreementSentAt ?? null,
     agreementRef: c.agreementRef ?? null,
     agreementReason: c.agreementReason ?? null,
@@ -114,7 +125,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return markSigned(req, candidate, by);
   }
 
-  let body: { action?: string; reason?: unknown; custom?: unknown };
+  let body: { action?: string; reason?: unknown; custom?: unknown; date?: unknown };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -142,6 +153,20 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       );
     }
     return NextResponse.json({ ok: true, ...patchOf(result.candidate) });
+  }
+
+  if (body.action === "startDate") {
+    const date = readStartDate(body.date);
+    if (!date) return NextResponse.json({ ok: false, error: "bad_date" }, { status: 400 });
+    const status = agreementStatus(candidate);
+    if (status === "signed" || status === "approved") {
+      return NextResponse.json({ ok: false, error: "already_signed" }, { status: 409 });
+    }
+    const updated = await setAgreementStartDate(id, date);
+    if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    // eslint-disable-next-line no-console
+    console.log(`[agreement] ${id} start date set to ${date} by ${by}`);
+    return NextResponse.json({ ok: true, ...patchOf(updated) });
   }
 
   if (body.action === "approve" || body.action === "unapprove") {

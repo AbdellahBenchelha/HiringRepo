@@ -595,7 +595,7 @@ export function AcceptedTable({
                     <td className="px-4 py-3 font-semibold text-navy-900">
                       {c.offer ? formatRate(c.offer) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-navy-600">{fmtDate(c.offer?.startDate)}</td>
+                    <td className="px-4 py-3 text-navy-600">{fmtDate(c.agreementStartDate || c.offer?.startDate)}</td>
                     <td className="px-4 py-3 text-navy-500">{fmt(c.offerAcceptedAt)}</td>
                     <td className="px-4 py-3">
                       {d ? (
