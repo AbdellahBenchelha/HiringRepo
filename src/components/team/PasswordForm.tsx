@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { problemOf, teamPost } from "@/lib/teamClient";
-import { PASSWORD_MIN } from "@/lib/teamPassword";
+import { PASSWORD_MIN } from "@/lib/teamShared";
 import { Icon } from "@/components/Icon";
 
 /**
@@ -58,7 +58,7 @@ export function PasswordForm({ mode }: { mode: "first" | "change" }) {
       className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-navy-400 hover:bg-cream-200 hover:text-navy-900"
       aria-label={show ? "Hide passwords" : "Show passwords"}
     >
-      <Icon name={show ? "shield" : "search"} className="h-4 w-4" />
+      <Icon name={show ? "eyeOff" : "eye"} className="h-4 w-4" />
     </button>
   );
 

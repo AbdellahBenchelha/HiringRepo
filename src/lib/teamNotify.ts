@@ -4,7 +4,7 @@
  *
  * Every email here is "reactive": it answers something a member or recruiter
  * just did, to someone already on the team, so the warm-up limit never holds
- * it back (it is still counted). A sign-in code that waits until tomorrow is a
+ * it back (it is still counted). Login details that wait until tomorrow are a
  * locked-out member.
  *
  * "Something new" emails — a ticket reply, a phone message — are spaced ten
@@ -21,9 +21,6 @@ import {
   teamBankHtml,
   teamBankSubject,
   teamBankText,
-  teamCodeHtml,
-  teamCodeSubject,
-  teamCodeText,
   teamDayOffHtml,
   teamDayOffSubject,
   teamDayOffText,
@@ -89,9 +86,11 @@ export async function sendLoginDetails(m: TeamMember): Promise<{ ok: boolean; re
   const enc = encryptPassword(temp);
   if (!enc) return { ok: false, reason: "no_key" };
   const expiry = new Date(Date.now() + TEMP_PASSWORD_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  await setTempPassword(m.id, enc, expiry);
+  // Send first: if the email fails, the member keeps the password they have.
   const r = await sendTeamInvite(m, temp);
-  return { ok: r.ok, reason: r.ok ? undefined : errorOf(r) };
+  if (!r.ok) return { ok: false, reason: errorOf(r) };
+  await setTempPassword(m.id, enc, expiry);
+  return { ok: true };
 }
 
 /** Tells the member (on their personal address) that their password changed. */
@@ -99,13 +98,6 @@ export async function sendPasswordChanged(m: TeamMember) {
   const e = { fullName: m.fullName };
   const r = await send(m, teamPasswordChangedSubject(), teamPasswordChangedHtml(e), teamPasswordChangedText(e));
   log("password changed", m, r.ok, errorOf(r));
-  return r;
-}
-
-export async function sendLoginCode(m: TeamMember, code: string) {
-  const e = { fullName: m.fullName, code };
-  const r = await send(m, teamCodeSubject(code), teamCodeHtml(e), teamCodeText(e));
-  log("sign-in code", m, r.ok, errorOf(r));
   return r;
 }
 

@@ -190,45 +190,6 @@ export function teamPasswordChangedHtml(e: { fullName: string }): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Sign-in code                                                                */
-/* -------------------------------------------------------------------------- */
-
-export interface TeamCodeEmail {
-  fullName: string;
-  code: string;
-}
-
-export function teamCodeSubject(code: string): string {
-  return `${code} is your ${siteConfig.company.name} sign-in code`;
-}
-
-export function teamCodeText(e: TeamCodeEmail): string {
-  return text([
-    `Hi ${firstNameOf(e.fullName)},`,
-    "",
-    `Your sign-in code is: ${e.code}`,
-    "",
-    "It works for 10 minutes. If you did not try to sign in, you can ignore this email —",
-    "nobody can sign in without the code.",
-    "Never share this code with anyone, including someone saying they are from our team.",
-  ]);
-}
-
-export function teamCodeHtml(e: TeamCodeEmail): string {
-  return shell({
-    subject: teamCodeSubject(e.code),
-    preheader: "It works for 10 minutes.",
-    heading: "Your sign-in code",
-    paragraphs: [
-      `Hi ${esc(firstNameOf(e.fullName))}, here is your code for the team portal:`,
-      `<span style="display:inline-block;padding:12px 18px;border:1px solid ${BORDER};border-radius:10px;background:${CREAM};font:800 30px/1 'Courier New',monospace;letter-spacing:6px;color:${NAVY};">${esc(e.code)}</span>`,
-      "It works for 10 minutes. If you did not try to sign in, ignore this email — nobody can sign in without the code.",
-    ],
-    note: "Never share this code with anyone, including someone saying they are from our team.",
-  });
-}
-
-/* -------------------------------------------------------------------------- */
 /* Ticket                                                                      */
 /* -------------------------------------------------------------------------- */
 

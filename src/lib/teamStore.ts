@@ -576,6 +576,11 @@ export function setOwnPassword(id: string, encrypted: string): Promise<TeamMembe
 /** Record a wrong password; locks the account after too many in a row. */
 export function recordPasswordFailure(id: string, maxTries: number, lockMs: number): Promise<TeamMember | null> {
   return mutateMember(id, (m) => {
+    // A lock that has run out starts the count again.
+    if (m.passwordLockedUntil && Date.now() >= Date.parse(m.passwordLockedUntil)) {
+      m.passwordTries = 0;
+      delete m.passwordLockedUntil;
+    }
     m.passwordTries = (m.passwordTries ?? 0) + 1;
     if (m.passwordTries >= maxTries) m.passwordLockedUntil = new Date(Date.now() + lockMs).toISOString();
   });

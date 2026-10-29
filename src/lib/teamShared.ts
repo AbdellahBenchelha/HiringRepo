@@ -411,6 +411,9 @@ export function uniqueAddress(local: string, domain: string, taken: string[]): s
   return `${local}.${Date.now()}@${domain}`;
 }
 
+/** Shortest portal password a member may choose (shared with the forms). */
+export const PASSWORD_MIN = 10;
+
 export const MAX_MAIL_RECIPIENTS = 10;
 export const MAX_MAIL_BODY = 50_000;
 export const MAX_MAIL_ATTACHMENTS_BYTES = 10 * 1024 * 1024;

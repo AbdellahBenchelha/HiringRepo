@@ -67,6 +67,14 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   return { ok: true, retryAfter: 0 };
 }
 
+/** Whether `key` is already over `limit`, without counting this look. */
+export function isRateLimited(key: string, limit: number): RateLimitResult {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+  if (!bucket || now > bucket.resetAt || bucket.count < limit) return { ok: true, retryAfter: 0 };
+  return { ok: false, retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)) };
+}
+
 /**
  * Standard 429 response carrying Retry-After.
  *

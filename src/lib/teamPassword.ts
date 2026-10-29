@@ -15,11 +15,19 @@
  */
 import crypto from "node:crypto";
 import { decryptSecret, encryptSecret } from "@/lib/teamCrypto";
+import { PASSWORD_MIN } from "@/lib/teamShared";
 
-export const PASSWORD_MIN = 10;
+export { PASSWORD_MIN };
 export const PASSWORD_MAX = 200;
 export const TEMP_PASSWORD_DAYS = 7;
-export const PASSWORD_MAX_TRIES = 5;
+/** Wrong tries from one device before that device must wait. */
+export const PASSWORD_DEVICE_TRIES = 5;
+/**
+ * Wrong tries from anywhere before the account itself is locked. Higher than
+ * the per-device limit, because the professional address is public: a
+ * stranger should not be able to lock a member out with five guesses.
+ */
+export const PASSWORD_MAX_TRIES = 20;
 export const PASSWORD_LOCK_MS = 15 * 60 * 1000;
 
 // No 0/O/1/I/l: a temporary password is read off a screen and typed by hand.
