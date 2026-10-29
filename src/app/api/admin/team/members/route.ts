@@ -3,7 +3,7 @@ import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { getCandidate } from "@/lib/store";
 import { createMember, listMembers, recordInvite } from "@/lib/teamStore";
-import { sendTeamInvite } from "@/lib/teamNotify";
+import { sendLoginDetails } from "@/lib/teamNotify";
 import { readBanks, readDate, readEmail, readHours, readMoney, readPhone, readSchedule, readText } from "@/lib/teamValidate";
 
 /**
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
   let invited = false;
   if (b.sendInvite !== false) {
-    const sent = await sendTeamInvite(result.member);
+    const sent = await sendLoginDetails(result.member);
     if (sent.ok) {
       await recordInvite(result.member.id);
       invited = true;

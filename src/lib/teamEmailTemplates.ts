@@ -108,12 +108,13 @@ function text(lines: (string | false | undefined)[]): string {
 
 export interface TeamInviteEmail {
   fullName: string;
-  loginEmail: string;
+  workEmail: string;
+  tempPassword: string;
   portalUrl: string;
 }
 
 export function teamInviteSubject(): string {
-  return `Welcome to the ${siteConfig.company.name} team — your portal is ready`;
+  return `Welcome to the ${siteConfig.company.name} team — your login details`;
 }
 
 export function teamInviteText(e: TeamInviteEmail): string {
@@ -124,24 +125,67 @@ export function teamInviteText(e: TeamInviteEmail): string {
     "In it you will find your profile, your tickets, your work phone number and its messages,",
     "your hours and earnings, and where to add your bank account for payments.",
     "",
-    `Sign in here: ${e.portalUrl}/login`,
-    `Use this email address: ${e.loginEmail}`,
-    "We will email you a 6-digit code each time you sign in — there is no password.",
+    "Your login details:",
+    `  Sign in here:      ${e.portalUrl}/login`,
+    `  Email:             ${e.workEmail}`,
+    `  Temporary password: ${e.tempPassword}`,
+    "",
+    "When you first sign in, you will be asked to choose your own password.",
+    "The temporary password above works for 7 days.",
+    "",
+    "Keep these details to yourself. We will never ask you for your password,",
+    "your card number, your PIN or any bank code.",
   ]);
 }
 
 export function teamInviteHtml(e: TeamInviteEmail): string {
+  const box = (label: string, value: string) =>
+    `<tr><td style="padding:4px 0;color:#6b6b8a;font-size:13px;">${esc(label)}</td></tr>` +
+    `<tr><td style="padding:0 0 10px;"><span style="display:inline-block;padding:8px 12px;border:1px solid ${BORDER};border-radius:8px;background:${CREAM};font:700 16px/1.2 'Courier New',monospace;color:${NAVY};">${esc(value)}</span></td></tr>`;
   return shell({
     subject: teamInviteSubject(),
-    preheader: "Your profile, tickets, phone messages, hours and pay — all in one place.",
+    preheader: "Your email, your temporary password, and where to sign in.",
     heading: `Welcome to the team, ${firstNameOf(e.fullName)}`,
     paragraphs: [
       `Your personal ${esc(siteConfig.company.name)} team portal is ready.`,
       "In it you will find your profile, your tickets, your work phone number and its messages, your hours and earnings, and where to add your bank account for payments.",
-      `Sign in with this email address: <strong style="color:${NAVY};">${esc(e.loginEmail)}</strong>. We email you a 6-digit code each time — there is no password to remember.`,
+      `Here are your login details:<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:10px;">${box("Email", e.workEmail)}${box("Temporary password", e.tempPassword)}</table>`,
+      "When you first sign in, you will be asked to choose your own password. The temporary password above works for 7 days.",
     ],
-    button: { label: "Open my portal", url: `${e.portalUrl}/login` },
-    note: `Or copy this link: <a href="${esc(e.portalUrl)}/login" style="color:${LINK};">${esc(e.portalUrl)}/login</a>`,
+    button: { label: "Sign in to my portal", url: `${e.portalUrl}/login` },
+    note: `Keep these details to yourself. ${esc(siteConfig.company.name)} will never ask you for your password, your card number, your PIN or any bank code.`,
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Password changed                                                            */
+/* -------------------------------------------------------------------------- */
+
+export function teamPasswordChangedSubject(): string {
+  return `Your ${siteConfig.company.name} portal password was changed`;
+}
+
+export function teamPasswordChangedText(e: { fullName: string }): string {
+  return text([
+    `Hi ${firstNameOf(e.fullName)},`,
+    "",
+    "This is to confirm that the password for your team portal was just changed.",
+    "",
+    "If this was you, there is nothing to do.",
+    "If this was NOT you, please contact your manager straight away.",
+  ]);
+}
+
+export function teamPasswordChangedHtml(e: { fullName: string }): string {
+  return shell({
+    subject: teamPasswordChangedSubject(),
+    preheader: "If this was not you, contact your manager.",
+    heading: "Your password was changed",
+    paragraphs: [
+      `Hi ${esc(firstNameOf(e.fullName))}, this confirms that the password for your team portal was just changed.`,
+      "If this was you, there is nothing to do.",
+      "<strong>If this was not you</strong>, please contact your manager straight away.",
+    ],
   });
 }
 

@@ -21,7 +21,7 @@ export default async function TeamLoginPage() {
         <div className="card">
           <h1 className="font-display text-2xl font-extrabold text-navy-900">Sign in</h1>
           <p className="mt-1 text-sm text-navy-500">
-            Use the personal email address you applied with. We will email you a 6-digit code — there is no password.
+            Use your professional <strong className="text-navy-700">@workroute.team</strong> email and the password we sent you.
           </p>
           <LoginForm />
         </div>

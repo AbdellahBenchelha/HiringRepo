@@ -15,7 +15,8 @@ import { sendEmail } from "@/lib/email";
 import { escapeHtml, sendTelegramMessage } from "@/lib/telegram";
 import { siteConfig } from "@/config/site";
 import { BANKS, formatDay, formatUsd, maskIban } from "@/lib/teamShared";
-import { markAlertSent, type DayOff, type Payment, type StoredBank, type TeamMember, type Ticket } from "@/lib/teamStore";
+import { markAlertSent, setTempPassword, type DayOff, type Payment, type StoredBank, type TeamMember, type Ticket } from "@/lib/teamStore";
+import { encryptPassword, generateTempPassword, TEMP_PASSWORD_DAYS } from "@/lib/teamPassword";
 import {
   teamBankHtml,
   teamBankSubject,
@@ -29,6 +30,9 @@ import {
   teamInviteHtml,
   teamInviteSubject,
   teamInviteText,
+  teamPasswordChangedHtml,
+  teamPasswordChangedSubject,
+  teamPasswordChangedText,
   teamMailAlertHtml,
   teamMailAlertSubject,
   teamMailAlertText,
@@ -67,10 +71,34 @@ function errorOf(r: Awaited<ReturnType<typeof sendEmail>>): string {
   return r.ok ? "" : "skipped" in r ? r.skipped : r.error;
 }
 
-export async function sendTeamInvite(m: TeamMember) {
-  const e = { fullName: m.fullName, loginEmail: m.loginEmail, portalUrl: teamPortalUrl() };
+/** The welcome email with the member's email and a temporary password. */
+export async function sendTeamInvite(m: TeamMember, tempPassword: string) {
+  const e = { fullName: m.fullName, workEmail: m.workEmail ?? "", tempPassword, portalUrl: teamPortalUrl() };
   const r = await send(m, teamInviteSubject(), teamInviteHtml(e), teamInviteText(e));
   log("invite", m, r.ok, errorOf(r));
+  return r;
+}
+
+/**
+ * Give the member a fresh temporary password and email it to them with their
+ * sign-in email. Used when adding them and when they forget their password.
+ */
+export async function sendLoginDetails(m: TeamMember): Promise<{ ok: boolean; reason?: string }> {
+  if (!m.workEmail) return { ok: false, reason: "no_work_email" };
+  const temp = generateTempPassword();
+  const enc = encryptPassword(temp);
+  if (!enc) return { ok: false, reason: "no_key" };
+  const expiry = new Date(Date.now() + TEMP_PASSWORD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  await setTempPassword(m.id, enc, expiry);
+  const r = await sendTeamInvite(m, temp);
+  return { ok: r.ok, reason: r.ok ? undefined : errorOf(r) };
+}
+
+/** Tells the member (on their personal address) that their password changed. */
+export async function sendPasswordChanged(m: TeamMember) {
+  const e = { fullName: m.fullName };
+  const r = await send(m, teamPasswordChangedSubject(), teamPasswordChangedHtml(e), teamPasswordChangedText(e));
+  log("password changed", m, r.ok, errorOf(r));
   return r;
 }
 

@@ -96,9 +96,9 @@ import {
   teamBankHtml,
   teamBankSubject,
   teamBankText,
-  teamCodeHtml,
-  teamCodeSubject,
-  teamCodeText,
+  teamPasswordChangedHtml,
+  teamPasswordChangedSubject,
+  teamPasswordChangedText,
   teamDayOffHtml,
   teamDayOffSubject,
   teamDayOffText,
@@ -724,26 +724,26 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
   /* ---------------------------------------------------------------- */
   {
     id: "team-invite",
-    name: "Welcome to the team — portal invitation",
+    name: "Welcome to the team — login details",
     stage: "team",
-    when: "Sent when you add someone to the team (Accepted → Add to team, or Team → Add member), or press Send the invitation again on their Team page.",
+    when: "Sent when you add someone to the team (Accepted → Add to team, or Team → Add member), or press Send login details again on their Team page. Includes their professional email and a temporary password.",
     kind: "reactive",
     source: "teamInviteHtml",
     render: () => {
-      const e = { fullName: SAMPLE_NAME, loginEmail: "amina.example@gmail.com", portalUrl: teamPortalUrl() };
+      const e = { fullName: SAMPLE_NAME, workEmail: "amina.benali@workroute.team", tempPassword: "Kp7q-M4xR-a9zT", portalUrl: teamPortalUrl() };
       return { subject: teamInviteSubject(), html: teamInviteHtml(e), text: teamInviteText(e) };
     },
   },
   {
-    id: "team-code",
-    name: "Sign-in code",
+    id: "team-password-changed",
+    name: "Password changed",
     stage: "team",
-    when: "Sent every time a member asks to sign in to the portal. The code works for 10 minutes.",
+    when: "Sent to a member when they change their own portal password, so they know if it was not them.",
     kind: "reactive",
-    source: "teamCodeHtml",
+    source: "teamPasswordChangedHtml",
     render: () => {
-      const e = { fullName: SAMPLE_NAME, code: "482913" };
-      return { subject: teamCodeSubject(e.code), html: teamCodeHtml(e), text: teamCodeText(e) };
+      const e = { fullName: SAMPLE_NAME };
+      return { subject: teamPasswordChangedSubject(), html: teamPasswordChangedHtml(e), text: teamPasswordChangedText(e) };
     },
   },
   {

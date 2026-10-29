@@ -32,6 +32,7 @@ import { bankCryptoReady } from "@/lib/teamCrypto";
 import { MemberForm } from "@/components/admin/team/MemberForm";
 import { AdminAction, AdminDelete, AdminForm } from "@/components/admin/team/AdminAction";
 import { BankReveal } from "@/components/admin/team/BankReveal";
+import { PasswordReveal } from "@/components/admin/team/PasswordReveal";
 import { EntryRow } from "@/components/admin/team/EntryRow";
 import { DocumentUpload } from "@/components/admin/team/DocumentUpload";
 import { TicketForm } from "@/components/team/TicketForm";
@@ -157,8 +158,12 @@ export default async function AdminTeamMemberPage({
                   {s === "active" ? "Make active" : s === "paused" ? "Pause" : "Mark as left"}
                 </AdminAction>
               ))}
-              <AdminAction url={api} body={{ action: "invite" }} confirm={`Email the portal invitation to ${m.loginEmail}?`}>
-                {m.invitedAt ? "Send the invitation again" : "Send the invitation"}
+              <AdminAction
+                url={api}
+                body={{ action: "invite" }}
+                confirm={`Send login details (a new temporary password) to ${m.loginEmail}?`}
+              >
+                {m.invitedAt ? "Send login details again" : "Send login details"}
               </AdminAction>
               <AdminAction url={api} body={{ action: "signout" }} confirm="Sign them out of every device?">
                 Sign out of every device
@@ -182,6 +187,60 @@ export default async function AdminTeamMemberPage({
                 </dd>
               </div>
             </dl>
+          </Section>
+
+          <Section title="Password">
+            {m.workEmail ? (
+              m.password ? (
+                <>
+                  <dl className="grid gap-3 text-sm sm:grid-cols-3">
+                    <div>
+                      <dt className="text-navy-400">Sign-in email</dt>
+                      <dd className="font-semibold text-navy-900">{m.workEmail}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-navy-400">Password</dt>
+                      <dd>
+                        <PasswordReveal memberId={id} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-navy-400">State</dt>
+                      <dd className="font-semibold text-navy-900">
+                        {m.mustChangePassword ? "Temporary — not yet changed" : "Chosen by the member"}
+                      </dd>
+                    </div>
+                  </dl>
+                  {(m.passwordViews ?? []).length ? (
+                    <details className="mt-3 text-sm">
+                      <summary className="cursor-pointer font-semibold text-navy-600">
+                        Password viewed {m.passwordViews!.length}×
+                      </summary>
+                      <ul className="mt-2 space-y-1 text-navy-500" data-password-views>
+                        {m.passwordViews!.slice(0, 20).map((v) => (
+                          <li key={`${v.at}-${v.by}`}>
+                            {formatDateTime(v.at)} — {v.by}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
+                  <p className="mt-3 text-xs text-navy-400">
+                    If the member forgets their password, press Show and send it to them. Press “Send login details
+                    again” above to give them a new temporary one instead.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-navy-500">
+                  No password yet. Press <strong>Send login details</strong> above to email them their email and a
+                  temporary password.
+                </p>
+              )
+            ) : (
+              <p className="text-sm text-navy-500">
+                Add a professional email in <strong>Details</strong> below, then send their login details.
+              </p>
+            )}
           </Section>
 
           <Section title="Getting started">

@@ -112,6 +112,19 @@ export interface TeamMember {
   bankRejected?: { at: string; by: string; reason: string };
   bankViews?: { at: string; by: string }[];
   onboarding?: { profileConfirmedAt?: string; mailboxOpenedAt?: string; rulesReadAt?: string };
+  /** The portal password, encrypted (AES-256-GCM) so it can be read back. */
+  password?: string;
+  /** When the member last set their own password. */
+  passwordSetAt?: string;
+  /** A temporary password from a recruiter must be changed at first sign-in. */
+  mustChangePassword?: boolean;
+  /** A temporary password stops working after this time. */
+  tempPasswordExpiry?: string;
+  /** Wrong-password tries in a row, and how long the account is locked. */
+  passwordTries?: number;
+  passwordLockedUntil?: string;
+  /** Each time a recruiter read this member's password. */
+  passwordViews?: { at: string; by: string }[];
   dismissedAnnouncements?: string[];
   /** The last "you have something new" email of each kind, to space them out. */
   alertSentAt?: Partial<Record<"ticket" | "phone" | "mail", string>>;
@@ -329,6 +342,12 @@ export async function getMemberByCandidate(candidateId: string): Promise<TeamMem
   return (await readTeam()).members.find((m) => m.candidateId === candidateId) ?? null;
 }
 
+/** Find a member by their professional @workroute.team address (sign-in). */
+export async function getMemberByWorkEmail(email: string): Promise<TeamMember | null> {
+  const want = normaliseEmail(email);
+  return (await readTeam()).members.find((m) => m.workEmail && normaliseEmail(m.workEmail) === want) ?? null;
+}
+
 export interface NewMember {
   candidateId?: string;
   fullName: string;
@@ -521,6 +540,60 @@ export async function revealBank(
   });
   const stored = which === "pending" ? m?.bankPending : m?.bank;
   return stored ? decryptSecret(stored.ibanEnc) : null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Passwords                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Give the member a temporary password (already encrypted), to be changed at
+ * their next sign-in. Clears any lock. Returns the member as saved.
+ */
+export function setTempPassword(id: string, encrypted: string, expiry: string): Promise<TeamMember | null> {
+  return mutateMember(id, (m) => {
+    m.password = encrypted;
+    m.mustChangePassword = true;
+    m.tempPasswordExpiry = expiry;
+    m.passwordTries = 0;
+    delete m.passwordLockedUntil;
+  });
+}
+
+/** Store a password the member chose themselves; signs out other devices. */
+export function setOwnPassword(id: string, encrypted: string): Promise<TeamMember | null> {
+  return mutateMember(id, (m) => {
+    m.password = encrypted;
+    m.passwordSetAt = nowIso();
+    m.mustChangePassword = false;
+    m.passwordTries = 0;
+    delete m.tempPasswordExpiry;
+    delete m.passwordLockedUntil;
+    m.sessionVersion = (m.sessionVersion ?? 1) + 1;
+  });
+}
+
+/** Record a wrong password; locks the account after too many in a row. */
+export function recordPasswordFailure(id: string, maxTries: number, lockMs: number): Promise<TeamMember | null> {
+  return mutateMember(id, (m) => {
+    m.passwordTries = (m.passwordTries ?? 0) + 1;
+    if (m.passwordTries >= maxTries) m.passwordLockedUntil = new Date(Date.now() + lockMs).toISOString();
+  });
+}
+
+export function resetPasswordFailures(id: string): Promise<TeamMember | null> {
+  return mutateMember(id, (m) => {
+    m.passwordTries = 0;
+    delete m.passwordLockedUntil;
+  });
+}
+
+/** The member's password in clear, for a recruiter who pressed Show. Logged. */
+export async function revealPassword(id: string, by: string): Promise<string | null> {
+  const m = await mutateMember(id, (x) => {
+    x.passwordViews = [{ at: nowIso(), by }, ...(x.passwordViews ?? [])].slice(0, 50);
+  });
+  return m?.password ? decryptSecret(m.password) : null;
 }
 
 /* -------------------------------------------------------------------------- */

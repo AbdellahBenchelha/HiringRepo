@@ -2,78 +2,90 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { isValidEmail } from "@/lib/validation";
-import { checkLoginCode, describeDevice, issueLoginCode, setMemberCookies } from "@/lib/teamAuth";
-import { recordSignIn } from "@/lib/teamStore";
-import { sendLoginCode } from "@/lib/teamNotify";
+import { canSignIn, describeDevice, setMemberCookies } from "@/lib/teamAuth";
+import {
+  getMemberByWorkEmail,
+  recordPasswordFailure,
+  recordSignIn,
+  resetPasswordFailures,
+} from "@/lib/teamStore";
+import { bankCryptoReady } from "@/lib/teamCrypto";
+import { passwordMatches, PASSWORD_MAX_TRIES, PASSWORD_LOCK_MS } from "@/lib/teamPassword";
 
 /**
- * Team portal sign-in, in two steps.
+ * Team portal sign-in with a professional email and a password.
  *
- *   POST { action: "code", email }          email a six-digit code
- *   POST { action: "verify", email, code }  check it and sign in
+ *   POST { email, password }
  *
- * The first step answers the same whether or not the address belongs to a
- * member, so the form cannot be used to find out who is on the team.
+ * The answer is the same whether the email is unknown or the password is
+ * wrong, so the form cannot be used to find out who is on the team. An account
+ * is locked for a while after several wrong tries. There is no self-service
+ * reset: a member who forgets asks a recruiter, who can read and resend it.
  */
 
 export const runtime = "nodejs";
 
+const GENERIC = "That email or password is not right.";
+
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  const parsed = await readJsonBody<{ action?: string; email?: unknown; code?: unknown }>(req, 2 * 1024);
+  if (!bankCryptoReady()) {
+    return NextResponse.json(
+      { ok: false, problems: ["Sign-in is not set up yet. Please contact your manager."] },
+      { status: 503 },
+    );
+  }
+
+  const parsed = await readJsonBody<{ email?: unknown; password?: unknown }>(req, 4 * 1024);
   if (!parsed.ok) return badBodyResponse(parsed.reason);
   const email = typeof parsed.data.email === "string" ? parsed.data.email.trim() : "";
-  if (!isValidEmail(email)) {
-    return NextResponse.json({ ok: false, problems: ["Enter the email address you applied with."] }, { status: 400 });
+  const password = typeof parsed.data.password === "string" ? parsed.data.password : "";
+  if (!isValidEmail(email) || !password) {
+    return NextResponse.json({ ok: false, problems: ["Enter your professional email and password."] }, { status: 400 });
   }
-  const who = email.toLowerCase();
 
-  if (parsed.data.action === "code") {
-    const byIp = rateLimit(`team-code-ip:${ip}`, 10, 15 * 60 * 1000);
-    if (!byIp.ok) return tooManyRequests(byIp.retryAfter, "team-code");
-    const byEmail = rateLimit(`team-code-email:${who}`, 4, 15 * 60 * 1000);
-    if (!byEmail.ok) {
+  const byIp = rateLimit(`team-login-ip:${ip}`, 30, 15 * 60 * 1000);
+  if (!byIp.ok) return tooManyRequests(byIp.retryAfter, "team-login");
+
+  const member = await getMemberByWorkEmail(email);
+
+  // No such member, no password yet, or they have left: one generic answer.
+  if (!member || !member.password || !canSignIn(member)) {
+    return NextResponse.json({ ok: false, problems: [GENERIC] }, { status: 400 });
+  }
+
+  // Locked after too many wrong tries.
+  if (member.passwordLockedUntil && Date.now() < Date.parse(member.passwordLockedUntil)) {
+    const mins = Math.max(1, Math.ceil((Date.parse(member.passwordLockedUntil) - Date.now()) / 60000));
+    return NextResponse.json(
+      { ok: false, problems: [`Too many wrong tries. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`] },
+      { status: 429 },
+    );
+  }
+
+  // A temporary password that was never changed in time no longer works.
+  if (member.mustChangePassword && member.tempPasswordExpiry && Date.now() > Date.parse(member.tempPasswordExpiry)) {
+    return NextResponse.json(
+      { ok: false, problems: ["Your temporary password has expired. Please ask your manager to send it again."] },
+      { status: 400 },
+    );
+  }
+
+  if (!passwordMatches(member.password, password)) {
+    const after = await recordPasswordFailure(member.id, PASSWORD_MAX_TRIES, PASSWORD_LOCK_MS);
+    if (after?.passwordLockedUntil && Date.now() < Date.parse(after.passwordLockedUntil)) {
       return NextResponse.json(
-        { ok: false, problems: ["Too many codes asked for. Please wait 15 minutes and try again."] },
+        { ok: false, problems: ["Too many wrong tries. Your account is locked for 15 minutes."] },
         { status: 429 },
       );
     }
-    const issued = await issueLoginCode(email);
-    if (issued) {
-      const sent = await sendLoginCode(issued.member, issued.code);
-      if (!sent.ok) {
-        return NextResponse.json(
-          { ok: false, problems: ["We could not send the code just now. Please try again in a minute."] },
-          { status: 502 },
-        );
-      }
-    }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: false, problems: [GENERIC] }, { status: 400 });
   }
 
-  if (parsed.data.action === "verify") {
-    const byIp = rateLimit(`team-verify-ip:${ip}`, 30, 15 * 60 * 1000);
-    if (!byIp.ok) return tooManyRequests(byIp.retryAfter, "team-verify");
-    const code = typeof parsed.data.code === "string" ? parsed.data.code.replace(/\D/g, "") : "";
-    if (code.length !== 6) {
-      return NextResponse.json({ ok: false, problems: ["Enter the 6-digit code from the email."] }, { status: 400 });
-    }
-    const result = await checkLoginCode(email, code);
-    if (!result.ok) {
-      const message =
-        result.reason === "expired"
-          ? "This code has expired. Ask for a new one."
-          : result.reason === "locked"
-            ? "Too many wrong tries. Ask for a new code."
-            : "That code is not right. Check the email and try again.";
-      return NextResponse.json({ ok: false, reason: result.reason, problems: [message] }, { status: 400 });
-    }
-    await setMemberCookies(result.member);
-    await recordSignIn(result.member.id, ip, describeDevice(req.headers.get("user-agent")));
-    // eslint-disable-next-line no-console
-    console.log(`[team] ${result.member.id} signed in`);
-    return NextResponse.json({ ok: true });
-  }
-
-  return NextResponse.json({ ok: false, error: "bad_action" }, { status: 400 });
+  await resetPasswordFailures(member.id);
+  await setMemberCookies(member);
+  await recordSignIn(member.id, ip, describeDevice(req.headers.get("user-agent")));
+  // eslint-disable-next-line no-console
+  console.log(`[team] ${member.id} signed in`);
+  return NextResponse.json({ ok: true, mustChange: member.mustChangePassword === true });
 }

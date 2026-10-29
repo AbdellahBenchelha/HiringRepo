@@ -7,6 +7,7 @@ import { PortalShell } from "@/components/team/PortalShell";
 import { ActionButton } from "@/components/team/ActionButton";
 import { Section } from "@/components/team/ui";
 import { CopyButton } from "@/components/admin/CopyButton";
+import { PasswordForm } from "@/components/team/PasswordForm";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -79,6 +80,15 @@ export default async function TeamProfilePage() {
             <Row label={`Your time (${member.schedule.timeZone})`} value={formatWindow(member.schedule)} />
             <Row label="UK time" value={windowInCompanyTime(member.schedule)} />
           </dl>
+        </Section>
+
+        <Section title="Password">
+          <p className="mb-4 text-sm text-navy-500">
+            Change the password you use to sign in. Changing it signs you out of every other device.
+          </p>
+          <div className="max-w-md">
+            <PasswordForm mode="change" />
+          </div>
         </Section>
 
         <Section

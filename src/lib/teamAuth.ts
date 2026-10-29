@@ -1,20 +1,18 @@
 /**
  * SERVER-ONLY sign-in for the team portal.
  *
- * No passwords. A member types the personal email they applied with and is
- * sent a six-digit code; the code is good for ten minutes and five tries, and
- * is held in memory only — a restart simply means asking for a new one.
- *
- * The session is a signed cookie, like the Admin Panel's, carrying the
- * member's id and their session version. Raising the version (Sign out of
- * every device, or a recruiter doing it for them) retires every cookie issued
- * before, wherever it is. CSRF is the same double-submit as the Admin Panel.
+ * A member signs in with their professional @workroute.team address and a
+ * password (see teamPassword). The session is a signed cookie, like the Admin
+ * Panel's, carrying the member's id and their session version. Raising the
+ * version (Sign out of every device, a password change, or a recruiter doing
+ * it for them) retires every cookie issued before, wherever it is. CSRF is the
+ * same double-submit as the Admin Panel.
  */
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { newId } from "@/lib/id";
-import { getMember, getMemberByEmail, type TeamMember } from "@/lib/teamStore";
+import { getMember, type TeamMember } from "@/lib/teamStore";
 
 const DEV_SECRET = "workroute-admin-dev-secret-change-me";
 const BASE =
@@ -31,9 +29,6 @@ const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const TEAM_COOKIE = "wr_team";
 export const TEAM_CSRF_COOKIE = "wr_team_csrf";
 export const TEAM_SESSION_MAX_AGE = 60 * 60 * 24 * 30;
-
-const CODE_TTL_MS = 10 * 60 * 1000;
-const CODE_TRIES = 5;
 
 function refused(): boolean {
   return IS_PRODUCTION && BASE === DEV_SECRET;
@@ -91,8 +86,17 @@ export async function getMemberSession(): Promise<{ member: TeamMember; csrf: st
   return { member, csrf: p.csrf };
 }
 
-/** Portal pages: the signed-in member, or off to the sign-in page. */
+/** Portal pages: the signed-in member, or off to the sign-in page. A member
+ * on a temporary password is sent to choose one before anything else. */
 export async function requireMember(): Promise<TeamMember> {
+  const s = await getMemberSession();
+  if (!s) redirect("/login");
+  if (s.member.mustChangePassword) redirect("/set-password");
+  return s.member;
+}
+
+/** The choose-a-password page: the signed-in member, without the gate above. */
+export async function requireMemberForPassword(): Promise<TeamMember> {
   const s = await getMemberSession();
   if (!s) redirect("/login");
   return s.member;
@@ -117,55 +121,6 @@ export async function clearMemberCookies(): Promise<void> {
   const store = await cookies();
   store.delete(TEAM_COOKIE);
   store.delete(TEAM_CSRF_COOKIE);
-}
-
-/* -------------------------------------------------------------------------- */
-/* Sign-in codes                                                               */
-/* -------------------------------------------------------------------------- */
-
-interface PendingCode {
-  hash: string;
-  expires: number;
-  tries: number;
-}
-
-// On globalThis so every route bundle sees the same codes.
-const g = globalThis as unknown as { __teamCodes?: Map<string, PendingCode> };
-const codes = (g.__teamCodes ??= new Map<string, PendingCode>());
-
-function hashCode(memberId: string, code: string): string {
-  return crypto.createHmac("sha256", SECRET).update(`${memberId}:${code}`).digest("hex");
-}
-
-/** A fresh code for the member with this email, or null if there is none. */
-export async function issueLoginCode(email: string): Promise<{ member: TeamMember; code: string } | null> {
-  if (refused()) return null;
-  const member = await getMemberByEmail(email);
-  if (!member || !canSignIn(member)) return null;
-  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
-  codes.set(member.id, { hash: hashCode(member.id, code), expires: Date.now() + CODE_TTL_MS, tries: 0 });
-  return { member, code };
-}
-
-export type CodeCheck =
-  | { ok: true; member: TeamMember }
-  | { ok: false; reason: "wrong" | "expired" | "locked" };
-
-export async function checkLoginCode(email: string, code: string): Promise<CodeCheck> {
-  const member = await getMemberByEmail(email);
-  if (!member || !canSignIn(member)) return { ok: false, reason: "wrong" };
-  const pending = codes.get(member.id);
-  if (!pending || Date.now() > pending.expires) {
-    codes.delete(member.id);
-    return { ok: false, reason: "expired" };
-  }
-  if (pending.tries >= CODE_TRIES) return { ok: false, reason: "locked" };
-  pending.tries += 1;
-  if (!safeEqual(pending.hash, hashCode(member.id, code.replace(/\D/g, "")))) {
-    return { ok: false, reason: pending.tries >= CODE_TRIES ? "locked" : "wrong" };
-  }
-  codes.delete(member.id);
-  return { ok: true, member };
 }
 
 /** "Chrome on Android" from a user agent — enough to recognise a device. */

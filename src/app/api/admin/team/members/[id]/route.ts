@@ -13,7 +13,8 @@ import {
   setRate,
   signOutEverywhere,
 } from "@/lib/teamStore";
-import { sendBankDecision, sendTeamInvite } from "@/lib/teamNotify";
+import { sendBankDecision, sendLoginDetails } from "@/lib/teamNotify";
+import { revealPassword } from "@/lib/teamStore";
 import { MEMBER_STATUSES, type MemberStatus } from "@/lib/teamShared";
 import { readBanks, readDate, readEmail, readHours, readMoney, readPhone, readSchedule, readText } from "@/lib/teamValidate";
 
@@ -109,12 +110,35 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ ok: true });
     }
     case "invite": {
-      const sent = await sendTeamInvite(member);
+      // Makes a fresh temporary password and emails the login details.
+      if (!member.workEmail) {
+        return NextResponse.json(
+          { ok: false, problems: ["Give this member a professional email first, then send their login details."] },
+          { status: 409 },
+        );
+      }
+      const sent = await sendLoginDetails(member);
       if (!sent.ok) {
-        return NextResponse.json({ ok: false, problems: ["The invitation could not be sent."] }, { status: 502 });
+        const msg =
+          sent.reason === "no_key"
+            ? "Passwords are not set up on the server (TEAM_BANK_KEY)."
+            : "The login details could not be sent.";
+        return NextResponse.json({ ok: false, problems: [msg] }, { status: 502 });
       }
       await recordInvite(id);
       return NextResponse.json({ ok: true });
+    }
+    case "password_reveal": {
+      const password = await revealPassword(id, by);
+      if (!password) {
+        return NextResponse.json(
+          { ok: false, problems: ["No password is set for this member yet. Send their login details."] },
+          { status: 409 },
+        );
+      }
+      // eslint-disable-next-line no-console
+      console.log(`[team] ${by} viewed the password of ${id}`);
+      return NextResponse.json({ ok: true, password });
     }
     case "signout":
       await signOutEverywhere(id);
