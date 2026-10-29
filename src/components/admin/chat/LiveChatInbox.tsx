@@ -13,7 +13,9 @@ import { PortalLoginButton } from "@/components/admin/chat/PortalLoginButton";
 import {
   MAX_MESSAGE,
   fillOnboarding,
+  needsAttention,
   type AdminSessionView,
+  type ChatKind,
   type ChatSummary,
   type OnboardingMessage,
 } from "@/lib/chat";
@@ -88,16 +90,26 @@ function beep() {
   }
 }
 
+/** The two kinds of chat, each in its own tab. */
+const TABS: { kind: ChatKind; label: string; icon: "headset" | "usersGroup" }[] = [
+  { kind: "interview", label: "Interview chat", icon: "headset" },
+  { kind: "onboarding", label: "Onboarding chat", icon: "usersGroup" },
+];
+
 export function LiveChatInbox({
   questions,
   onboarding = [],
   initialId,
+  initialTab = "interview",
 }: {
   questions: string[];
   /** Ready-made portal explanations, for onboarding chats. */
   onboarding?: OnboardingMessage[];
   initialId?: string;
+  initialTab?: ChatKind;
 }) {
+  const [tab, setTab] = useState<ChatKind>(initialTab);
+  const tabSynced = useRef(!initialId);
   const [list, setList] = useState<ChatSummary[] | null>(null);
   const [health, setHealth] = useState<Health>("ok");
   const [selected, setSelected] = useState<string | undefined>(initialId);
@@ -213,9 +225,10 @@ export function LiveChatInbox({
     if (autoPicked.current || !list) return;
     autoPicked.current = true;
     if (selected || !window.matchMedia("(min-width: 768px)").matches) return;
-    const first = list.find((s) => s.status === "waiting") ?? list.find((s) => s.status === "active");
+    const mine = list.filter((s) => s.kind === tab);
+    const first = mine.find((s) => s.status === "waiting") ?? mine.find((s) => s.status === "active");
     if (first) setSelected(first.id);
-  }, [list, selected]);
+  }, [list, selected, tab]);
 
   /* -- the open conversation ---------------------------------------------- */
   const applySession = useCallback((s: AdminSessionView) => {
@@ -231,6 +244,32 @@ export function LiveChatInbox({
       return { ...p, [s.id]: mine.filter((x) => !s.messages.some((m) => m.clientId === x.clientId)) };
     });
   }, []);
+
+  // Opened from a link to one conversation (Telegram): show the tab it is in.
+  useEffect(() => {
+    if (tabSynced.current || !open || open.id !== initialId) return;
+    tabSynced.current = true;
+    setTab(open.kind);
+  }, [open, initialId]);
+
+  function switchTab(k: ChatKind) {
+    if (k === tab) return;
+    setTab(k);
+    tabSynced.current = true;
+    setShowQuestions(false);
+    setActionError("");
+    // On a wide screen, open whoever is waiting longest in that tab.
+    const mine = (list ?? []).filter((s) => s.kind === k);
+    const first = window.matchMedia("(min-width: 768px)").matches
+      ? mine.find((s) => s.status === "waiting") ?? mine.find((s) => s.status === "active")
+      : undefined;
+    setSelected(first?.id);
+    try {
+      window.history.replaceState(null, "", k === "onboarding" ? "/admin/chat?tab=onboarding" : "/admin/chat");
+    } catch {
+      /* the address just does not follow */
+    }
+  }
 
   const isEnded = open?.id === selected && open?.status === "ended";
   useEffect(() => {
@@ -418,14 +457,21 @@ export function LiveChatInbox({
     return (q: string) => said.has(q.trim());
   }, [open?.messages]);
 
+  const attention = useMemo(() => {
+    const n: Record<ChatKind, number> = { interview: 0, onboarding: 0 };
+    for (const s of list ?? []) if (needsAttention(s)) n[s.kind] += 1;
+    return n;
+  }, [list]);
+
   const groups = useMemo(() => {
-    const l = list ?? [];
+    const l = (list ?? []).filter((s) => s.kind === tab);
     return [
       { key: "waiting", title: "Waiting", items: l.filter((s) => s.status === "waiting") },
       { key: "active", title: "Active", items: l.filter((s) => s.status === "active") },
       { key: "ended", title: "Ended", items: l.filter((s) => s.status === "ended") },
     ];
-  }, [list]);
+  }, [list, tab]);
+  const tabEmpty = !!list && !groups.some((g) => g.items.length);
 
   const view = open && open.id === selected ? open : null;
 
@@ -453,6 +499,37 @@ export function LiveChatInbox({
         </div>
       ) : null}
 
+      <div role="tablist" aria-label="Chats" className="inline-flex flex-wrap gap-1 rounded-2xl border border-navy-100 bg-white p-1 shadow-soft">
+        {TABS.map((t) => {
+          const on = t.kind === tab;
+          const n = attention[t.kind];
+          return (
+            <button
+              key={t.kind}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              data-chat-tab={t.kind}
+              onClick={() => switchTab(t.kind)}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition ${
+                on ? "bg-navy-900 text-white" : "text-navy-600 hover:bg-navy-50 hover:text-navy-900"
+              }`}
+            >
+              <Icon name={t.icon} className={`h-4 w-4 ${on ? "text-brand-400" : ""}`} />
+              {t.label}
+              {n ? (
+                <span
+                  data-chat-tab-count={t.kind}
+                  className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white"
+                >
+                  {n}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="chat-inbox-h grid min-h-[520px] overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-soft md:grid-cols-[320px_1fr]">
         {/* ---- conversations ---- */}
         <aside className={`${selected ? "hidden md:flex" : "flex"} min-h-0 flex-col border-r border-navy-100 bg-navy-50/40`}>
@@ -471,14 +548,16 @@ export function LiveChatInbox({
           <div className="min-h-0 flex-1 overflow-y-auto" data-chat-list>
             {list === null ? (
               <p className="p-4 text-sm text-navy-500">{health === "ok" ? "Loading…" : "Could not load chats — retrying…"}</p>
-            ) : list.length === 0 ? (
-              <div className="p-6 text-center">
-                <Icon name="headset" className="mx-auto h-8 w-8 text-navy-300" />
-                <p className="mt-2 text-sm font-semibold text-navy-700">No chats yet</p>
+            ) : tabEmpty ? (
+              <div className="p-6 text-center" data-chat-empty={tab}>
+                <Icon name={tab === "onboarding" ? "usersGroup" : "headset"} className="mx-auto h-8 w-8 text-navy-300" />
+                <p className="mt-2 text-sm font-semibold text-navy-700">
+                  {tab === "onboarding" ? "No onboarding chats yet" : "No interview chats yet"}
+                </p>
                 <p className="mt-1 text-xs text-navy-500">
-                  Send a final interview chat link from a candidate&rsquo;s View info, or an onboarding
-                  chat from the Agreement tab. When they press Start chat, they appear here and you get
-                  a Telegram message.
+                  {tab === "onboarding"
+                    ? "Accept a signed agreement, then press Invite to onboarding chat in View info → Agreement. When they press Start chat, they appear here and you get a Telegram message."
+                    : "Send a final interview chat link from a candidate’s View info. When they press Start chat, they appear here and you get a Telegram message."}
                 </p>
               </div>
             ) : (
@@ -523,11 +602,7 @@ export function LiveChatInbox({
                             </span>
                           </span>
                           <span className="flex items-center gap-1.5 truncate text-[11px] text-navy-500">
-                            {s.kind === "onboarding" ? (
-                              <span data-chat-kind="onboarding" className="shrink-0 rounded-full bg-brand-500 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-navy-900">
-                                Onboarding
-                              </span>
-                            ) : s.candidateStatus === FULL_VERIFIED ? (
+                            {s.kind !== "onboarding" && s.candidateStatus === FULL_VERIFIED ? (
                               <span className="shrink-0 rounded-full bg-emerald-600 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white">
                                 Full verified
                               </span>
@@ -658,6 +733,7 @@ export function LiveChatInbox({
                     <LiveNowButton
                       key={view.id}
                       candidateId={view.candidateId}
+                      chat={view.kind}
                       candidateName={view.candidateName}
                       email={view.candidateEmail}
                       reminders={view.reminders ?? []}
@@ -831,7 +907,7 @@ export function LiveChatInbox({
               {view.status === "ended" ? (
                 <div className="border-t border-navy-100 bg-white px-4 py-3 text-xs text-navy-500">
                   This chat has ended and cannot be reopened. To talk again, send a new chat link from
-                  their View info.
+                  their View info{view.kind === "onboarding" ? " → Agreement" : ""}.
                 </div>
               ) : (
                 <div className="border-t border-navy-100 bg-white">

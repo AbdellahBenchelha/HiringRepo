@@ -473,7 +473,11 @@ export interface Candidate {
    */
   chatLinkSentAt?: string;
   chatLinks?: string[];
-  /** Which of chatLinks were onboarding-chat invitations (lib/chat ChatKind). */
+  /**
+   * Onboarding-chat links, oldest first — kept apart from the interview links
+   * above, so sending one kind never replaces or closes the other. The last is
+   * the live one. See lib/chat ChatKind.
+   */
   onboardingChatLinks?: string[];
   /** "Our team is live now" emails, oldest first — see lib/chat. */
   liveReminders?: LiveReminder[];
@@ -520,9 +524,9 @@ async function readAll(): Promise<Candidate[]> {
     return [];
   }
 
+  let data: unknown;
   try {
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? (data as Candidate[]) : [];
+    data = JSON.parse(raw);
   } catch {
     /**
      * A file that exists but will not parse is damage, not emptiness, and the
@@ -532,6 +536,21 @@ async function readAll(): Promise<Candidate[]> {
      */
     throw new Error(`${FILE} exists but could not be parsed as JSON`);
   }
+  if (!Array.isArray(data)) return [];
+  for (const c of data as Candidate[]) separateChatLinks(c);
+  return data as Candidate[];
+}
+
+/**
+ * For a short while onboarding links were also kept with the interview links,
+ * and the newest of either kind was "the" chat link. Take them back out, so
+ * the interview link on record is an interview link. Saved on the next write.
+ */
+function separateChatLinks(c: Candidate): void {
+  const onboarding = c.onboardingChatLinks;
+  if (!onboarding?.length || !c.chatLinks?.some((t) => onboarding.includes(t))) return;
+  c.chatLinks = c.chatLinks.filter((t) => !onboarding.includes(t));
+  c.chatLinkSentAt = c.chatLinks[c.chatLinks.length - 1];
 }
 
 // Serialize writes so concurrent requests don't clobber the file.
@@ -1473,15 +1492,18 @@ export function clearResidenceImages(id: string): Promise<string[]> {
 
 /**
  * A chat link was emailed — for the final interview, or for onboarding. The
- * newest replaces any before it, whichever kind.
+ * newest of its kind replaces the one before; the other kind is not touched.
  */
 export function recordChatLink(id: string, sentAt: string, kind: "interview" | "onboarding" = "interview"): Promise<Candidate | null> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
+    if (kind === "onboarding") {
+      c.onboardingChatLinks = [...(c.onboardingChatLinks ?? []), sentAt];
+      return { list, result: c };
+    }
     c.chatLinks = [...(c.chatLinks ?? []), sentAt];
     c.chatLinkSentAt = sentAt;
-    if (kind === "onboarding") c.onboardingChatLinks = [...(c.onboardingChatLinks ?? []), sentAt];
     return { list, result: c };
   });
 }
@@ -1799,13 +1821,17 @@ export function setGstinByRecruiter(id: string, gstin: string, by?: string): Pro
  * Undo a chat link whose email never left, so the previous link keeps working.
  * Only when it is still the newest — a later send is not touched.
  */
-export function revertChatLink(id: string, sentAt: string): Promise<boolean> {
+export function revertChatLink(id: string, sentAt: string, kind: "interview" | "onboarding" = "interview"): Promise<boolean> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
+    if (kind === "onboarding") {
+      if (!c || c.onboardingChatLinks?.at(-1) !== sentAt) return { list, result: false };
+      c.onboardingChatLinks = (c.onboardingChatLinks ?? []).slice(0, -1);
+      return { list, result: true };
+    }
     if (!c || c.chatLinkSentAt !== sentAt) return { list, result: false };
     c.chatLinks = (c.chatLinks ?? []).filter((t) => t !== sentAt);
     c.chatLinkSentAt = c.chatLinks[c.chatLinks.length - 1];
-    if (c.onboardingChatLinks?.includes(sentAt)) c.onboardingChatLinks = c.onboardingChatLinks.filter((t) => t !== sentAt);
     return { list, result: true };
   });
 }

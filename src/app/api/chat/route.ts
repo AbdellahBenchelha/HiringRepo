@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
           session.candidateName,
           candidate.email,
           session.candidateCountry,
-          `${base}/admin/chat?s=${session.id}`,
+          `${base}/admin/chat?${session.kind === "onboarding" ? "tab=onboarding&" : ""}s=${session.id}`,
           session.kind === "onboarding" ? "onboarding" : "interview",
         ),
       ).catch(() => {});
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
           name,
           candidate.email,
           candidate.confirmedDetails?.country || candidate.country || undefined,
-          `${base}/admin/chat${s ? `?s=${s.id}` : ""}`,
+          `${base}/admin/chat?${access.kind === "onboarding" ? "tab=onboarding&" : ""}${s ? `s=${s.id}` : ""}`.replace(/[?&]$/, ""),
           !s ? "not_started" : chatStatus(s) === "active" ? "active" : "waiting",
           reminderKind(reminder),
         ),

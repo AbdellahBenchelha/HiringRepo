@@ -597,13 +597,19 @@ export async function markRead(sessionId: string, count: number): Promise<boolea
 }
 
 /**
- * A new link was sent: whatever conversation an older link opened is closed,
- * because a newer invitation is now the one in their inbox.
+ * A new link was sent: whatever conversation an older link of the same kind
+ * opened is closed, because a newer invitation is now the one in their inbox.
+ * The other kind is left alone — an onboarding invitation never closes an
+ * interview, nor the reverse.
  */
-export async function closeOlderSessions(candidateId: string, keepLinkSentAt: string): Promise<number> {
+export async function closeOlderSessions(
+  candidateId: string,
+  keepLinkSentAt: string,
+  kind: ChatKind = "interview",
+): Promise<number> {
   let closed = 0;
   for (const s of await listSessions()) {
-    if (s.candidateId !== candidateId || s.linkSentAt === keepLinkSentAt || s.endedAt) continue;
+    if (s.candidateId !== candidateId || s.linkSentAt === keepLinkSentAt || s.endedAt || s.kind !== kind) continue;
     const out = await mutate(s.id, (live) => {
       if (live.endedAt) return { result: false, changed: false };
       endInPlace(live, "replaced");

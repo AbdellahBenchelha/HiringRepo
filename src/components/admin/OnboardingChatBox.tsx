@@ -11,8 +11,8 @@ import type { CandidateView } from "@/lib/candidateView";
  * After the signed agreement is accepted: invite them to an onboarding chat,
  * where the portal login is sent and the portal explained (Live chat tab).
  *
- * Sending a chat link retires the one before, whichever kind — by now the
- * interview is long over, so that only ever closes an older onboarding link.
+ * Separate from the final-interview chat: sending this retires only an earlier
+ * onboarding link, and the interview link and chat are left as they are.
  */
 
 const ERRORS: Record<string, string> = {
@@ -39,8 +39,6 @@ export function OnboardingChatBox({
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const invites = candidate.onboardingChatLinks ?? [];
   const last = invites.at(-1);
-  // Still the live link? A newer link of the other kind would have replaced it.
-  const current = !!last && candidate.chatLinkSentAt === last;
   const hasEmail = !!candidate.email?.includes("@");
 
   async function send() {
@@ -51,13 +49,11 @@ export function OnboardingChatBox({
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
-        chatLinkSentAt?: string;
-        chatLinks?: string[];
         onboardingChatLinks?: string[];
       };
       if (data.ok) {
-        onChange({ chatLinkSentAt: data.chatLinkSentAt, chatLinks: data.chatLinks, onboardingChatLinks: data.onboardingChatLinks });
-        setResult({ ok: true, text: "Invitation sent. They appear in Live chat when they press Start chat." });
+        onChange({ onboardingChatLinks: data.onboardingChatLinks });
+        setResult({ ok: true, text: "Invitation sent. They appear in Live chat → Onboarding chat when they press Start chat." });
       } else {
         const why = res.status === 401 ? "your admin session has expired — sign in again" : ERRORS[data.error ?? ""] ?? data.error ?? "failed";
         setResult({ ok: false, text: `Not sent (${why}).` });
@@ -84,10 +80,9 @@ export function OnboardingChatBox({
             <p className="mt-2 text-xs font-medium text-navy-700" data-onboarding-chat-sent>
               <Icon name="mail" className="mr-1 inline h-3 w-3 align-[-2px]" />
               Invitation sent {fmt(last)}
-              {invites.length > 1 ? ` (${invites.length} sent in total)` : ""}
-              {current ? "" : " · replaced by a newer chat link"}.{" "}
-              <Link href="/admin/chat" className="font-semibold text-brand-700 underline">
-                Open Live chat
+              {invites.length > 1 ? ` (${invites.length} sent in total)` : ""}.{" "}
+              <Link href="/admin/chat?tab=onboarding" className="font-semibold text-brand-700 underline">
+                Open onboarding chats
               </Link>
             </p>
           ) : null}

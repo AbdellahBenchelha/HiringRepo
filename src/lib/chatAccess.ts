@@ -64,16 +64,29 @@ export async function resolveChatLink(
   const candidate = await candidateFor(read.link.id, !!opts.fresh);
   if (!candidate) return { ok: false, reason: "not_found" };
 
+  // Interview and onboarding links are two separate chains: each kind's
+  // newest link is current, whatever was sent of the other kind.
   const sentAt = read.link.sentAt;
-  const current = candidate.chatLinkSentAt === sentAt;
-  if (!current && !(candidate.chatLinks ?? []).includes(sentAt)) return { ok: false, reason: "invalid" };
+  const kind = chatLinkKind(candidate, sentAt);
+  const current = currentChatLink(candidate, kind) === sentAt;
+  if (!current && kind === "interview" && !(candidate.chatLinks ?? []).includes(sentAt)) {
+    return { ok: false, reason: "invalid" };
+  }
 
   const session = await sessionForLink(candidate.id, sentAt);
   if (!session) {
     if (!current) return { ok: false, reason: "replaced" };
     if (read.expired) return { ok: false, reason: "expired" };
   }
-  return { ok: true, candidate, link: read.link, session, current, kind: chatLinkKind(candidate, sentAt) };
+  return { ok: true, candidate, link: read.link, session, current, kind };
+}
+
+/** The newest link of one kind — the one that may start a chat. */
+export function currentChatLink(
+  c: Pick<Candidate, "chatLinkSentAt" | "onboardingChatLinks">,
+  kind: ChatKind,
+): string | undefined {
+  return kind === "onboarding" ? c.onboardingChatLinks?.at(-1) : c.chatLinkSentAt;
 }
 
 /** What a chat link was sent for — a conversation already open keeps its own. */

@@ -80,6 +80,7 @@ export function LiveNowButton({
   linkExpired,
   size = "md",
   kind = "live",
+  chat = "interview",
   onSent,
 }: {
   candidateId: string;
@@ -90,6 +91,8 @@ export function LiveNowButton({
   linkExpired?: boolean;
   size?: "sm" | "md";
   kind?: ReminderKind;
+  /** Which chat the email is about: the interview, or the onboarding chat. */
+  chat?: "interview" | "onboarding";
   onSent: (r: LiveNowResult) => void;
 }) {
   const [asking, setAsking] = useState(false);
@@ -107,7 +110,7 @@ export function LiveNowButton({
     setBusy(true);
     setResult("");
     try {
-      const res = await adminPost(`/api/admin/candidates/${candidateId}/chat`, { action: "remind", kind }, 20_000);
+      const res = await adminPost(`/api/admin/candidates/${candidateId}/chat`, { action: "remind", kind, ...(chat === "onboarding" ? { chat } : {}) }, 20_000);
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string } & Partial<LiveNowResult>;
       if (data.ok) {
         setResult("sent");

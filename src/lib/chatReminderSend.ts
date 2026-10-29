@@ -24,6 +24,7 @@ import {
   CHAT_LINK_TTL_DAYS,
   REMINDER_MIN_GAP_MS,
   reminderKind,
+  type ChatKind,
   type LiveReminder,
   type ReminderKind,
 } from "@/lib/chat";
@@ -38,7 +39,7 @@ import {
   chatReminderText,
 } from "@/lib/emailTemplates";
 import { campaignBlocked } from "@/lib/warmupStore";
-import { chatLinkKind, forgetCandidateStatuses } from "@/lib/chatAccess";
+import { chatLinkKind, currentChatLink, forgetCandidateStatuses } from "@/lib/chatAccess";
 import { newId } from "@/lib/id";
 import { siteConfig } from "@/config/site";
 
@@ -91,6 +92,7 @@ export type ChatReminderOutcome =
       reminders: LiveReminder[];
       chatLinkSentAt?: string;
       chatLinks?: string[];
+      onboardingChatLinks?: string[];
       link: string;
     }
   | { ok: false; reason: ChatReminderRefusal | string; refused?: boolean };
@@ -98,28 +100,35 @@ export type ChatReminderOutcome =
 export async function sendChatReminder(
   id: string,
   base: string,
-  opts: { kind: ReminderKind; by?: string; override?: boolean },
+  opts: {
+    kind: ReminderKind;
+    by?: string;
+    override?: boolean;
+    /** Which chat: the interview (default) or the onboarding chat. */
+    chat?: ChatKind;
+  },
 ): Promise<ChatReminderOutcome> {
   const { kind } = opts;
+  const linkKind: ChatKind = opts.chat === "onboarding" ? "onboarding" : "interview";
+  const onboarding = linkKind === "onboarding";
   const refuse = (reason: ChatReminderRefusal): ChatReminderOutcome => ({ ok: false, reason, refused: true });
 
   const candidate = await getCandidate(id);
   if (!candidate) return refuse("not_found");
   const email = (candidate.email || "").trim();
   if (!email.includes("@")) return refuse("no_email");
-  const current = candidate.chatLinkSentAt;
+  const current = currentChatLink(candidate, linkKind);
   if (!current) return refuse("no_link");
 
   const session = await sessionForLink(id, current);
-  // An onboarding invitation is reminded about as one, and a fresh link stays one.
-  const linkKind = session?.kind === "onboarding" ? "onboarding" : chatLinkKind(candidate, current);
-  const onboarding = linkKind === "onboarding";
   if (session?.endedAt) return refuse("ended");
   // A reminder to start is wrong for somebody who has: they are in the chat,
   // or waiting in it, and "you haven't started yet" would be false.
   if (kind === "nudge" && session) return refuse("started");
 
-  const last = (candidate.liveReminders ?? []).filter((r) => reminderKind(r) === kind).at(-1);
+  const last = (candidate.liveReminders ?? [])
+    .filter((r) => reminderKind(r) === kind && chatLinkKind(candidate, r.linkSentAt) === linkKind)
+    .at(-1);
   if (last && Date.now() - Date.parse(last.sentAt) < REMINDER_MIN_GAP_MS) return refuse("too_soon");
   // Asked before anything is written, so a held email never retires a link.
   if (!opts.override && (await campaignBlocked())) return refuse("warmup_limit");
@@ -169,7 +178,7 @@ export async function sendChatReminder(
 
   if (!result.ok) {
     await revertLiveReminder(id, reminder.id);
-    if (newLink) await revertChatLink(id, linkSentAt);
+    if (newLink) await revertChatLink(id, linkSentAt, linkKind);
     forgetCandidateStatuses();
     const reason = "skipped" in result ? result.skipped : result.error;
     // eslint-disable-next-line no-console
@@ -177,7 +186,7 @@ export async function sendChatReminder(
     return { ok: false, reason };
   }
 
-  if (newLink) await closeOlderSessions(id, linkSentAt);
+  if (newLink) await closeOlderSessions(id, linkSentAt, linkKind);
   forgetCandidateStatuses(); // the Live chat header shows it on its next poll
   // eslint-disable-next-line no-console
   console.log(`[chat] ${kind} reminder to ${id}${opts.by ? ` by ${opts.by}` : ""}${newLink ? " (with a fresh link)" : ""}`);
@@ -186,8 +195,9 @@ export async function sendChatReminder(
     newLink,
     reminder,
     reminders: (updated.liveReminders ?? []).filter((r) => r.linkSentAt === linkSentAt),
-    chatLinkSentAt: updated.chatLinkSentAt,
-    chatLinks: updated.chatLinks,
+    ...(onboarding
+      ? { onboardingChatLinks: updated.onboardingChatLinks ?? [] }
+      : { chatLinkSentAt: updated.chatLinkSentAt, chatLinks: updated.chatLinks }),
     link: chatLinkUrl(base, id, linkSentAt),
   };
 }
