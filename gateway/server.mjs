@@ -19,6 +19,7 @@
  * No dependencies: Node's own http module only.
  */
 import http from "node:http";
+import dns from "node:dns/promises";
 
 const PORT = Number(process.env.PORT || 8080);
 const rawTarget = process.env.TARGET_URL?.trim();
@@ -66,6 +67,70 @@ const HOP = new Set([
 // connection costs well under a millisecond.
 const agent = new http.Agent({ keepAlive: false, maxSockets: 256 });
 
+/** How long to wait for the main service to accept a connection. */
+const CONNECT_TIMEOUT_MS = 10_000;
+
+/**
+ * A connection to the main service that gives up after CONNECT_TIMEOUT_MS
+ * instead of waiting forever. On Railway's private network a wrong port or
+ * an unreachable service does not refuse — it just never answers, which
+ * looked like pages that load for ever.
+ */
+function withConnectTimeout(request) {
+  request.on("socket", (socket) => {
+    if (!socket.connecting) return;
+    const timer = setTimeout(() => {
+      const err = new Error(`could not connect to ${target.host} within ${CONNECT_TIMEOUT_MS / 1000}s`);
+      err.code = "CONNECT_TIMEOUT";
+      request.destroy(err);
+    }, CONNECT_TIMEOUT_MS);
+    socket.once("connect", () => clearTimeout(timer));
+    socket.once("close", () => clearTimeout(timer));
+  });
+  return request;
+}
+
+/**
+ * /__gateway/check — says whether the main service can be reached, and if
+ * not, why: the address TARGET_URL names, what it resolves to, and what
+ * happened when we tried. For setting up; it reveals nothing reachable from
+ * outside Railway.
+ */
+async function check(res) {
+  const lines = [`TARGET_URL: ${target.origin}`];
+  try {
+    const addrs = await dns.lookup(target.hostname, { all: true });
+    lines.push(`Address found: ${addrs.map((a) => a.address).join(", ")}`);
+  } catch (err) {
+    lines.push(`Address NOT found (${err.code}). The name before the port is wrong, or Private Networking is off on the main service.`);
+    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(lines.join("\n"));
+    return;
+  }
+  const result = await new Promise((resolve) => {
+    const r = withConnectTimeout(
+      http.request(
+        { protocol: target.protocol, hostname: target.hostname, port: target.port || 80, method: "GET", path: "/robots.txt", agent, headers: { host: ALLOWED[0] } },
+        (up) => {
+          up.resume();
+          resolve(`Main service answered: HTTP ${up.statusCode}. Everything is connected.`);
+        },
+      ),
+    );
+    r.on("error", (err) =>
+      resolve(
+        err.code === "CONNECT_TIMEOUT" || err.code === "ECONNREFUSED"
+          ? `NO answer on port ${target.port || 80} (${err.code}). The port is probably wrong: use the number in the main service's deploy log line "Local: http://localhost:____".`
+          : `Failed: ${err.code || err.message}`,
+      ),
+    );
+    r.end();
+  });
+  lines.push(result);
+  res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(lines.join("\n"));
+}
+
 function unavailable(res) {
   res.writeHead(502, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
   res.end(
@@ -86,6 +151,10 @@ const server = http.createServer((req, res) => {
     res.end("ok");
     return;
   }
+  if (req.url === "/__gateway/check") {
+    void check(res);
+    return;
+  }
   if (!ALLOWED.includes(host)) {
     res.writeHead(308, { Location: `https://${ALLOWED[0]}${req.url || "/"}` });
     res.end();
@@ -100,7 +169,7 @@ const server = http.createServer((req, res) => {
   headers["x-forwarded-proto"] ??= "https";
   headers["x-forwarded-host"] ??= hostHeader;
 
-  const upstream = http.request(
+  const upstream = withConnectTimeout(http.request(
     {
       protocol: target.protocol,
       hostname: target.hostname,
@@ -118,7 +187,7 @@ const server = http.createServer((req, res) => {
       res.writeHead(up.statusCode || 502, up.statusMessage, out);
       up.pipe(res);
     },
-  );
+  ));
 
   let visitorLeft = false;
   upstream.on("error", (err) => {

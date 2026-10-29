@@ -30,4 +30,6 @@ the team admin panel; this service stores nothing.
    gateway runs; `https://workroute.team` should show the portal sign-in.
 
 If the portal shows "WorkRoute Team is restarting", the gateway cannot reach
-the main service: check `TARGET_URL` (name and port) in its deploy logs.
+the main service. Open `https://workroute.team/__gateway/check`: it says
+whether the address in `TARGET_URL` was found and whether the main service
+answered on that port, and what to change if not.
