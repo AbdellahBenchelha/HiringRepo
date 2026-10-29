@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
 import {
+  addSystemMessage,
   appendMessage,
   endSession,
   getSession,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/chatStore";
 import {
   MAX_MESSAGE,
+  chatKindOf,
   chatStatus,
   cleanMessage,
   isSessionId,
@@ -18,11 +20,15 @@ import {
   type AdminSessionView,
   type ChatSession,
   type LiveReminder,
+  type PortalState,
 } from "@/lib/chat";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { candidateStatuses, forgetCandidateStatuses, liveRemindersFor } from "@/lib/chatAccess";
 import { setStatus } from "@/lib/store";
 import { FULL_VERIFIED } from "@/lib/candidateStatus";
+import { getMemberByCandidate, recordInvite } from "@/lib/teamStore";
+import { sendLoginDetails } from "@/lib/teamNotify";
+import { teamPortalUrl } from "@/lib/teamHost";
 
 /**
  * One conversation, from the recruiter's side.
@@ -34,6 +40,8 @@ import { FULL_VERIFIED } from "@/lib/candidateStatus";
  *   POST read           everything up to `count` has been seen
  *   POST typing         "is typing…" for the candidate, for a few seconds
  *   POST verify         mark the candidate Full verified — ended chats only
+ *   POST portalLogin    onboarding chats: email their team-portal login (a
+ *                       new temporary password) and say so in the chat
  */
 
 export const runtime = "nodejs";
@@ -45,9 +53,9 @@ function fromOf(v: unknown): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-type Facts = { candidateStatus?: string; reminders?: LiveReminder[] };
+type Facts = { candidateStatus?: string; reminders?: LiveReminder[]; portal?: PortalState };
 
-function view(s: ChatSession, from: number, { candidateStatus, reminders }: Facts = {}): AdminSessionView {
+function view(s: ChatSession, from: number, { candidateStatus, reminders, portal }: Facts = {}): AdminSessionView {
   const total = s.messages.length;
   // More than exists: the page holds a conversation the server does not.
   const reset = from > total;
@@ -58,6 +66,7 @@ function view(s: ChatSession, from: number, { candidateStatus, reminders }: Fact
     ...(reset ? { reset: true } : {}),
     id: s.id,
     candidateId: s.candidateId,
+    kind: chatKindOf(s),
     candidateName: s.candidateName,
     candidateEmail: s.candidateEmail,
     candidateCountry: s.candidateCountry,
@@ -75,16 +84,45 @@ function view(s: ChatSession, from: number, { candidateStatus, reminders }: Fact
     candidateTyping: status !== "ended" && presence.candidateTyping,
     candidateStatus,
     reminders,
+    ...(portal ? { portal } : {}),
+  };
+}
+
+/** Where an onboarding chat's candidate is with the team portal. */
+async function portalOf(s: ChatSession): Promise<PortalState> {
+  const base = teamPortalUrl();
+  const m = await getMemberByCandidate(s.candidateId);
+  return {
+    portalUrl: base,
+    addUrl: `${base}/admin/team/new?candidate=${encodeURIComponent(s.candidateId)}&from=chat`,
+    ...(m
+      ? {
+          member: {
+            id: m.id,
+            url: `${base}/admin/team/${m.id}`,
+            workEmail: m.workEmail,
+            firstName: m.fullName.split(/\s+/)[0] || m.fullName,
+            invitedAt: m.invitedAt,
+            passwordSet: !!m.passwordSetAt && !m.mustChangePassword,
+            lastSignInAt: m.lastSignInAt,
+            active: m.status === "active",
+          },
+        }
+      : {}),
   };
 }
 
 async function factsOf(s: ChatSession): Promise<Facts> {
-  const [statuses, reminders] = await Promise.all([
+  const [statuses, reminders, portal] = await Promise.all([
     candidateStatuses(),
     liveRemindersFor(s.candidateId, s.linkSentAt),
+    chatKindOf(s) === "onboarding" ? portalOf(s) : Promise.resolve(undefined),
   ]);
-  return { candidateStatus: statuses.get(s.candidateId), reminders };
+  return { candidateStatus: statuses.get(s.candidateId), reminders, portal };
 }
+
+/** Below this, a second login email is refused as a double click. */
+const LOGIN_MIN_GAP_MS = 60_000;
 
 const notFound = () => NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
@@ -166,6 +204,35 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       // eslint-disable-next-line no-console
       console.log(`[chat] ${s.candidateId} marked Full verified by ${by} from chat ${id}`);
       return NextResponse.json({ ok: true, session: view(s, from, { ...(await factsOf(s)), candidateStatus: updated.status }) });
+    }
+    case "portalLogin": {
+      const s = await getSession(id);
+      if (!s) return notFound();
+      if (chatKindOf(s) !== "onboarding") return NextResponse.json({ ok: false, error: "not_onboarding" }, { status: 409 });
+      if (s.endedAt) return NextResponse.json({ ok: false, error: "ended" }, { status: 409 });
+      const member = await getMemberByCandidate(s.candidateId);
+      if (!member) return NextResponse.json({ ok: false, error: "not_member" }, { status: 409 });
+      if (!member.workEmail) return NextResponse.json({ ok: false, error: "no_work_email" }, { status: 409 });
+      if (member.invitedAt && Date.now() - Date.parse(member.invitedAt) < LOGIN_MIN_GAP_MS) {
+        return NextResponse.json({ ok: false, error: "too_soon" }, { status: 409 });
+      }
+      const sent = await sendLoginDetails(member);
+      if (!sent.ok) {
+        // eslint-disable-next-line no-console
+        console.warn(`[chat] portal login for ${member.id} not sent: ${sent.reason}`);
+        return NextResponse.json({ ok: false, error: sent.reason ?? "send_failed" }, { status: 502 });
+      }
+      await recordInvite(member.id);
+      // Never the password itself: that is in the email, and only there.
+      const updated =
+        (await addSystemMessage(
+          id,
+          "Your team portal login details have been emailed to you. Please check your inbox (and your spam folder).",
+          by,
+        )) ?? s;
+      // eslint-disable-next-line no-console
+      console.log(`[chat] portal login sent to ${member.id} by ${by} from chat ${id}`);
+      return NextResponse.json({ ok: true, session: view(updated, from, await factsOf(updated)) });
     }
     case "read": {
       const s = await getSession(id);

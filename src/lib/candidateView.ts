@@ -218,6 +218,7 @@ export interface CandidateView {
   /** Final-interview chat links sent. The conversation is fetched on demand. */
   chatLinkSentAt?: string;
   chatLinks?: string[];
+  onboardingChatLinks?: string[];
   /**
    * Whether the current chat link has opened a conversation. Not on the record
    * itself — it lives in the chat store — so pages that need it (Accepted) set
@@ -439,6 +440,7 @@ export function toCandidateView(
     identityReminderSentAt: c.identityReminderSentAt,
     chatLinkSentAt: c.chatLinkSentAt,
     chatLinks: c.chatLinks,
+    onboardingChatLinks: c.onboardingChatLinks,
     chatRemindedAt: (c.liveReminders ?? []).filter((r) => (r.kind ?? "live") === "nudge").at(-1)?.sentAt,
     fullyVerifiedAt: c.fullyVerifiedAt,
     submissionAckSentAt: c.submissionAckSentAt,

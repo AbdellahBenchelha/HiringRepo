@@ -9,7 +9,14 @@ import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ChatMessages } from "@/components/admin/chat/ChatMessages";
 import { LiveNowButton } from "@/components/admin/chat/LiveNowButton";
 import { ChatProfilePopup } from "@/components/admin/chat/ChatProfilePopup";
-import { MAX_MESSAGE, type AdminSessionView, type ChatSummary } from "@/lib/chat";
+import { PortalLoginButton } from "@/components/admin/chat/PortalLoginButton";
+import {
+  MAX_MESSAGE,
+  fillOnboarding,
+  type AdminSessionView,
+  type ChatSummary,
+  type OnboardingMessage,
+} from "@/lib/chat";
 import { newId } from "@/lib/id";
 import { FULL_VERIFIED } from "@/lib/candidateStatus";
 
@@ -81,7 +88,16 @@ function beep() {
   }
 }
 
-export function LiveChatInbox({ questions, initialId }: { questions: string[]; initialId?: string }) {
+export function LiveChatInbox({
+  questions,
+  onboarding = [],
+  initialId,
+}: {
+  questions: string[];
+  /** Ready-made portal explanations, for onboarding chats. */
+  onboarding?: OnboardingMessage[];
+  initialId?: string;
+}) {
   const [list, setList] = useState<ChatSummary[] | null>(null);
   const [health, setHealth] = useState<Health>("ok");
   const [selected, setSelected] = useState<string | undefined>(initialId);
@@ -384,6 +400,19 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [draft, open?.id]);
 
+  const isOnboarding = open?.kind === "onboarding";
+  /** The ready-made portal messages for the open chat, filled in for this person. */
+  const portalMessages = useMemo(() => {
+    if (!open || open.kind !== "onboarding") return [];
+    const p = open.portal;
+    const values = {
+      portal: p?.portalUrl.replace(/^https?:\/\//, ""),
+      email: p?.member?.workEmail,
+      name: p?.member?.firstName || open.candidateName.split(/\s+/)[0],
+    };
+    return onboarding.map((m) => ({ title: m.title, text: fillOnboarding(m.text, values) }));
+  }, [open, onboarding]);
+
   const asked = useMemo(() => {
     const said = new Set((open?.messages ?? []).filter((m) => m.from === "recruiter").map((m) => m.text.trim()));
     return (q: string) => said.has(q.trim());
@@ -447,8 +476,9 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                 <Icon name="headset" className="mx-auto h-8 w-8 text-navy-300" />
                 <p className="mt-2 text-sm font-semibold text-navy-700">No chats yet</p>
                 <p className="mt-1 text-xs text-navy-500">
-                  Send a final interview chat link from a candidate&rsquo;s View info. When they press
-                  Start chat, they appear here and you get a Telegram message.
+                  Send a final interview chat link from a candidate&rsquo;s View info, or an onboarding
+                  chat from the Agreement tab. When they press Start chat, they appear here and you get
+                  a Telegram message.
                 </p>
               </div>
             ) : (
@@ -493,7 +523,11 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                             </span>
                           </span>
                           <span className="flex items-center gap-1.5 truncate text-[11px] text-navy-500">
-                            {s.candidateStatus === FULL_VERIFIED ? (
+                            {s.kind === "onboarding" ? (
+                              <span data-chat-kind="onboarding" className="shrink-0 rounded-full bg-brand-500 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-navy-900">
+                                Onboarding
+                              </span>
+                            ) : s.candidateStatus === FULL_VERIFIED ? (
                               <span className="shrink-0 rounded-full bg-emerald-600 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white">
                                 Full verified
                               </span>
@@ -589,6 +623,11 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                         View info
                       </span>
                     </button>
+                    {view.kind === "onboarding" ? (
+                      <span className="mt-0.5 inline-flex rounded-full bg-brand-500 px-2 py-px text-[10px] font-bold uppercase tracking-wide text-navy-900">
+                        Onboarding chat
+                      </span>
+                    ) : null}
                     <p className="truncate text-xs text-navy-500">
                       {view.status === "ended" ? (
                         <>{ago(view.endedAt, now) === "just now" ? "Ended just now" : `Ended ${ago(view.endedAt, now)} ago`}</>
@@ -613,6 +652,7 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
+                  {view.kind === "onboarding" ? <PortalLoginButton key={`portal-${view.id}`} view={view} onSent={applySession} /> : null}
                   {/* Here, and they are not: email them that the team is live. */}
                   {view.status !== "ended" && !view.candidateOnline ? (
                     <LiveNowButton
@@ -654,7 +694,7 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                       {/* The outcome, set in the same place the interview was
                           held. Once set it is a label, not a button: changing
                           it back is done from the status in View info. */}
-                      {view.candidateStatus === FULL_VERIFIED ? (
+                      {view.kind === "onboarding" ? null : view.candidateStatus === FULL_VERIFIED ? (
                         <span
                           data-full-verified="done"
                           className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white"
@@ -679,6 +719,39 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
 
               {actionError ? (
                 <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">{actionError}</p>
+              ) : null}
+
+              {view.kind === "onboarding" && view.portal ? (
+                <p
+                  data-portal-state={
+                    !view.portal.member ? "not_member" : view.portal.member.passwordSet ? "signed_in" : view.portal.member.invitedAt ? "sent" : "member"
+                  }
+                  className={`border-b px-4 py-1.5 text-[11px] font-medium ${
+                    view.portal.member?.passwordSet ? "border-green-200 bg-green-50 text-green-800" : "border-brand-200 bg-brand-50 text-navy-700"
+                  }`}
+                >
+                  <Icon name="key" className="mr-1 inline h-3 w-3 align-[-2px]" />
+                  {!view.portal.member ? (
+                    <>
+                      Not on the team yet. Press <strong>Add to team first</strong>, check the form and save,
+                      then come back here and press <strong>Send portal login</strong>.
+                    </>
+                  ) : view.portal.member.passwordSet ? (
+                    <>
+                      Signed in to the portal and chose their own password
+                      {view.portal.member.lastSignInAt ? ` · last sign-in ${agoText(view.portal.member.lastSignInAt, now)}` : ""}.
+                    </>
+                  ) : view.portal.member.invitedAt ? (
+                    <>Portal login emailed {agoText(view.portal.member.invitedAt, now)} · not signed in yet.</>
+                  ) : (
+                    <>
+                      On the team{view.portal.member.workEmail ? ` as ${view.portal.member.workEmail}` : ""} · portal login not sent yet.
+                    </>
+                  )}{" "}
+                  <a href={view.portal.member?.url ?? view.portal.addUrl} target="_blank" rel="noopener" className="font-semibold underline">
+                    {view.portal.member ? "Team page" : "Team panel"}
+                  </a>
+                </p>
               ) : null}
 
               {view.status !== "ended" && view.reminders?.length ? (
@@ -762,7 +835,41 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                 </div>
               ) : (
                 <div className="border-t border-navy-100 bg-white">
-                  {showQuestions ? (
+                  {showQuestions && isOnboarding ? (
+                    <div className="max-h-64 overflow-y-auto border-b border-navy-100 bg-navy-50/50 p-2" data-portal-messages>
+                      {portalMessages.length === 0 ? (
+                        <p className="p-2 text-xs text-navy-500">
+                          No portal messages. Add some in{" "}
+                          <Link href="/admin/settings/chat" className="font-semibold text-brand-700 underline">
+                            Settings → Live chat
+                          </Link>
+                          .
+                        </p>
+                      ) : (
+                        portalMessages.map((m, i) => (
+                          <button
+                            key={`${i}-${m.title}`}
+                            type="button"
+                            onClick={() => insertQuestion(m.text)}
+                            data-portal-message={m.title}
+                            className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-navy-700 transition hover:bg-white"
+                          >
+                            <span
+                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${
+                                asked(m.text) ? "bg-green-600 text-white" : "bg-navy-200 text-navy-600"
+                              }`}
+                            >
+                              {asked(m.text) ? <Icon name="check" className="h-2.5 w-2.5" /> : i + 1}
+                            </span>
+                            <span className={`min-w-0 ${asked(m.text) ? "text-navy-400" : ""}`}>
+                              <span className="block font-bold text-navy-900">{m.title}</span>
+                              <span className="line-clamp-2 whitespace-pre-line">{m.text}</span>
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : showQuestions ? (
                     <div className="max-h-56 overflow-y-auto border-b border-navy-100 bg-navy-50/50 p-2" data-saved-questions>
                       {questions.length === 0 ? (
                         <p className="p-2 text-xs text-navy-500">
@@ -807,9 +914,9 @@ export function LiveChatInbox({ questions, initialId }: { questions: string[]; i
                       className={`flex h-10 shrink-0 items-center gap-1 rounded-full border px-3 text-xs font-bold transition ${
                         showQuestions ? "border-brand-400 bg-brand-50 text-brand-800" : "border-navy-200 text-navy-600 hover:bg-navy-50"
                       }`}
-                      title="Saved questions"
+                      title={isOnboarding ? "Ready-made messages that explain the portal" : "Saved questions"}
                     >
-                      <Icon name="document" className="h-3.5 w-3.5" /> Questions
+                      <Icon name="document" className="h-3.5 w-3.5" /> {isOnboarding ? "Portal guide" : "Questions"}
                     </button>
                     {/* 16px on phones, where iOS zooms into any smaller field. */}
                     <textarea

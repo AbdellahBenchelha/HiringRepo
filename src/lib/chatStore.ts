@@ -30,13 +30,16 @@ import { writeFileAtomic } from "@/lib/atomicWrite";
 import { newId } from "@/lib/id";
 import {
   DEFAULT_HOURS,
+  DEFAULT_ONBOARDING,
   DEFAULT_QUESTIONS,
   MAX_MESSAGES,
   OLD_DEFAULT_HOURS,
+  chatKindOf,
   chatStatus,
   isChatSession,
   isSessionId,
   unreadCount,
+  type ChatKind,
   type ChatMessage,
   type ChatSender,
   type ChatSession,
@@ -66,6 +69,7 @@ const SESSION_FILE_RE = /^([A-Za-z0-9]{6,40})\.json$/;
 export interface SessionIndex {
   id: string;
   candidateId: string;
+  kind: ChatKind;
   linkSentAt: string;
   candidateName: string;
   candidateEmail?: string;
@@ -153,6 +157,7 @@ function indexOf(s: ChatSession): SessionIndex {
   return {
     id: s.id,
     candidateId: s.candidateId,
+    kind: chatKindOf(s),
     linkSentAt: s.linkSentAt,
     candidateName: s.candidateName,
     candidateEmail: s.candidateEmail,
@@ -445,6 +450,7 @@ function mutate<T>(
  */
 export function startSession(input: {
   candidateId: string;
+  kind?: ChatKind;
   linkSentAt: string;
   candidateName: string;
   candidateEmail?: string;
@@ -460,11 +466,18 @@ export function startSession(input: {
         }
       }
       const now = new Date().toISOString();
+      const { kind, ...rest } = input;
       const session: ChatSession = {
         id: newId(12),
-        ...input,
+        ...rest,
+        ...(kind === "onboarding" ? { kind } : {}),
         startedAt: now,
-        messages: [message("system", "Chat started. A recruiter will join shortly.")],
+        messages: [
+          message(
+            "system",
+            kind === "onboarding" ? "Chat started. Our team will join you shortly." : "Chat started. A recruiter will join shortly.",
+          ),
+        ],
         recruiterRead: 1,
         notifiedAt: now,
         lastMessageAt: now,
@@ -482,7 +495,7 @@ export type AppendResult =
 function joinInPlace(s: ChatSession, by?: string) {
   s.joinedAt = new Date().toISOString();
   s.joinedBy = by;
-  s.messages.push(message("system", "A recruiter joined the chat."));
+  s.messages.push(message("system", chatKindOf(s) === "onboarding" ? "Our team joined the chat." : "A recruiter joined the chat."));
   s.lastMessageAt = s.joinedAt;
   s.recruiterRead = s.messages.length;
 }
@@ -518,6 +531,24 @@ export async function appendMessage(
   return out.found ? out.result : { ok: false, reason: "not_found" };
 }
 
+/**
+ * A line from the system, not from either person — "your login details were
+ * emailed". Joins the chat first, like a recruiter's message, so it never
+ * appears before somebody is there to answer.
+ */
+export async function addSystemMessage(sessionId: string, text: string, by?: string): Promise<ChatSession | null> {
+  const out = await mutate(sessionId, (s) => {
+    if (s.endedAt || s.messages.length >= MAX_MESSAGES) return { result: null, changed: false };
+    if (!s.joinedAt) joinInPlace(s, by);
+    const m = message("system", text);
+    s.messages.push(m);
+    s.lastMessageAt = m.at;
+    s.recruiterRead = s.messages.length;
+    return { result: null, changed: true };
+  });
+  return out.found ? out.session : null;
+}
+
 export async function joinSession(sessionId: string, by?: string): Promise<ChatSession | null> {
   const out = await mutate(sessionId, (s) => {
     if (s.joinedAt || s.endedAt) return { result: null, changed: false };
@@ -536,7 +567,9 @@ function endInPlace(s: ChatSession, reason: "ended" | "replaced", by?: string) {
       "system",
       reason === "replaced"
         ? "This chat was closed because a new chat link was sent."
-        : "The chat has ended. Thank you for your time.",
+        : chatKindOf(s) === "onboarding"
+          ? "The chat has ended. Welcome to the team!"
+          : "The chat has ended. Thank you for your time.",
     ),
   );
   s.lastMessageAt = s.endedAt;
@@ -603,12 +636,16 @@ export async function getChatSettings(): Promise<ChatSettings & { isDefault: boo
   try {
     raw = await fs.readFile(settingsFile(), "utf8");
   } catch {
-    return { questions: DEFAULT_QUESTIONS, hours: DEFAULT_HOURS, isDefault: true };
+    return { questions: DEFAULT_QUESTIONS, onboarding: DEFAULT_ONBOARDING, hours: DEFAULT_HOURS, isDefault: true };
   }
   try {
     const s = JSON.parse(raw) as Partial<ChatSettings>;
     return {
       questions: Array.isArray(s.questions) ? s.questions.filter((q): q is string => typeof q === "string") : DEFAULT_QUESTIONS,
+      // Settings saved before onboarding chats existed have none: the defaults.
+      onboarding: Array.isArray(s.onboarding)
+        ? s.onboarding.filter((m): m is { title: string; text: string } => !!m && typeof m.title === "string" && typeof m.text === "string")
+        : DEFAULT_ONBOARDING,
       hours: typeof s.hours === "string" && !OLD_DEFAULT_HOURS.includes(s.hours) ? s.hours : DEFAULT_HOURS,
       updatedAt: typeof s.updatedAt === "string" ? s.updatedAt : undefined,
       isDefault: false,
@@ -616,12 +653,12 @@ export async function getChatSettings(): Promise<ChatSettings & { isDefault: boo
   } catch {
     // eslint-disable-next-line no-console
     console.error("[chat] chat-settings.json could not be parsed; showing the defaults");
-    return { questions: DEFAULT_QUESTIONS, hours: DEFAULT_HOURS, isDefault: true };
+    return { questions: DEFAULT_QUESTIONS, onboarding: DEFAULT_ONBOARDING, hours: DEFAULT_HOURS, isDefault: true };
   }
 }
 
 /** Replaces the settings whole — there is nothing in the old file to keep. */
-export function saveChatSettings(next: Pick<ChatSettings, "questions" | "hours">): Promise<ChatSettings> {
+export function saveChatSettings(next: Pick<ChatSettings, "questions" | "onboarding" | "hours">): Promise<ChatSettings> {
   return ready().then(() =>
     serial(async () => {
       const saved: ChatSettings = { ...next, updatedAt: new Date().toISOString() };

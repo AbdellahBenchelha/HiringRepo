@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
         "Candidate";
       ({ session, created } = await startSession({
         candidateId: candidate.id,
+        kind: access.kind,
         linkSentAt: link.sentAt,
         candidateName: name,
         candidateEmail: candidate.email || undefined,
@@ -162,6 +163,7 @@ export async function POST(req: NextRequest) {
           candidate.email,
           session.candidateCountry,
           `${base}/admin/chat?s=${session.id}`,
+          session.kind === "onboarding" ? "onboarding" : "interview",
         ),
       ).catch(() => {});
     }

@@ -11,6 +11,7 @@ import { mutateMember, signOutEverywhere } from "@/lib/teamStore";
  *   mailbox_opened         getting started: "I have opened my mailbox"
  *   rules_read             getting started: "I have read the rules"
  *   dismiss_announcement   hide one announcement, for them only
+ *   tour_done              the welcome tour was finished or closed: not shown again by itself
  */
 
 export const runtime = "nodejs";
@@ -39,6 +40,11 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({ ok: true });
     }
+    case "tour_done":
+      await mutateMember(member.id, (m) => {
+        m.onboarding = { ...(m.onboarding ?? {}), tourDoneAt: m.onboarding?.tourDoneAt ?? at };
+      });
+      return NextResponse.json({ ok: true });
     case "dismiss_announcement":
       if (typeof id !== "string" || !id) return NextResponse.json({ ok: false }, { status: 400 });
       await mutateMember(member.id, (m) => {

@@ -38,7 +38,7 @@ import {
   chatReminderText,
 } from "@/lib/emailTemplates";
 import { campaignBlocked } from "@/lib/warmupStore";
-import { forgetCandidateStatuses } from "@/lib/chatAccess";
+import { chatLinkKind, forgetCandidateStatuses } from "@/lib/chatAccess";
 import { newId } from "@/lib/id";
 import { siteConfig } from "@/config/site";
 
@@ -111,6 +111,9 @@ export async function sendChatReminder(
   if (!current) return refuse("no_link");
 
   const session = await sessionForLink(id, current);
+  // An onboarding invitation is reminded about as one, and a fresh link stays one.
+  const linkKind = session?.kind === "onboarding" ? "onboarding" : chatLinkKind(candidate, current);
+  const onboarding = linkKind === "onboarding";
   if (session?.endedAt) return refuse("ended");
   // A reminder to start is wrong for somebody who has: they are in the chat,
   // or waiting in it, and "you haven't started yet" would be false.
@@ -128,7 +131,7 @@ export async function sendChatReminder(
   const linkSentAt = newLink ? now : current;
   let updated = candidate;
   if (newLink) {
-    const u = await recordChatLink(id, linkSentAt);
+    const u = await recordChatLink(id, linkSentAt, linkKind);
     if (!u) return refuse("not_found");
     updated = u;
   }
@@ -142,13 +145,13 @@ export async function sendChatReminder(
   let subject: string, html: string, text: string;
   if (kind === "nudge") {
     const settings = await getChatSettings();
-    const payload = { fullName, chatUrl, hours: settings.hours || undefined, validUntil: validUntil(linkSentAt), newLink };
-    subject = chatReminderSubject();
+    const payload = { fullName, chatUrl, hours: settings.hours || undefined, validUntil: validUntil(linkSentAt), newLink, onboarding };
+    subject = chatReminderSubject(onboarding);
     html = chatReminderHtml(payload);
     text = chatReminderText(payload);
   } else {
-    const payload = { fullName, chatUrl, newLink, validDays: CHAT_LINK_TTL_DAYS };
-    subject = chatLiveNowSubject();
+    const payload = { fullName, chatUrl, newLink, validDays: CHAT_LINK_TTL_DAYS, onboarding };
+    subject = chatLiveNowSubject(onboarding);
     html = chatLiveNowHtml(payload);
     text = chatLiveNowText(payload);
   }

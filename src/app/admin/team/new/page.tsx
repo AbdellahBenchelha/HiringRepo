@@ -20,9 +20,13 @@ export const metadata: Metadata = { title: "Add team member", robots: { index: f
  * and timezone, the hours (weekly hours spread over their five days), the
  * rate if it was hourly in dollars, and the start date.
  */
-export default async function AdminTeamNewPage({ searchParams }: { searchParams: Promise<{ candidate?: string }> }) {
+export default async function AdminTeamNewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ candidate?: string; from?: string }>;
+}) {
   await requireAdmin();
-  const { candidate: candidateId } = await searchParams;
+  const { candidate: candidateId, from } = await searchParams;
   const c = candidateId ? await getCandidate(candidateId) : null;
   if (c) {
     const existing = await getMemberByCandidate(c.id);
@@ -58,7 +62,8 @@ export default async function AdminTeamNewPage({ searchParams }: { searchParams:
     timeZone,
     hoursPerDay: perDay,
     rate: hourlyUsd,
-    firstWorkDay: offer?.startDate || localDate(timeZone),
+    // The agreement's start date, when one was set for it, is the one they signed.
+    firstWorkDay: c?.agreementStartDate || offer?.startDate || localDate(timeZone),
     checkInRequired: false,
     allowedBanks: defaultBanksFor(country),
     notes: "",
@@ -85,7 +90,7 @@ export default async function AdminTeamNewPage({ searchParams }: { searchParams:
         ) : null}
       </header>
       <div className="card">
-        <MemberForm mode="new" initial={initial} />
+        <MemberForm mode="new" initial={initial} fromChat={from === "chat"} />
       </div>
     </AdminShell>
   );

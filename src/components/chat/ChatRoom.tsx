@@ -8,6 +8,7 @@ import {
   RECRUITER_NAME,
   splitLinks,
   type CandidateChatState,
+  type ChatKind,
   type PublicMessage,
 } from "@/lib/chat";
 import { newId } from "@/lib/id";
@@ -109,6 +110,7 @@ export function ChatRoom({
   firstName,
   position,
   hours,
+  kind = "interview",
   initial,
   reminder,
 }: {
@@ -116,11 +118,15 @@ export function ChatRoom({
   firstName: string;
   position?: string;
   hours: string;
+  /** An onboarding chat, after the agreement: different words, same chat. */
+  kind?: ChatKind;
   initial: CandidateChatState;
   /** Opened from a "we're live" email: tell the recruiter, once. */
   reminder?: string;
 }) {
   const hydrated = useHydrated();
+  const onboarding = kind === "onboarding";
+  const teamName = onboarding ? "WorkRoute Team" : RECRUITER_NAME;
   const [status, setStatus] = useState<CandidateChatState["status"]>(initial.status);
   const [messages, setMessages] = useState<PublicMessage[]>(initial.messages);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -475,7 +481,7 @@ export function ChatRoom({
   /* -- the link stopped working ------------------------------------------ */
   if (blocked) {
     return (
-      <Frame status="ended" statusLabel="Chat unavailable">
+      <Frame name={teamName} label={onboarding ? "Onboarding" : "Final interview"} status="ended" statusLabel="Chat unavailable">
         <div className="flex flex-1 items-center justify-center p-6">
           <div className="max-w-md rounded-3xl border border-navy-100 bg-white p-8 text-center shadow-sm">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-navy-100 text-navy-600">
@@ -502,33 +508,41 @@ export function ChatRoom({
   /* -- before Start -------------------------------------------------------- */
   if (status === "not_started") {
     return (
-      <Frame status="idle" statusLabel="Recruitment team">
+      <Frame name={teamName} label={onboarding ? "Onboarding" : "Final interview"} status="idle" statusLabel={onboarding ? "WorkRoute team" : "Recruitment team"}>
         <div className="flex flex-1 items-start justify-center overflow-y-auto px-4 py-8 sm:items-center sm:py-12">
           <div className="w-full max-w-lg">
             <div className="overflow-hidden rounded-3xl border border-navy-100 bg-white shadow-card">
               <div className="relative bg-navy-900 px-6 pb-8 pt-7 text-white sm:px-8">
                 <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-brand-500/20 blur-2xl" />
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-300">
-                  <Icon name="sparkles" className="h-3.5 w-3.5" /> Final stage
+                  <Icon name="sparkles" className="h-3.5 w-3.5" /> {onboarding ? "Welcome to the team" : "Final stage"}
                 </span>
                 <h1 className="mt-4 text-2xl font-extrabold leading-tight text-white sm:text-3xl">
-                  Hi {firstName}, welcome to your final interview
+                  {onboarding ? `Hi ${firstName}, let’s get you started` : `Hi ${firstName}, welcome to your final interview`}
                 </h1>
                 {position ? <p className="mt-2 text-sm text-navy-200">For the {position} role</p> : null}
               </div>
 
               <div className="px-6 py-6 sm:px-8">
                 <p className="text-sm leading-relaxed text-navy-600">
-                  This is a live text chat with our recruitment team. There is no video or call —
-                  you answer a few questions in writing, in your own words.
+                  {onboarding
+                    ? "This is a live text chat with our team. We send you the login for your WorkRoute team portal and show you how everything works."
+                    : "This is a live text chat with our recruitment team. There is no video or call — you answer a few questions in writing, in your own words."}
                 </p>
 
                 <ol className="mt-5 space-y-3">
-                  {[
-                    ["Press Start chat", "You join the queue and we are told you are here."],
-                    ["A recruiter joins you", "Usually within a few minutes during our hours."],
-                    ["Answer a few questions", "It takes about 15–20 minutes."],
-                  ].map(([title, sub], i) => (
+                  {(onboarding
+                    ? [
+                        ["Press Start chat", "We are told you are here."],
+                        ["We email your portal login", "Your professional email and a temporary password."],
+                        ["We show you the portal", "Mail, tickets, bank details and more — about 10 minutes."],
+                      ]
+                    : [
+                        ["Press Start chat", "You join the queue and we are told you are here."],
+                        ["A recruiter joins you", "Usually within a few minutes during our hours."],
+                        ["Answer a few questions", "It takes about 15–20 minutes."],
+                      ]
+                  ).map(([title, sub], i) => (
                     <li key={title} className="flex items-start gap-3">
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-extrabold text-brand-800">
                         {i + 1}
@@ -564,8 +578,9 @@ export function ChatRoom({
                   {starting ? "Starting…" : "Start chat"}
                 </button>
                 <p className="mt-3 text-center text-xs text-navy-400">
-                  Find a quiet place with a stable connection. If you close this page, the same link
-                  brings you back.
+                  {onboarding
+                    ? "Keep your personal email open — your login details arrive there. If you close this page, the same link brings you back."
+                    : "Find a quiet place with a stable connection. If you close this page, the same link brings you back."}
                 </p>
               </div>
             </div>
@@ -581,7 +596,7 @@ export function ChatRoom({
   if (status === "ended") {
     const replaced = endedReason === "replaced";
     return (
-      <Frame status="ended" statusLabel="Chat ended">
+      <Frame name={teamName} label={onboarding ? "Onboarding" : "Final interview"} status="ended" statusLabel="Chat ended">
         <div className="flex flex-1 items-center justify-center overflow-y-auto px-4 py-10">
           <div
             data-chat-ended
@@ -595,12 +610,14 @@ export function ChatRoom({
               <Icon name={replaced ? "chat" : "checkCircle"} className="h-8 w-8" />
             </span>
             <h1 className="mt-5 text-2xl font-extrabold text-navy-900">
-              {replaced ? "This chat was closed" : "Your interview has ended"}
+              {replaced ? "This chat was closed" : onboarding ? "Your onboarding chat has ended" : "Your interview has ended"}
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-navy-600">
               {replaced
                 ? "A newer chat link was sent to you. Please use the link in the most recent email we sent you."
-                : `Thank you, ${firstName}. We will be in touch by email.`}
+                : onboarding
+                  ? `Welcome to the team, ${firstName}! Any question later: open a ticket in the team portal.`
+                  : `Thank you, ${firstName}. We will be in touch by email.`}
             </p>
           </div>
         </div>
@@ -609,10 +626,10 @@ export function ChatRoom({
   }
 
   /* -- the conversation --------------------------------------------------- */
-  const statusLabel = status === "active" ? "Online" : "Waiting for a recruiter";
+  const statusLabel = status === "active" ? "Online" : onboarding ? "Waiting for our team" : "Waiting for a recruiter";
 
   return (
-    <Frame status={status} statusLabel={statusLabel} offline={offline}>
+    <Frame name={teamName} label={onboarding ? "Onboarding" : "Final interview"} status={status} statusLabel={statusLabel} offline={offline}>
       <div className="relative min-h-0 flex-1">
         <div ref={listRef} onScroll={onScroll} className="h-full overflow-y-auto overscroll-contain">
           <div
@@ -640,7 +657,9 @@ export function ChatRoom({
                   </>
                 ) : (
                   <>
-                    <p className="mt-3 text-base font-bold text-navy-900">Waiting for a recruiter to join…</p>
+                    <p className="mt-3 text-base font-bold text-navy-900">
+                      {onboarding ? "Waiting for our team to join…" : "Waiting for a recruiter to join…"}
+                    </p>
                     <p className="mt-1 text-sm leading-relaxed text-navy-600">
                       You are in the queue. You can type your first message while you wait.
                     </p>
@@ -672,7 +691,7 @@ export function ChatRoom({
                   {!mine ? grouped ? <span className="w-8 shrink-0" /> : <Avatar /> : null}
                   <div className={`flex max-w-[82%] flex-col ${mine ? "items-end" : "items-start"} sm:max-w-[70%]`}>
                     {!mine && !grouped ? (
-                      <span className="mb-1 ml-1 text-[11px] font-bold text-navy-500">{RECRUITER_NAME}</span>
+                      <span className="mb-1 ml-1 text-[11px] font-bold text-navy-500">{teamName}</span>
                     ) : null}
                     <div
                       className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed shadow-sm ${
@@ -794,11 +813,15 @@ export function ChatRoom({
 
 /** The fixed chrome: header, the scam line, and the body slot. */
 function Frame({
+  name,
+  label,
   status,
   statusLabel,
   offline,
   children,
 }: {
+  name: string;
+  label: string;
   status: "idle" | "waiting" | "active" | "ended";
   statusLabel: string;
   offline?: boolean;
@@ -816,14 +839,14 @@ function Frame({
               <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${dot}`} />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-navy-900">{RECRUITER_NAME}</p>
+              <p className="truncate text-sm font-bold text-navy-900">{name}</p>
               <p className="truncate text-xs font-medium text-navy-500" data-chat-status>
                 {statusLabel}
               </p>
             </div>
           </div>
           <span className="shrink-0 rounded-full bg-navy-900 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-300">
-            Final interview
+            {label}
           </span>
         </div>
         <div className="border-t border-amber-100 bg-amber-50/70">

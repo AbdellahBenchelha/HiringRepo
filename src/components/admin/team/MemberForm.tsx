@@ -31,10 +31,21 @@ export interface MemberFormValues {
  * Add a member, or edit one. A new member's schedule, hours and rate come
  * from the offer they accepted; everything can be changed here before saving.
  */
-export function MemberForm({ mode, memberId, initial }: { mode: "new" | "edit"; memberId?: string; initial: MemberFormValues }) {
+export function MemberForm({
+  mode,
+  memberId,
+  initial,
+  fromChat,
+}: {
+  mode: "new" | "edit";
+  memberId?: string;
+  initial: MemberFormValues;
+  /** Opened from an onboarding chat: the login is sent from the chat instead. */
+  fromChat?: boolean;
+}) {
   const router = useRouter();
   const [v, setV] = useState(initial);
-  const [sendInvite, setSendInvite] = useState(true);
+  const [sendInvite, setSendInvite] = useState(!fromChat);
   const [busy, setBusy] = useState(false);
   const [problems, setProblems] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
@@ -201,6 +212,9 @@ export function MemberForm({ mode, memberId, initial }: { mode: "new" | "edit"; 
         <label className="flex items-center gap-2 text-sm text-navy-700">
           <input type="checkbox" checked={sendInvite} onChange={(e) => setSendInvite(e.target.checked)} />
           Email them the invitation to the portal now
+          {fromChat ? (
+            <span className="text-navy-500">— leave this off: press Send portal login in the onboarding chat instead</span>
+          ) : null}
         </label>
       )}
 

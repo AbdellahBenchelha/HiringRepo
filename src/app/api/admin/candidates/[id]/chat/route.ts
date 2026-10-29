@@ -4,7 +4,16 @@ import { getCandidate, recordChatLink, revertChatLink } from "@/lib/store";
 import { closeOlderSessions, getChatSettings, sessionsForCandidate } from "@/lib/chatStore";
 import { CHAT_LINK_TTL_DAYS, chatStatus } from "@/lib/chat";
 import { sendEmail } from "@/lib/email";
-import { finalChatHtml, finalChatSubject, finalChatText } from "@/lib/emailTemplates";
+import {
+  finalChatHtml,
+  finalChatSubject,
+  finalChatText,
+  onboardingChatHtml,
+  onboardingChatSubject,
+  onboardingChatText,
+} from "@/lib/emailTemplates";
+import { agreementStatus } from "@/lib/agreement";
+import { chatLinkKind } from "@/lib/chatAccess";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { campaignBlocked } from "@/lib/warmupStore";
 import { siteConfig } from "@/config/site";
@@ -21,6 +30,8 @@ import {
  *
  *   GET   their conversations (transcripts) and the current link
  *   POST  email a new chat link — which retires any earlier one
+ *   POST  {action:"onboarding"}  email an onboarding-chat link — after the
+ *         signed agreement is accepted; retires any earlier link the same way
  *   POST  {action:"remind", kind?:"live"|"nudge"}  "our team is live now", or
  *         "you have not started yet" — see lib/chatReminderSend
  */
@@ -49,6 +60,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
     .map((s) => ({
       id: s.id,
+      kind: s.kind === "onboarding" ? "onboarding" : "interview",
       status: chatStatus(s),
       linkSentAt: s.linkSentAt,
       startedAt: s.startedAt,
@@ -64,6 +76,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       sessions,
       link: sentAt && linkLive(sentAt) ? linkFor(req, id, sentAt) : undefined,
       linkSentAt: sentAt,
+      linkKind: chatLinkKind(candidate, sentAt),
+      onboardingChatLinks: candidate.onboardingChatLinks ?? [],
       linkExpired: !!sentAt && !linkLive(sentAt),
       reminders: sentAt ? (candidate.liveReminders ?? []).filter((r) => r.linkSentAt === sentAt) : [],
     },
@@ -88,6 +102,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (parsed?.data?.action === "remind") {
     return remind(req, id, parsed.data.kind === "nudge" ? "nudge" : "live", by);
   }
+  const kind = parsed?.data?.action === "onboarding" ? "onboarding" : "interview";
+  // Onboarding is for somebody whose signed agreement has been accepted.
+  if (kind === "onboarding" && agreementStatus(candidate) !== "approved") {
+    return NextResponse.json({ ok: false, error: "agreement_not_accepted" }, { status: 409 });
+  }
+  if (kind === "onboarding" && candidate.onboardingChatLinks?.length) {
+    const last = Date.parse(candidate.onboardingChatLinks[candidate.onboardingChatLinks.length - 1]);
+    if (Date.now() - last < 60_000) return NextResponse.json({ ok: false, error: "too_soon" }, { status: 409 });
+  }
   // Asked before the write, so a held email never retires a working link.
   if (await campaignBlocked()) {
     return NextResponse.json({ ok: false, error: "warmup_limit" }, { status: 429 });
@@ -96,7 +119,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   // Recorded first: the page reads the link back from the record, and a
   // candidate who opens the email at once must not beat the write.
   const sentAt = new Date().toISOString();
-  const updated = await recordChatLink(id, sentAt);
+  const updated = await recordChatLink(id, sentAt, kind);
   if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
   const settings = await getChatSettings();
@@ -108,12 +131,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     hours: settings.hours || undefined,
     validDays: CHAT_LINK_TTL_DAYS,
   };
+  const message =
+    kind === "onboarding"
+      ? { subject: onboardingChatSubject(), html: onboardingChatHtml(payload), text: onboardingChatText(payload) }
+      : { subject: finalChatSubject(), html: finalChatHtml(payload), text: finalChatText(payload) };
   const result = await sendEmail({
     to: email,
     toName: updated.fullName || undefined,
-    subject: finalChatSubject(),
-    html: finalChatHtml(payload),
-    text: finalChatText(payload),
+    ...message,
     replyTo: siteConfig.contact.recruitmentEmail,
     kind: "campaign",
   });
@@ -130,11 +155,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   // Only now is the old link really replaced — close what it had open.
   const closed = await closeOlderSessions(id, sentAt);
   // eslint-disable-next-line no-console
-  console.log(`[chat] link sent to ${id} by ${by}${closed ? ` (closed ${closed} older chat)` : ""}`);
+  console.log(`[chat] ${kind} link sent to ${id} by ${by}${closed ? ` (closed ${closed} older chat)` : ""}`);
   return NextResponse.json({
     ok: true,
+    kind,
     chatLinkSentAt: sentAt,
     chatLinks: updated.chatLinks,
+    onboardingChatLinks: updated.onboardingChatLinks ?? [],
     link: chatUrl,
   });
 }

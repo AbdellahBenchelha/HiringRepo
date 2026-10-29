@@ -10,12 +10,16 @@ function csrf(): string {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
-/** POST JSON to a team portal endpoint, with the CSRF header. */
-export function teamPost(url: string, body: unknown): Promise<Response> {
+/**
+ * POST JSON to a team portal endpoint, with the CSRF header. `keepalive` lets
+ * it finish even if the page is left straight after.
+ */
+export function teamPost(url: string, body: unknown, opts: { keepalive?: boolean } = {}): Promise<Response> {
   return fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-csrf-token": csrf() },
     body: JSON.stringify(body ?? {}),
+    keepalive: opts.keepalive,
   });
 }
 

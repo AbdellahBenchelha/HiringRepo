@@ -16,7 +16,7 @@
 import { getCandidate, listCandidates, type Candidate } from "@/lib/store";
 import { sessionForLink } from "@/lib/chatStore";
 import { readChatToken, type ChatLink } from "@/lib/token";
-import type { ChatSession, LiveReminder } from "@/lib/chat";
+import type { ChatKind, ChatSession, LiveReminder } from "@/lib/chat";
 
 export type ChatAccess =
   | {
@@ -27,6 +27,8 @@ export type ChatAccess =
       session: ChatSession | null;
       /** Is this the newest link — the one that may start a chat? */
       current: boolean;
+      /** What the link was sent for. */
+      kind: ChatKind;
     }
   | { ok: false; reason: "invalid" | "expired" | "not_found" | "replaced" };
 
@@ -71,7 +73,12 @@ export async function resolveChatLink(
     if (!current) return { ok: false, reason: "replaced" };
     if (read.expired) return { ok: false, reason: "expired" };
   }
-  return { ok: true, candidate, link: read.link, session, current };
+  return { ok: true, candidate, link: read.link, session, current, kind: chatLinkKind(candidate, sentAt) };
+}
+
+/** What a chat link was sent for — a conversation already open keeps its own. */
+export function chatLinkKind(c: Pick<Candidate, "onboardingChatLinks">, sentAt: string | undefined): ChatKind {
+  return sentAt && c.onboardingChatLinks?.includes(sentAt) ? "onboarding" : "interview";
 }
 
 export const ACCESS_STATUS: Record<Exclude<ChatAccess, { ok: true }>["reason"], number> = {

@@ -23,6 +23,7 @@ function summarise(s: SessionIndex, statuses: Map<string, string>): ChatSummary 
   return {
     id: s.id,
     candidateId: s.candidateId,
+    kind: s.kind,
     candidateName: s.candidateName,
     candidateEmail: s.candidateEmail,
     candidateCountry: s.candidateCountry,

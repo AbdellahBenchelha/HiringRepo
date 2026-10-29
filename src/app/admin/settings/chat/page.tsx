@@ -14,8 +14,8 @@ export default async function AdminChatSettingsPage() {
       <header className="mb-5">
         <h2 className="text-lg font-bold text-navy-900">Live chat</h2>
         <p className="mt-1 max-w-3xl text-sm text-navy-500">
-          The questions you keep to hand in the final interview chat, and the hours candidates are
-          told you reply.
+          The questions you keep to hand in the final interview chat, the messages that explain the
+          team portal in an onboarding chat, and the hours candidates are told you reply.
         </p>
       </header>
       <ChatSettingsEditor initial={settings} />

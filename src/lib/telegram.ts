@@ -153,13 +153,14 @@ export function buildChatStartedMessage(
   email: string | undefined,
   country: string | undefined,
   adminUrl: string,
+  kind: "interview" | "onboarding" = "interview",
 ): string {
   return [
-    "💬 <b>Final interview chat started</b>",
+    kind === "onboarding" ? "💬 <b>Onboarding chat started</b>" : "💬 <b>Final interview chat started</b>",
     "",
     ...whoLines(name, email, country),
     "",
-    "They are waiting for a recruiter to join.",
+    kind === "onboarding" ? "They are waiting for you to send their portal login." : "They are waiting for a recruiter to join.",
     // Quotes escaped too: escapeHtml is for text, and this is an attribute.
     `<a href="${escapeHtml(adminUrl).replace(/"/g, "&quot;")}">Open the Live chat</a>`,
   ].join("\n");

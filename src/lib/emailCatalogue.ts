@@ -58,6 +58,9 @@ import {
   submissionReceivedHtml,
   finalChatHtml,
   finalChatSubject,
+  onboardingChatHtml,
+  onboardingChatSubject,
+  onboardingChatText,
   finalChatText,
   chatLiveNowHtml,
   chatLiveNowSubject,
@@ -790,6 +793,25 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     render: () => {
       const payload = { fullName: SAMPLE_NAME, ref: "WR-EXAMPLE-20261029" };
       return { subject: agreementReceivedSubject(), html: agreementReceivedHtml(payload), text: agreementReceivedText(payload) };
+    },
+  },
+  {
+    id: "onboarding-chat",
+    name: "Onboarding chat invitation",
+    stage: "offer",
+    when:
+      "Sent by hand from View info → Agreement with Invite to onboarding chat, once the signed agreement is accepted. The link opens the live chat page (valid 7 days); in the chat you send the portal login and explain the portal. The “we’re live” and reminder emails for this chat say “onboarding chat” instead of “final interview”.",
+    kind: "campaign",
+    source: "onboardingChatHtml",
+    render: () => {
+      const payload = {
+        fullName: SAMPLE_NAME,
+        chatUrl: link("/chat?t=EXAMPLE"),
+        position: SAMPLE_POSITION,
+        hours: DEFAULT_HOURS,
+        validDays: CHAT_LINK_TTL_DAYS,
+      };
+      return { subject: onboardingChatSubject(), html: onboardingChatHtml(payload), text: onboardingChatText(payload) };
     },
   },
   {

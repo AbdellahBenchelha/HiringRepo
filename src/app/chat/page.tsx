@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
 import { resolveChatLink } from "@/lib/chatAccess";
 import { getChatSettings } from "@/lib/chatStore";
-import { chatStatus, isReminderId, type CandidateChatState } from "@/lib/chat";
+import { chatKindOf, chatStatus, isReminderId, type CandidateChatState } from "@/lib/chat";
 import { CHAT_LINK_TTL_DAYS } from "@/lib/token";
 import { siteConfig } from "@/config/site";
 import { Icon } from "@/components/Icon";
 import { ChatRoom } from "@/components/chat/ChatRoom";
 
 /**
- * Where a candidate holds their final interview, as a live text chat.
+ * Where a candidate holds their final interview as a live text chat — and,
+ * after the signed agreement, their onboarding chat (lib/chat ChatKind).
  *
  * Reaching this page records nothing and pages nobody — mail scanners open
  * every link in an email. The conversation begins when they press Start.
  */
 
 export const metadata: Metadata = {
-  title: "Final interview — live chat",
+  title: "Live chat — WorkRoute",
   robots: { index: false, follow: false },
 };
 
@@ -76,6 +77,8 @@ export default async function ChatPage({
   }
 
   const { candidate, session } = access;
+  // A conversation keeps the kind it started with; before that, the link's.
+  const kind = session ? chatKindOf(session) : access.kind;
   const settings = await getChatSettings();
 
   // An ended chat is shown as ended, with none of the conversation — that
@@ -108,6 +111,7 @@ export default async function ChatPage({
       firstName={candidate.confirmedDetails?.firstName || candidate.firstName || (candidate.fullName ?? "").split(" ")[0] || "there"}
       position={candidate.offer?.position || candidate.position || undefined}
       hours={settings.hours}
+      kind={kind}
       initial={initial}
       reminder={isReminderId(reminder) && !session?.endedAt ? reminder : undefined}
     />

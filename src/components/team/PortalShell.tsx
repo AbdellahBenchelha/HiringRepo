@@ -4,6 +4,7 @@ import { listAnnouncements, type TeamMember } from "@/lib/teamStore";
 import { PortalNav, type PortalTab } from "@/components/team/PortalNav";
 import { Announcements } from "@/components/team/Announcements";
 import { SignOutButton } from "@/components/team/SignOutButton";
+import { PortalTour } from "@/components/team/PortalTour";
 
 /**
  * Every signed-in portal page: the header, the tabs, any announcements, and
@@ -47,6 +48,8 @@ export async function PortalShell({
           </div>
           <div className="flex items-center gap-3">
             <p className="hidden truncate text-sm text-navy-500 sm:block">{member.fullName}</p>
+            {/* Opens by itself once, after the first sign-in; the button brings it back. */}
+            <PortalTour autoOpen={!member.onboarding?.tourDoneAt} workEmail={member.workEmail} firstName={member.fullName.split(/\s+/)[0]} />
             <SignOutButton />
           </div>
         </div>

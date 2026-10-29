@@ -1143,6 +1143,199 @@ export function finalChatHtml(e: FinalChatEmail): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Onboarding — live chat after the signed agreement                           */
+/* -------------------------------------------------------------------------- */
+
+export interface OnboardingChatEmail {
+  fullName: string;
+  chatUrl: string;
+  position?: string;
+  hours?: string;
+  validDays: number;
+}
+
+/**
+ * After the signed agreement is accepted: an invitation to a live chat in
+ * which the team emails the portal login and shows them round. Says first
+ * that the password comes by email, never in the chat — a "send us your
+ * password" chat is the scam this must not look like.
+ */
+export function onboardingChatSubject(): string {
+  return `Welcome to ${siteConfig.company.name} — let's get you started`;
+}
+
+export function onboardingChatText(e: OnboardingChatEmail): string {
+  const name = firstNameOf(e.fullName);
+  return [
+    `Hi ${name},`,
+    ``,
+    `Welcome to ${siteConfig.company.name}! Thank you for signing your agreement${e.position ? ` for the ${e.position} role` : ""}.`,
+    ``,
+    `The next step is a short live text chat with our team. In the chat we:`,
+    `1. email you the login for your WorkRoute team portal`,
+    `   (your professional email and a temporary password),`,
+    `2. help you sign in and choose your own password,`,
+    `3. show you round the portal: Mail, Tickets, Phone, Bank details and Profile.`,
+    `It takes about 10 minutes.`,
+    ...(e.hours && hoursSentence(e.hours) ? [``, hoursSentence(e.hours)] : []),
+    ``,
+    `Start your onboarding chat:`,
+    e.chatUrl,
+    ``,
+    `This link is personal to you and stays valid for ${e.validDays} days.`,
+    `Keep this inbox open during the chat — your login details arrive here.`,
+    ``,
+    `Your password is sent by email only. We will never ask you for it in the chat,`,
+    `and we will never ask you for a payment or your bank card details.`,
+    ``,
+    `Any questions, reply to this email or write to ${siteConfig.contact.recruitmentEmail}.`,
+    ``,
+    `${siteConfig.company.name} — ${siteConfig.company.descriptor}`,
+    siteConfig.url,
+  ].join("\n");
+}
+
+export function onboardingChatHtml(e: OnboardingChatEmail): string {
+  const name = esc(firstNameOf(e.fullName));
+  const company = esc(siteConfig.company.name);
+  const url = esc(e.chatUrl);
+  const role = e.position ? ` for the <strong style="color:${NAVY};">${esc(e.position)}</strong> role` : "";
+
+  const step = (n: number, text: string) => `
+    <tr>
+      <td width="34" valign="top" style="padding:0 0 12px 0;">
+        <span style="display:inline-block;width:24px;height:24px;border-radius:12px;background:${AMBER};color:${NAVY};font:700 13px/24px Arial,Helvetica,sans-serif;text-align:center;">${n}</span>
+      </td>
+      <td valign="top" style="padding:2px 0 12px 0;font:400 15px/1.55 Arial,Helvetica,sans-serif;color:${MUTED};">${text}</td>
+    </tr>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(onboardingChatSubject())}</title>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Your onboarding chat: we send your team portal login and show you how everything works.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:32px 16px;">
+  <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;">
+
+    <tr>
+      <td style="padding:0 0 22px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font:800 21px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">${company}</td></tr>
+          <tr><td style="padding-top:4px;font:700 10px/1 Arial,Helvetica,sans-serif;color:#b06e0c;letter-spacing:2px;text-transform:uppercase;">${esc(siteConfig.company.descriptor)}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
+
+        <p style="margin:0 0 14px 0;">
+          <span style="display:inline-block;padding:6px 12px;border-radius:999px;background:#e8f7ee;color:#166534;font:700 12px/1 Arial,Helvetica,sans-serif;letter-spacing:0.5px;">
+            &#10003;&nbsp; Agreement accepted
+          </span>
+        </p>
+
+        <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
+          Welcome to ${company}
+        </h1>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Hi ${name},
+        </p>
+
+        <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          Thank you for signing your agreement${role}. We are happy to have you on the team.
+        </p>
+
+        <p style="margin:0 0 24px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+          The next step is a short <strong style="color:${NAVY};">live text chat</strong> with our team
+          to set up your <strong style="color:${NAVY};">WorkRoute team portal</strong>.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${CREAM};border:1px solid ${BORDER};border-radius:10px;margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:20px 22px 8px 22px;">
+              <p style="margin:0 0 14px 0;font:700 12px/1 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:1.4px;text-transform:uppercase;">
+                In the chat we
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${step(1, "Email you your portal login: your <strong style=\"color:" + NAVY + ";\">professional email</strong> and a temporary password.")}
+                ${step(2, "Help you sign in and choose your own password.")}
+                ${step(3, "Show you round the portal: Mail, Tickets, Phone, Bank details and Profile. About 10 minutes.")}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        ${
+          e.hours && hoursSentence(e.hours)
+            ? `<p style="margin:0 0 22px 0;font:700 15px/1.55 Arial,Helvetica,sans-serif;color:${NAVY};">
+          &#128339;&nbsp; ${esc(hoursSentence(e.hours))}
+        </p>`
+            : ""
+        }
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
+          <tr>
+            <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
+              <a href="${url}" style="display:inline-block;padding:15px 36px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
+                Start my onboarding chat
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 6px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          This link is personal to you and stays valid for ${e.validDays} days. Keep this inbox open
+          during the chat &mdash; your login details arrive here.
+        </p>
+        <p style="margin:0 0 26px 0;font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#7373a0;">
+          Button not working? Copy this link into your browser:<br>
+          <a href="${url}" style="color:#b06e0c;word-break:break-all;">${url}</a>
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fffaf0;border:2px solid ${AMBER};border-radius:10px;">
+          <tr>
+            <td style="padding:18px 22px;font:400 14px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
+              <strong style="color:${NAVY};">Your password is sent by email only.</strong> We will never
+              ask you for it in the chat, and we will never ask you for a payment or your bank card details.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:22px 8px 0 8px;font:400 13px/1.65 Arial,Helvetica,sans-serif;color:#7373a0;">
+        Questions? Reply to this email or write to
+        <a href="mailto:${esc(siteConfig.contact.recruitmentEmail)}" style="color:#b06e0c;">${esc(siteConfig.contact.recruitmentEmail)}</a>.
+        <br><br>
+        ${company} &mdash; ${esc(siteConfig.company.descriptor)}<br>
+        <a href="${esc(siteConfig.url)}" style="color:#7373a0;">${esc(siteConfig.url.replace(/^https?:\/\//, ""))}</a>
+      </td>
+    </tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Final interview — "our team is live now"                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -1153,6 +1346,8 @@ export interface ChatLiveNowEmail {
   /** A fresh link replacing an expired one: say so, and how long it lasts. */
   newLink?: boolean;
   validDays: number;
+  /** For an onboarding chat: "your onboarding chat", not "your final interview". */
+  onboarding?: boolean;
 }
 
 /**
@@ -1160,8 +1355,10 @@ export interface ChatLiveNowEmail {
  * and the candidate is not. Short on purpose: they already had the invitation,
  * and this only has to say "now" and give them the button.
  */
-export function chatLiveNowSubject(): string {
-  return "Our recruitment team is live now — join your final interview chat";
+export function chatLiveNowSubject(onboarding = false): string {
+  return onboarding
+    ? "Our team is live now — join your onboarding chat"
+    : "Our recruitment team is live now — join your final interview chat";
 }
 
 export function chatLiveNowText(e: ChatLiveNowEmail): string {
@@ -1169,8 +1366,15 @@ export function chatLiveNowText(e: ChatLiveNowEmail): string {
   return [
     `Hi ${name},`,
     ``,
-    `Our recruitment team is online right now and ready for your final interview`,
-    `chat. Click the link below to join — it takes about 15–20 minutes.`,
+    ...(e.onboarding
+      ? [
+          `Our team is online right now and ready for your onboarding chat. Click the`,
+          `link below to join — we send your portal login and show you round (about 10 minutes).`,
+        ]
+      : [
+          `Our recruitment team is online right now and ready for your final interview`,
+          `chat. Click the link below to join — it takes about 15–20 minutes.`,
+        ]),
     ``,
     `Join the chat now:`,
     e.chatUrl,
@@ -1200,11 +1404,11 @@ export function chatLiveNowHtml(e: ChatLiveNowEmail): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(chatLiveNowSubject())}</title>
+<title>${esc(chatLiveNowSubject(e.onboarding))}</title>
 </head>
 <body style="margin:0;padding:0;background:${CREAM};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-  A recruiter is online right now — join your final interview chat.
+  ${e.onboarding ? "Our team is online right now — join your onboarding chat." : "A recruiter is online right now — join your final interview chat."}
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
@@ -1231,7 +1435,7 @@ export function chatLiveNowHtml(e: ChatLiveNowEmail): string {
         </p>
 
         <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
-          Our recruitment team is live now
+          ${e.onboarding ? "Our team is live now" : "Our recruitment team is live now"}
         </h1>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
@@ -1239,9 +1443,15 @@ export function chatLiveNowHtml(e: ChatLiveNowEmail): string {
         </p>
 
         <p style="margin:0 0 26px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          Our recruitment team is <strong style="color:${NAVY};">online right now</strong> and ready
+          ${
+            e.onboarding
+              ? `Our team is <strong style="color:${NAVY};">online right now</strong> and ready for your
+          onboarding chat. Click the button below to join &mdash; we send your portal login and show
+          you round (about 10 minutes).`
+              : `Our recruitment team is <strong style="color:${NAVY};">online right now</strong> and ready
           for your final interview chat. Click the button below to join &mdash; it takes about
-          15&ndash;20 minutes.
+          15&ndash;20 minutes.`
+          }
         </p>
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
@@ -1311,6 +1521,8 @@ export interface ChatReminderEmail {
   validUntil: string;
   /** A fresh link replacing an expired one. */
   newLink?: boolean;
+  /** For an onboarding chat. */
+  onboarding?: boolean;
 }
 
 /**
@@ -1318,8 +1530,8 @@ export interface ChatReminderEmail {
  * nobody is promised a recruiter this minute — they are told the chat is still
  * waiting for them, and when the team answers.
  */
-export function chatReminderSubject(): string {
-  return "Reminder: your final interview chat is waiting";
+export function chatReminderSubject(onboarding = false): string {
+  return onboarding ? "Reminder: your onboarding chat is waiting" : "Reminder: your final interview chat is waiting";
 }
 
 export function chatReminderText(e: ChatReminderEmail): string {
@@ -1328,11 +1540,21 @@ export function chatReminderText(e: ChatReminderEmail): string {
   return [
     `Hi ${name},`,
     ``,
-    `We sent you a link to your final interview chat, but you haven't started it yet.`,
-    `It's a short written chat with our team (about 15–20 minutes) — no video and no`,
-    `phone call. Open it whenever you're ready${hours ? ` during our hours. ${hours}` : "."}`,
-    ``,
-    `Start my final interview chat:`,
+    ...(e.onboarding
+      ? [
+          `We sent you a link to your onboarding chat, but you haven't started it yet.`,
+          `In the chat we send your team portal login and show you how it works (about`,
+          `10 minutes). Open it whenever you're ready${hours ? ` during our hours. ${hours}` : "."}`,
+          ``,
+          `Start my onboarding chat:`,
+        ]
+      : [
+          `We sent you a link to your final interview chat, but you haven't started it yet.`,
+          `It's a short written chat with our team (about 15–20 minutes) — no video and no`,
+          `phone call. Open it whenever you're ready${hours ? ` during our hours. ${hours}` : "."}`,
+          ``,
+          `Start my final interview chat:`,
+        ]),
     e.chatUrl,
     ``,
     e.newLink
@@ -1353,17 +1575,18 @@ export function chatReminderHtml(e: ChatReminderEmail): string {
   const company = esc(siteConfig.company.name);
   const url = esc(e.chatUrl);
   const hours = e.hours ? hoursSentence(e.hours) : "";
+  const chat = e.onboarding ? "onboarding chat" : "final interview chat";
 
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(chatReminderSubject())}</title>
+<title>${esc(chatReminderSubject(e.onboarding))}</title>
 </head>
 <body style="margin:0;padding:0;background:${CREAM};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-  Your final interview chat is still waiting — start it whenever you are ready.
+  Your ${chat} is still waiting — start it whenever you are ready.
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CREAM};">
@@ -1384,7 +1607,7 @@ export function chatReminderHtml(e: ChatReminderEmail): string {
       <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;padding:38px 34px;">
 
         <h1 style="margin:0 0 20px 0;font:800 25px/1.25 Arial,Helvetica,sans-serif;color:${NAVY};letter-spacing:-0.5px;">
-          Your final interview chat is waiting
+          Your ${chat} is waiting
         </h1>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
@@ -1392,13 +1615,18 @@ export function chatReminderHtml(e: ChatReminderEmail): string {
         </p>
 
         <p style="margin:0 0 16px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          We sent you a link to your final interview chat, but you haven&rsquo;t started it yet.
+          We sent you a link to your ${chat}, but you haven&rsquo;t started it yet.
         </p>
 
         <p style="margin:0 0 ${hours ? "16" : "26"}px 0;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:${MUTED};">
-          It&rsquo;s a short <strong style="color:${NAVY};">written chat</strong> with our team
+          ${
+            e.onboarding
+              ? `In the chat we send your <strong style="color:${NAVY};">team portal login</strong> and show
+          you how it works (about 10 minutes). Open it whenever you&rsquo;re ready${hours ? " during our hours:" : "."}`
+              : `It&rsquo;s a short <strong style="color:${NAVY};">written chat</strong> with our team
           (about 15&ndash;20 minutes) &mdash; no video and no phone call. Open it whenever you&rsquo;re
-          ready${hours ? " during our hours:" : "."}
+          ready${hours ? " during our hours:" : "."}`
+          }
         </p>
 
         ${
@@ -1413,7 +1641,7 @@ export function chatReminderHtml(e: ChatReminderEmail): string {
           <tr>
             <td align="center" bgcolor="${AMBER}" style="border-radius:999px;">
               <a href="${url}" style="display:inline-block;padding:15px 36px;font:700 16px/1 Arial,Helvetica,sans-serif;color:${NAVY};text-decoration:none;border-radius:999px;">
-                Start my final interview chat
+                Start my ${chat}
               </a>
             </td>
           </tr>

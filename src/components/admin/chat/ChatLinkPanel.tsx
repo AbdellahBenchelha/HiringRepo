@@ -26,6 +26,7 @@ import type { ChatMessage, LiveReminder } from "@/lib/chat";
 
 interface SessionInfo {
   id: string;
+  kind?: "interview" | "onboarding";
   status: "waiting" | "active" | "ended";
   linkSentAt: string;
   startedAt: string;
@@ -287,7 +288,7 @@ export function ChatLinkPanel({
           {shown.map((s) => (
             <div key={s.id} className="mb-3">
               <p className="text-xs font-semibold text-navy-500">
-                Started {fmt(s.startedAt)}
+                {s.kind === "onboarding" ? "Onboarding chat · " : ""}Started {fmt(s.startedAt)}
                 {s.endedAt ? ` · ended ${fmt(s.endedAt)}` : ""} · {s.messages.filter((m) => m.from !== "system").length} messages
               </p>
               <div className="mt-2 max-h-80 overflow-y-auto rounded-lg bg-cream-100/60 p-3" data-chat-transcript>

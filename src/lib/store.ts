@@ -473,6 +473,8 @@ export interface Candidate {
    */
   chatLinkSentAt?: string;
   chatLinks?: string[];
+  /** Which of chatLinks were onboarding-chat invitations (lib/chat ChatKind). */
+  onboardingChatLinks?: string[];
   /** "Our team is live now" emails, oldest first — see lib/chat. */
   liveReminders?: LiveReminder[];
   /** When the status was set to "Full verified", and by whom. Cleared if it is changed away. */
@@ -1469,13 +1471,17 @@ export function clearResidenceImages(id: string): Promise<string[]> {
   });
 }
 
-/** A final-interview chat link was emailed. The newest replaces any before it. */
-export function recordChatLink(id: string, sentAt: string): Promise<Candidate | null> {
+/**
+ * A chat link was emailed — for the final interview, or for onboarding. The
+ * newest replaces any before it, whichever kind.
+ */
+export function recordChatLink(id: string, sentAt: string, kind: "interview" | "onboarding" = "interview"): Promise<Candidate | null> {
   return withWrite((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
     c.chatLinks = [...(c.chatLinks ?? []), sentAt];
     c.chatLinkSentAt = sentAt;
+    if (kind === "onboarding") c.onboardingChatLinks = [...(c.onboardingChatLinks ?? []), sentAt];
     return { list, result: c };
   });
 }
@@ -1799,6 +1805,7 @@ export function revertChatLink(id: string, sentAt: string): Promise<boolean> {
     if (!c || c.chatLinkSentAt !== sentAt) return { list, result: false };
     c.chatLinks = (c.chatLinks ?? []).filter((t) => t !== sentAt);
     c.chatLinkSentAt = c.chatLinks[c.chatLinks.length - 1];
+    if (c.onboardingChatLinks?.includes(sentAt)) c.onboardingChatLinks = c.onboardingChatLinks.filter((t) => t !== sentAt);
     return { list, result: true };
   });
 }

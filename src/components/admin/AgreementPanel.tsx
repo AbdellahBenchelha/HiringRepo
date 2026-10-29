@@ -16,6 +16,7 @@ import {
   type AgreementStatus,
 } from "@/lib/agreement";
 import type { CandidateView } from "@/lib/candidateView";
+import { OnboardingChatBox } from "@/components/admin/OnboardingChatBox";
 
 /**
  * The final agreement for one candidate — see lib/agreement.
@@ -372,6 +373,9 @@ export function AgreementPanel({
           {candidate.agreementApprovedBy ? ` by ${candidate.agreementApprovedBy}` : ""}.
         </p>
       ) : null}
+
+      {/* The next step once it is accepted: the onboarding chat. */}
+      {status === "approved" ? <OnboardingChatBox candidate={candidate} onChange={onChange} /> : null}
 
       {/* Ask for it again */}
       {reasking ? (

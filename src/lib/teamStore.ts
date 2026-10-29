@@ -111,7 +111,7 @@ export interface TeamMember {
   bankPending?: StoredBank;
   bankRejected?: { at: string; by: string; reason: string };
   bankViews?: { at: string; by: string }[];
-  onboarding?: { profileConfirmedAt?: string; mailboxOpenedAt?: string; rulesReadAt?: string };
+  onboarding?: { profileConfirmedAt?: string; mailboxOpenedAt?: string; rulesReadAt?: string; tourDoneAt?: string };
   /** The portal password, encrypted (AES-256-GCM) so it can be read back. */
   password?: string;
   /** When the member last set their own password. */

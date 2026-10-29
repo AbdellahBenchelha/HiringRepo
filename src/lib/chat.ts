@@ -24,6 +24,22 @@ export const BUSY_AFTER_MINUTES = 10;
 
 export type ChatSender = "candidate" | "recruiter" | "system";
 
+/**
+ * What a conversation is for.
+ *
+ *   interview   the final interview, before the offer (the first kind)
+ *   onboarding  after the signed agreement is accepted: the recruiter sends
+ *               the team-portal login and walks the new member through it
+ *
+ * Kept on the candidate per link sent, and copied onto the conversation when
+ * it starts, so an old conversation never changes kind.
+ */
+export type ChatKind = "interview" | "onboarding";
+
+export function chatKindOf(s: { kind?: ChatKind }): ChatKind {
+  return s.kind === "onboarding" ? "onboarding" : "interview";
+}
+
 export interface ChatMessage {
   id: string;
   from: ChatSender;
@@ -36,6 +52,8 @@ export interface ChatMessage {
 export interface ChatSession {
   id: string;
   candidateId: string;
+  /** Absent on interview chats, which came first. */
+  kind?: ChatKind;
   /** Which emailed link this conversation belongs to. */
   linkSentAt: string;
   /** Snapshots for the inbox, so the list does not need the candidate file. */
@@ -192,14 +210,25 @@ export function splitLinks(text: string): TextPart[] {
 export interface ChatSettings {
   /** Saved questions, clicked into the message box in the Live chat tab. */
   questions: string[];
+  /** Ready-made portal explanations, for onboarding chats. */
+  onboarding: OnboardingMessage[];
   /** Shown to candidates on the chat page. */
   hours: string;
   updatedAt?: string;
 }
 
+/** One ready-made onboarding message: a short name for the button, and the text sent. */
+export interface OnboardingMessage {
+  title: string;
+  text: string;
+}
+
 export const MAX_QUESTIONS = 40;
 export const MAX_QUESTION = 500;
 export const MAX_HOURS_TEXT = 160;
+export const MAX_ONBOARDING = 30;
+export const MAX_ONBOARDING_TITLE = 60;
+export const MAX_ONBOARDING_TEXT = 1500;
 
 export const DEFAULT_HOURS = "We reply every day, 9:00–01:00 UK time";
 
@@ -226,8 +255,89 @@ export const DEFAULT_QUESTIONS: string[] = [
   "Thank you for your time today. We will review the interview and get back to you by email. Have a good day!",
 ];
 
+/**
+ * The portal explained, one part at a time. {portal} becomes the portal's
+ * address, {email} their professional email and {name} their first name when
+ * the message is put in the box — so the recruiter sees exactly what is sent.
+ */
+export const DEFAULT_ONBOARDING: OnboardingMessage[] = [
+  {
+    title: "Welcome",
+    text: "Hi {name}, welcome to WorkRoute! Thank you for signing your agreement. In this chat I will send you your login for our team portal and show you how it works. It takes about 10 minutes. Please ask me anything at any time.",
+  },
+  {
+    title: "Your login",
+    text: "I have just emailed your login details to your personal email. Please open that email now. It has your professional email ({email}) and a temporary password. Never share your password with anyone — not even with us. We will never ask you for it in this chat.",
+  },
+  {
+    title: "First sign-in",
+    text: "1. Open {portal}\n2. Sign in with your professional email ({email}) and the temporary password from the email.\n3. The portal asks you to choose your own password (at least 10 characters). Choose one only you know.\nThe temporary password works for 7 days. Tell me when you are in.",
+  },
+  {
+    title: "Dashboard",
+    text: "The Dashboard is the first page you see. It shows your hours and earnings, which are added automatically after each work day, the next payday, and a short \"Get started\" list. Please complete every step in that list.",
+  },
+  {
+    title: "Mail",
+    text: "The Mail tab is your professional mailbox, {email}. Use it for all work emails. You can read, reply, forward and write new emails there. Please check it every work day.",
+  },
+  {
+    title: "Tickets",
+    text: "Tickets is how you talk to us once you are working. We send you tasks and messages there, and you can open a New ticket for any question or problem. You get a reply in the same ticket.",
+  },
+  {
+    title: "Phone",
+    text: "The Phone tab shows your WorkRoute work phone number and the messages it receives. Use this number for work only.",
+  },
+  {
+    title: "Bank details",
+    text: "Your earnings are paid to your bank account. Open the Bank tab and add the account holder name, IBAN and BIC. That is all we need — never send bank details, card numbers or passwords in a chat or by email. We check the account and you get an email when it is approved.",
+  },
+  {
+    title: "Profile",
+    text: "Profile shows your details and your work schedule. You can change your password there at any time. If something is wrong, open a ticket and we will correct it. Please also read the Team rules (linked from your Dashboard).",
+  },
+  {
+    title: "Documents",
+    text: "Documents has your offer, your monthly statements and the files we share with you. You can download them at any time.",
+  },
+  {
+    title: "Forgot password",
+    text: "If you ever forget your password, email us from your personal email and we will send you a new temporary password. Nobody from WorkRoute will ever ask you for your password.",
+  },
+  {
+    title: "Wrap up",
+    text: "That is everything! You are all set up. If you have any question later, open a ticket in the portal or reply to our email. Welcome to the team, {name}!",
+  },
+];
+
+/** {portal}, {email} and {name} in a ready-made message, filled in. */
+export function fillOnboarding(text: string, values: { portal?: string; email?: string; name?: string }): string {
+  return text
+    .replace(/\{portal\}/g, values.portal || "the team portal")
+    .replace(/\{email\}/g, values.email || "your professional email")
+    .replace(/\{name\}/g, values.name || "there");
+}
+
+export function cleanOnboarding(raw: unknown): OnboardingMessage[] | { error: string } {
+  if (!Array.isArray(raw)) return { error: "onboarding must be a list" };
+  const out: OnboardingMessage[] = [];
+  for (const item of raw) {
+    const r = (item ?? {}) as { title?: unknown; text?: unknown };
+    const title = typeof r.title === "string" ? r.title.replace(/\s+/g, " ").trim() : "";
+    const text = cleanMessage(r.text);
+    if (!title && !text) continue;
+    if (!title || !text) return { error: "Each portal message needs a name and a text." };
+    if (title.length > MAX_ONBOARDING_TITLE) return { error: `Each name can be at most ${MAX_ONBOARDING_TITLE} characters.` };
+    if (text.length > MAX_ONBOARDING_TEXT) return { error: `Each portal message can be at most ${MAX_ONBOARDING_TEXT} characters.` };
+    out.push({ title, text });
+  }
+  if (out.length > MAX_ONBOARDING) return { error: `At most ${MAX_ONBOARDING} portal messages.` };
+  return out;
+}
+
 export function cleanSettings(raw: unknown): ChatSettings | { error: string } {
-  const r = (raw ?? {}) as { questions?: unknown; hours?: unknown };
+  const r = (raw ?? {}) as { questions?: unknown; hours?: unknown; onboarding?: unknown };
   if (!Array.isArray(r.questions)) return { error: "questions must be a list" };
   const questions = r.questions
     .map((q) => cleanMessage(q))
@@ -238,7 +348,9 @@ export function cleanSettings(raw: unknown): ChatSettings | { error: string } {
   }
   const hours = typeof r.hours === "string" ? r.hours.replace(/\s+/g, " ").trim() : "";
   if (hours.length > MAX_HOURS_TEXT) return { error: `The hours line can be at most ${MAX_HOURS_TEXT} characters.` };
-  return { questions, hours };
+  const onboarding = r.onboarding === undefined ? DEFAULT_ONBOARDING : cleanOnboarding(r.onboarding);
+  if ("error" in onboarding) return onboarding;
+  return { questions, onboarding, hours };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -272,6 +384,7 @@ export interface CandidateChatState {
 export interface ChatSummary {
   id: string;
   candidateId: string;
+  kind: ChatKind;
   candidateName: string;
   candidateEmail?: string;
   candidateCountry?: string;
@@ -295,6 +408,7 @@ export interface AdminSessionView {
   reset?: boolean;
   id: string;
   candidateId: string;
+  kind: ChatKind;
   candidateName: string;
   candidateEmail?: string;
   candidateCountry?: string;
@@ -313,6 +427,31 @@ export interface AdminSessionView {
   candidateStatus?: string;
   /** "We're live" emails sent for this chat's link, oldest first. */
   reminders?: LiveReminder[];
+  /** Onboarding chats: where they are with the team portal. */
+  portal?: PortalState;
+}
+
+/**
+ * An onboarding chat's view of the team portal: are they on the team yet, and
+ * have they had and used their login.
+ */
+export interface PortalState {
+  /** The portal's address, for {portal} in the ready-made messages. */
+  portalUrl: string;
+  /** Not on the team yet: the team panel's Add to team form, filled in for them. */
+  addUrl: string;
+  member?: {
+    id: string;
+    url: string;
+    workEmail?: string;
+    firstName: string;
+    /** When login details were last emailed. */
+    invitedAt?: string;
+    /** They signed in and chose their own password. */
+    passwordSet: boolean;
+    lastSignInAt?: string;
+    active: boolean;
+  };
 }
 
 /**
