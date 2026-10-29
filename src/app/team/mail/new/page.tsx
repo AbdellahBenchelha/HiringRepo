@@ -32,7 +32,7 @@ export default async function TeamMailNewPage({ searchParams }: { searchParams: 
   }
 
   return (
-    <PortalShell member={member} active="mail" title="Mail">
+    <PortalShell member={member} active="mail" title="Mail" wide hideTitle>
       <MailShell address={member.workEmail} folder={null} unread={unread}>
         <MailCompose
           from={member.workEmail}

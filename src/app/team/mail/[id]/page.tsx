@@ -27,7 +27,7 @@ export default async function TeamMailMessagePage({ params }: { params: Promise<
   const back = inbox ? "/mail" : "/mail?folder=sent";
 
   return (
-    <PortalShell member={member} active="mail" title="Mail">
+    <PortalShell member={member} active="mail" title="Mail" wide hideTitle>
       <MailShell address={member.workEmail} folder={message.folder} unread={unread}>
         <div className="flex flex-wrap items-center gap-2 border-b border-cream-200 px-4 py-3 sm:px-5">
           <Link href={back} className="inline-flex h-9 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-navy-600 transition hover:bg-cream-200 hover:text-navy-900">

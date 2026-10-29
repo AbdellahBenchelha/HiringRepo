@@ -6,9 +6,9 @@ import { CopyAddress } from "@/components/team/CopyAddress";
 type Folder = "inbox" | "sent";
 
 /**
- * The frame every Mail page sits in: the WorkRoute Mail band with the
- * member's address, the folders and New email, then the page itself. On a
- * phone the folders run across the top instead of down the side.
+ * The frame every Mail page sits in: the member's address, New email and
+ * the folders down the side, then the page itself. On a phone they run
+ * across the top instead.
  */
 export function MailShell({
   address,
@@ -29,24 +29,15 @@ export function MailShell({
 
   return (
     <div className="overflow-hidden rounded-3xl border border-cream-300 bg-white shadow-lift" data-mailbox>
-      <div className="relative overflow-hidden bg-navy-900 px-5 py-4 sm:px-6">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand-500/20 blur-3xl" aria-hidden="true" />
-        <div className="relative flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-navy-900 shadow-amber">
-            <Icon name="mailLine" className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="font-display text-lg font-extrabold leading-tight text-white">
-              WorkRoute <span className="text-brand-400">Mail</span>
+      <div className="lg:grid lg:min-h-[34rem] lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <aside className="flex flex-wrap items-center gap-2 border-b border-cream-200 bg-cream-50 px-3 py-3 lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-1 lg:border-b-0 lg:border-r lg:p-4">
+          <div className="w-full min-w-0 rounded-xl border border-cream-300 bg-white py-2 pl-3 pr-1 lg:mb-3">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-navy-400">
+              <Icon name="mailLine" className="h-3.5 w-3.5 text-brand-600" /> Your email
             </p>
             <CopyAddress address={address} />
           </div>
-        </div>
-      </div>
-
-      <div className="lg:grid lg:min-h-[34rem] lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="flex items-center gap-2 border-b border-cream-200 bg-cream-50 px-3 py-2.5 lg:flex-col lg:items-stretch lg:gap-1 lg:border-b-0 lg:border-r lg:p-4">
-          <Link href="/mail/new" className="btn-primary order-last ml-auto whitespace-nowrap px-3 py-2 sm:px-4 lg:order-first lg:mb-4 lg:ml-0 lg:py-3" data-mail-new>
+          <Link href="/mail/new" className="btn-primary order-last ml-auto whitespace-nowrap px-3 py-2 sm:px-4 lg:order-none lg:mb-4 lg:ml-0 lg:py-3" data-mail-new>
             <Icon name="pencil" className="h-4 w-4" /> New email
           </Link>
           <nav aria-label="Folders" className="flex gap-1 lg:flex-col">

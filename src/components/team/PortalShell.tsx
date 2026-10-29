@@ -14,12 +14,18 @@ export async function PortalShell({
   active,
   title,
   intro,
+  wide,
+  hideTitle,
   children,
 }: {
   member: TeamMember;
   active: PortalTab;
   title: string;
   intro?: ReactNode;
+  /** Use the whole width of the screen (Mail). */
+  wide?: boolean;
+  /** Keep the page title for screen readers only. */
+  hideTitle?: boolean;
   children: ReactNode;
 }) {
   const dismissed = new Set(member.dismissedAnnouncements ?? []);
@@ -47,12 +53,16 @@ export async function PortalShell({
         <PortalNav active={active} />
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className={`mx-auto px-4 py-6 sm:px-6 sm:py-8 ${wide ? "max-w-none" : "max-w-6xl"}`}>
         <Announcements items={announcements} />
-        <div className="mb-6">
-          <h1 className="font-display text-2xl font-extrabold text-navy-900 sm:text-3xl">{title}</h1>
-          {intro ? <div className="mt-1 text-sm text-navy-500">{intro}</div> : null}
-        </div>
+        {hideTitle ? (
+          <h1 className="sr-only">{title}</h1>
+        ) : (
+          <div className="mb-6">
+            <h1 className="font-display text-2xl font-extrabold text-navy-900 sm:text-3xl">{title}</h1>
+            {intro ? <div className="mt-1 text-sm text-navy-500">{intro}</div> : null}
+          </div>
+        )}
         {children}
       </div>
     </>

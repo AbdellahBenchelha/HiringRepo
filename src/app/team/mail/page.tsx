@@ -56,7 +56,7 @@ export default async function TeamMailPage({ searchParams }: { searchParams: Pro
       : `${all.length} sent`;
 
   return (
-    <PortalShell member={member} active="mail" title="Mail">
+    <PortalShell member={member} active="mail" title="Mail" wide hideTitle>
       <MailShell address={member.workEmail} folder={folder} unread={unread}>
         <div className="flex flex-wrap items-center gap-3 border-b border-cream-200 px-4 py-3 sm:px-5">
           <div className="mr-auto min-w-0">

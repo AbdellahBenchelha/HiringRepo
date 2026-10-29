@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 
-/** The member's address with a one-click copy, for the mailbox header. */
+/** The member's address with a one-click copy icon, at the top of the mailbox. */
 export function CopyAddress({ address }: { address: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -18,18 +18,19 @@ export function CopyAddress({ address }: { address: string }) {
   }
 
   return (
-    <span className="inline-flex min-w-0 items-center gap-2">
-      <span className="truncate text-sm text-navy-100" data-mail-address>
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="min-w-0 flex-1 break-all text-sm font-semibold leading-snug text-navy-900" data-mail-address>
         {address}
       </span>
       <button
         type="button"
         onClick={copy}
-        className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-brand-300 transition hover:bg-white/10 hover:text-brand-200"
+        title={copied ? "Copied" : "Copy address"}
         aria-label={copied ? "Address copied" : "Copy address"}
+        className={`shrink-0 rounded-lg p-1.5 transition ${copied ? "text-green-700" : "text-navy-400 hover:bg-cream-200 hover:text-navy-900"}`}
+        data-copy-address
       >
-        <Icon name={copied ? "check" : "copy"} className="h-3.5 w-3.5" />
-        <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
+        <Icon name={copied ? "check" : "copy"} className="h-4 w-4" />
       </button>
     </span>
   );
