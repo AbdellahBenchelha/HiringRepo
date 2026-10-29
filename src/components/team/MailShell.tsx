@@ -28,8 +28,8 @@ export function MailShell({
   ];
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-cream-300 bg-white shadow-lift" data-mailbox>
-      <div className="lg:grid lg:min-h-[34rem] lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <div className="border-b border-cream-300 bg-white" data-mailbox>
+      <div className="lg:grid lg:min-h-[calc(100vh-7rem)] lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="flex flex-wrap items-center gap-2 border-b border-cream-200 bg-cream-50 px-3 py-3 lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-1 lg:border-b-0 lg:border-r lg:p-4">
           <div className="w-full min-w-0 rounded-xl border border-cream-300 bg-white py-2 pl-3 pr-1 lg:mb-3">
             <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-navy-400">

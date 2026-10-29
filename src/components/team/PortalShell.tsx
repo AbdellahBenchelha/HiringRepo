@@ -22,7 +22,7 @@ export async function PortalShell({
   active: PortalTab;
   title: string;
   intro?: ReactNode;
-  /** Use the whole width of the screen (Mail). */
+  /** Fill the screen edge to edge, no page margins (Mail). */
   wide?: boolean;
   /** Keep the page title for screen readers only. */
   hideTitle?: boolean;
@@ -53,8 +53,14 @@ export async function PortalShell({
         <PortalNav active={active} />
       </header>
 
-      <div className={`mx-auto px-4 py-6 sm:px-6 sm:py-8 ${wide ? "max-w-none" : "max-w-6xl"}`}>
-        <Announcements items={announcements} />
+      <div className={wide ? "" : "mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8"}>
+        {wide ? (
+          <div className="px-4 pt-4 empty:hidden sm:px-6">
+            <Announcements items={announcements} />
+          </div>
+        ) : (
+          <Announcements items={announcements} />
+        )}
         {hideTitle ? (
           <h1 className="sr-only">{title}</h1>
         ) : (
