@@ -8,8 +8,14 @@ the team admin panel; this service stores nothing.
 
 ## Setting it up on Railway
 
-1. In the project, **Create → GitHub Repo** and pick this repository again.
-   It becomes a second service — rename it `team-gateway`.
+1. In the **same project as the main service**, **Create → GitHub Repo** and
+   pick this repository again. It must be the same project: Railway's private
+   network only connects services within one project, and from another
+   project the main service's private name leads nowhere (or back to the
+   gateway itself).
+   It becomes a second service — rename it `team-gateway`, and give it its own
+   private name (Settings → Networking → Private Networking → DNS), so the two
+   services are never confused.
 2. In the new service's **Settings**:
    - **Branch**: the same branch as the main service.
    - **Root Directory**: `/gateway`
