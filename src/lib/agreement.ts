@@ -222,12 +222,21 @@ export function agreementRef(id: string, sentAt: string): string {
 export interface AgreementEvent {
   at: string;
   by?: string;
-  kind: "sent" | "reminder" | "reask";
+  /** "updated": a new version with a changed start date, replacing the one before. */
+  kind: "sent" | "updated" | "reminder" | "reask";
   /** Only on "reask": what the candidate was told. */
   reason?: string;
-  /** Only on "sent": the reference and the stored copy of what was emailed. */
+  /** On "sent" and "updated": the reference and the stored copy of what was emailed. */
   ref?: string;
   key?: string;
+  /** On "updated": the start date before and after (yyyy-mm-dd). */
+  fromDate?: string;
+  toDate?: string;
+}
+
+/** Emails that carried a new version of the agreement (the newest one is the one in force). */
+export function agreementVersions<E extends Pick<AgreementEvent, "kind">>(events: E[] | undefined): E[] {
+  return (events ?? []).filter((e) => e.kind === "sent" || e.kind === "updated");
 }
 
 /** The signed copy, once: the files, and how it reached us. */

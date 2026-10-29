@@ -18,6 +18,7 @@ import {
 } from "@/lib/agreement";
 import {
   AGREEMENT_REFUSAL_STATUS,
+  agreementVersionPdf,
   draftAgreement,
   sendAgreementEmail,
   sentAgreementPdf,
@@ -39,10 +40,14 @@ import { createHash } from "node:crypto";
  *
  *   GET  ?preview=1   the agreement as it would be drawn up now (PDF)
  *   GET  ?file=sent   the exact agreement that was emailed (PDF)
+ *   GET  ?file=version&at=…        an earlier version, replaced by a newer one
+ *   GET  ?preview=1&start=yyyy-mm-dd  the agreement as it would be with a new start date
  *
  *   POST { action }   JSON:
  *     send       draw it up and email it, with their upload link
  *     reminder   email it again, for somebody who has not sent it back
+ *     update     { date } a new version with a new start date, emailed in place
+ *                of the one they have not signed yet
  *     reask      "please send it again", with the reason
  *     approve    accept the signed copy on file
  *     unapprove  take the acceptance back
@@ -97,16 +102,28 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   if (!candidate) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   const name = agreementFileName(contractorName(candidate));
 
-  if (req.nextUrl.searchParams.get("file") === "sent") {
+  const q = req.nextUrl.searchParams;
+  if (q.get("file") === "sent") {
     const doc = await sentAgreementPdf(candidate);
     if (!doc) return NextResponse.json({ ok: false, error: "not_sent" }, { status: 404 });
     return pdfResponse(doc.pdf, name);
   }
-  const missing = agreementMissing(candidate).filter((m) => !m.startsWith("the candidate is not Full verified"));
+  if (q.get("file") === "version") {
+    const doc = await agreementVersionPdf(candidate, q.get("at") ?? "");
+    if (!doc) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    return pdfResponse(doc.pdf, `REPLACED-${doc.ref}-${name}`);
+  }
+  // A new start date to look at before sending it.
+  const start = q.get("start");
+  const startDate = start ? readStartDate(start) : undefined;
+  if (start && !startDate) return NextResponse.json({ ok: false, error: "bad_date" }, { status: 400 });
+  const missing = agreementMissing(startDate ? { ...candidate, agreementStartDate: startDate } : candidate).filter(
+    (m) => !m.startsWith("the candidate is not Full verified"),
+  );
   if (missing.length) {
     return NextResponse.json({ ok: false, error: "missing", missing }, { status: 409 });
   }
-  const doc = await draftAgreement(candidate, new Date().toISOString());
+  const doc = await draftAgreement(candidate, new Date().toISOString(), undefined, startDate ?? undefined);
   if (!doc) return NextResponse.json({ ok: false, error: "missing" }, { status: 409 });
   return pdfResponse(doc.pdf, `PREVIEW-${name}`);
 }
@@ -130,6 +147,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
+  }
+
+  if (body.action === "update") {
+    const result = await sendAgreementEmail(id, baseUrl(req), {
+      kind: "updated",
+      by,
+      startDate: typeof body.date === "string" ? body.date : "",
+    });
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.reason }, { status: AGREEMENT_REFUSAL_STATUS[result.reason] ?? 502 });
+    }
+    return NextResponse.json({ ok: true, ...patchOf(result.candidate) });
   }
 
   if (body.action === "send" || body.action === "reminder" || body.action === "reask") {

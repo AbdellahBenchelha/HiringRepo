@@ -11,6 +11,7 @@ import {
   MAX_AGREEMENT_REASON,
   MAX_SIGNED_FILES,
   agreementReaskMessage,
+  agreementVersions,
   formatAgreementDate,
   type AgreementStatus,
 } from "@/lib/agreement";
@@ -31,7 +32,12 @@ const STYLE: Record<AgreementStatus, { chip: string; icon: IconName }> = {
   approved: { chip: "bg-green-100 text-green-800", icon: "checkCircle" },
 };
 
-const EVENT_LABEL = { sent: "Agreement sent", reminder: "Reminder", reask: "Asked to send again" } as const;
+const EVENT_LABEL = {
+  sent: "Agreement sent",
+  updated: "Updated agreement sent",
+  reminder: "Reminder",
+  reask: "Asked to send again",
+} as const;
 
 const ERRORS: Record<string, string> = {
   warmup_limit: "today's sending limit is reached — try again after it resets, or raise the cap on the Warm-up tab",
@@ -52,6 +58,7 @@ const ERRORS: Record<string, string> = {
   blocked: "a file did not pass the file check",
   storage_unavailable: "file storage is not available",
   bad_date: "choose a valid date",
+  same_date: "that is already the start date in their agreement",
 };
 
 function fmt(iso?: string): string {
@@ -75,7 +82,7 @@ export function AgreementPanel({
   onChange: (patch: Patch) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState<"send" | "reminder" | null>(null);
+  const [confirm, setConfirm] = useState<"send" | "reminder" | "update" | null>(null);
   const [reasking, setReasking] = useState(false);
   const [reason, setReason] = useState<string>(AGREEMENT_REASK_REASONS[0].value);
   const [custom, setCustom] = useState("");
@@ -96,6 +103,8 @@ export function AgreementPanel({
   const docs = (candidate.documents ?? []).filter((d) => d.kind === "signedAgreement" && d.key);
   const signedDocs = latest ? latest.keys.map((k) => docs.find((d) => d.key === k)).filter((d): d is CandidateDocument => !!d) : [];
   const earlier = submissions.slice(0, -1);
+  const versions = agreementVersions(events);
+  const replaced = versions.slice(0, -1).reverse();
   const reminders = events.filter((e) => e.kind === "reminder" && (!candidate.agreementSentAt || e.at >= candidate.agreementSentAt)).length;
   const lastEvent = events.at(-1);
   const recentEvent = !!lastEvent && Date.now() - Date.parse(lastEvent.at) < 24 * 60 * 60 * 1000;
@@ -124,7 +133,7 @@ export function AgreementPanel({
     return true;
   }
 
-  async function act(action: "send" | "reminder" | "reask" | "approve" | "unapprove") {
+  async function act(action: "send" | "reminder" | "update" | "reask" | "approve" | "unapprove") {
     if (busy) return;
     if (action === "reask" && !reaskMessage) {
       setResult({ ok: false, text: ERRORS.no_reason });
@@ -133,12 +142,17 @@ export function AgreementPanel({
     setBusy(true);
     setResult(null);
     try {
-      const res = await adminPost(api, { action, ...(action === "reask" ? { reason, custom } : {}) });
+      const res = await adminPost(api, {
+        action,
+        ...(action === "reask" ? { reason, custom } : {}),
+        ...(action === "update" ? { date: startDate } : {}),
+      });
       const ok = await handle(
         res,
         {
           send: "Agreement emailed.",
           reminder: "Reminder emailed.",
+          update: "Updated agreement emailed — it replaces the earlier version.",
           reask: "Asked to send it again — their page is open again.",
           approve: "Signed agreement accepted.",
           unapprove: "Acceptance undone.",
@@ -258,6 +272,48 @@ export function AgreementPanel({
             </button>
           </div>
         </div>
+      ) : status === "sent" ? (
+        <div className="mt-4 rounded-xl border border-cream-300 bg-white p-3.5" data-agreement-start data-agreement-change>
+          <label htmlFor={`agreement-start-${candidate.id}`} className="text-xs font-bold uppercase tracking-wide text-navy-500">
+            Start date
+          </label>
+          <p className="mt-0.5 text-xs text-navy-500">
+            In their agreement now: <strong className="text-navy-800">{currentStart ? formatAgreementDate(currentStart) : "—"}</strong>. Not
+            signed yet — to change it, choose the new date and send them an updated agreement. It replaces the one they have.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              id={`agreement-start-${candidate.id}`}
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900"
+              data-agreement-start-input
+            />
+            {startDate && startDate !== currentStart ? (
+              <a
+                href={`${api}?preview=1&start=${encodeURIComponent(startDate)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${btn} border border-navy-200 bg-white text-navy-800 hover:bg-navy-50`}
+                data-agreement-preview-new
+              >
+                <Icon name="search" className="h-4 w-4" />
+                Preview new agreement
+              </a>
+            ) : null}
+            <button
+              type="button"
+              disabled={busy || !hasEmail || !startDate || startDate === currentStart}
+              onClick={() => setConfirm("update")}
+              className={`${btn} bg-navy-900 text-white hover:bg-navy-800`}
+              data-agreement-action="update"
+            >
+              <Icon name="send" className="h-4 w-4" />
+              Send updated agreement
+            </button>
+          </div>
+        </div>
       ) : currentStart ? (
         <p className="mt-3 text-xs text-navy-500" data-agreement-start>
           Start date in the agreement: <strong className="text-navy-800">{formatAgreementDate(currentStart)}</strong>
@@ -297,7 +353,15 @@ export function AgreementPanel({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-navy-500">Check every page is there, and that it is signed and dated where it says “The Contractor”.</p>
+          <p className="mt-2 text-xs text-navy-500">
+            Check every page is there, and that it is signed and dated where it says “The Contractor”.
+            {versions.length > 1 && candidate.agreementRef ? (
+              <>
+                {" "}It was updated, so check the reference at the foot of each page is{" "}
+                <strong className="text-navy-800">{candidate.agreementRef}</strong> — not an earlier version.
+              </>
+            ) : null}
+          </p>
         </div>
       ) : null}
 
@@ -468,12 +532,36 @@ export function AgreementPanel({
                 <span className="min-w-0">
                   {EVENT_LABEL[e.kind]} · {fmt(e.at)}
                   {e.by ? ` by ${e.by}` : ""}
+                  {e.kind === "updated" && e.toDate
+                    ? ` · start date ${e.fromDate ? formatAgreementDate(e.fromDate) : "—"} → ${formatAgreementDate(e.toDate)}`
+                    : ""}
                   {e.ref ? ` · ${e.ref}` : ""}
                   {e.reason ? ` — ${e.reason}` : ""}
                 </span>
               </li>
             ))}
           </ol>
+        </div>
+      ) : null}
+
+      {replaced.length ? (
+        <div className="mt-3 text-xs text-navy-600" data-agreement-replaced>
+          <p className="font-semibold text-navy-500">Earlier versions (replaced)</p>
+          <ul className="mt-1 space-y-1">
+            {replaced.map((v) => (
+              <li key={v.at}>
+                <a
+                  href={`${api}?file=version&at=${encodeURIComponent(v.at)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-800"
+                >
+                  {v.ref || "Agreement"}
+                </a>{" "}
+                · sent {fmt(v.at)} · replaced
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
@@ -501,7 +589,13 @@ export function AgreementPanel({
       <ConfirmDialog
         open={confirm !== null}
         icon="mail"
-        title={confirm === "reminder" ? "Send an agreement reminder?" : "Send the final agreement?"}
+        title={
+          confirm === "reminder"
+            ? "Send an agreement reminder?"
+            : confirm === "update"
+              ? "Send the updated agreement?"
+              : "Send the final agreement?"
+        }
         confirmLabel={busy ? "Sending…" : "Send email"}
         busy={busy}
         warning={recentEvent ? `An email about this already went out on ${fmt(lastEvent?.at)}.` : undefined}
@@ -517,6 +611,8 @@ export function AgreementPanel({
             ) : null}{" "}
             {confirm === "reminder"
               ? "reminding them to sign and send back their agreement. The same PDF is attached again."
+              : confirm === "update"
+                ? `with a new version of their agreement: the start date changes from ${currentStart ? formatAgreementDate(currentStart) : "—"} to ${startDate ? formatAgreementDate(startDate) : "—"}. The email tells them the earlier version no longer applies and not to sign it.`
               : "with their Independent Contractor Agreement attached as a PDF, filled with their details, and a personal link to upload it signed."}{" "}
             You get a Telegram message when they upload it.
           </p>

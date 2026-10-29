@@ -136,6 +136,9 @@ import {
   agreementSentHtml,
   agreementSentSubject,
   agreementSentText,
+  agreementUpdatedHtml,
+  agreementUpdatedSubject,
+  agreementUpdatedText,
 } from "@/lib/agreementEmails";
 import { REUPLOAD_REASONS } from "@/lib/verification";
 import { RESIDENCE_REASONS } from "@/lib/residence";
@@ -725,6 +728,25 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     render: () => {
       const payload = { fullName: SAMPLE_NAME, url: link("/agreement?t=EXAMPLE"), ref: "WR-EXAMPLE-20261029" };
       return { subject: agreementSentSubject(), html: agreementSentHtml(payload), text: agreementSentText(payload) };
+    },
+  },
+  {
+    id: "agreement-updated",
+    name: "Final agreement — updated start date",
+    stage: "offer",
+    when:
+      "Sent with Send updated agreement in View info → Agreement, when you change the start date for somebody who has not signed yet. The new version is attached with a new reference; the email tells them the earlier one no longer applies.",
+    kind: "campaign",
+    source: "agreementUpdatedHtml",
+    render: () => {
+      const payload = {
+        fullName: SAMPLE_NAME,
+        url: link("/agreement?t=EXAMPLE"),
+        ref: "WR-EXAMPLE-20261105-V2",
+        fromDate: "2 November 2026",
+        toDate: "16 November 2026",
+      };
+      return { subject: agreementUpdatedSubject(), html: agreementUpdatedHtml(payload), text: agreementUpdatedText(payload) };
     },
   },
   {

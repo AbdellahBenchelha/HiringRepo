@@ -5,6 +5,8 @@
  *   sent      draw up the agreement for this candidate, keep the exact PDF,
  *             and email it with the link to send the signed copy back
  *   reminder  the same PDF again, for somebody who has not sent it back
+ *   updated   a new version with a changed start date, for somebody who has
+ *             not signed yet; it replaces the one before
  *   reask     the signed copy will not do: says why, with the PDF again
  *
  * Each checks the candidate's state again at the moment of sending, so a
@@ -15,9 +17,13 @@ import { getCandidate, recordAgreementEmail, type Candidate } from "@/lib/store"
 import {
   agreementMissing,
   agreementRef,
+  agreementStart,
   agreementStatus,
   agreementTerms,
+  agreementVersions,
   contractorName,
+  formatAgreementDate,
+  readStartDate,
   type AgreementEvent,
 } from "@/lib/agreement";
 import { agreementPdf } from "@/lib/agreementPdf";
@@ -36,6 +42,9 @@ import {
   agreementSentHtml,
   agreementSentSubject,
   agreementSentText,
+  agreementUpdatedHtml,
+  agreementUpdatedSubject,
+  agreementUpdatedText,
 } from "@/lib/agreementEmails";
 import { createAgreementToken } from "@/lib/token";
 import { sendEmail } from "@/lib/email";
@@ -62,6 +71,8 @@ export const AGREEMENT_REFUSAL_STATUS: Record<string, number> = {
   no_document: 409,
   not_sent: 409,
   too_soon: 409,
+  bad_date: 400,
+  same_date: 409,
   warmup_limit: 429,
 };
 
@@ -74,13 +85,18 @@ export function agreementKeyFor(id: string, ref: string, at: string): string {
   return `candidates/${id}/agreement-${ref}-${at.slice(11, 19).replace(/:/g, "")}.pdf`;
 }
 
-/** The agreement drawn up now for this candidate — for the preview, or to send. */
+/**
+ * The agreement drawn up now for this candidate — for the preview, or to send.
+ * `startDate` draws it with a different start date (a new version), without
+ * saving anything.
+ */
 export async function draftAgreement(
   c: Candidate,
   issuedAt: string,
   ref = agreementRef(c.id, issuedAt),
+  startDate?: string,
 ): Promise<{ pdf: Uint8Array; ref: string } | null> {
-  const terms = agreementTerms(c);
+  const terms = agreementTerms(startDate ? { ...c, agreementStartDate: startDate } : c);
   if (!terms) return null;
   const seal = await loadSeal();
   return { pdf: await agreementPdf({ terms, ref, issuedAt, seal }), ref };
@@ -96,15 +112,38 @@ export async function sentAgreementPdf(c: Candidate): Promise<{ pdf: Uint8Array;
     const bytes = await getObjectBytes(c.agreementKey, MAX_PDF_BYTES);
     if (bytes && c.agreementRef) return { pdf: bytes, ref: c.agreementRef };
   }
-  const sent = [...(c.agreementEvents ?? [])].reverse().find((e) => e.kind === "sent");
+  const sent = agreementVersions(c.agreementEvents).at(-1);
   if (!sent) return null;
   return draftAgreement(c, sent.at, sent.ref ?? c.agreementRef);
+}
+
+/** One earlier version, for the recruiter: the stored copy, or drawn again. */
+export async function agreementVersionPdf(c: Candidate, at: string): Promise<{ pdf: Uint8Array; ref: string } | null> {
+  const v = agreementVersions(c.agreementEvents).find((e) => e.at === at);
+  if (!v) return null;
+  if (v.key) {
+    const bytes = await getObjectBytes(v.key, MAX_PDF_BYTES);
+    if (bytes) return { pdf: bytes, ref: v.ref ?? "" };
+  }
+  return draftAgreement(c, v.at, v.ref, v.toDate);
+}
+
+/** A new version's reference: the date it was issued, and which version it is. */
+function nextRef(c: Candidate, at: string): string {
+  return `${agreementRef(c.id, at)}-V${agreementVersions(c.agreementEvents).length + 1}`;
 }
 
 export async function sendAgreementEmail(
   id: string,
   base: string,
-  opts: { kind: AgreementEmailKind; by?: string; reason?: string; override?: boolean },
+  opts: {
+    kind: AgreementEmailKind;
+    by?: string;
+    reason?: string;
+    override?: boolean;
+    /** For "updated": the new start date (yyyy-mm-dd). */
+    startDate?: string;
+  },
 ): Promise<AgreementSendOutcome> {
   const candidate = await getCandidate(id);
   if (!candidate) return { ok: false, reason: "not_found" };
@@ -117,6 +156,14 @@ export async function sendAgreementEmail(
     if (status === "signed" || status === "approved") return { ok: false, reason: "already_signed" };
   }
   if (opts.kind === "reminder" && status !== "sent") return { ok: false, reason: "not_waiting" };
+  const fromDate = agreementStart(candidate);
+  const toDate = opts.kind === "updated" ? readStartDate(opts.startDate) : null;
+  if (opts.kind === "updated") {
+    // Only while they have not signed: a signed copy is answered with Ask again.
+    if (status !== "sent") return { ok: false, reason: "not_waiting" };
+    if (!toDate) return { ok: false, reason: "bad_date" };
+    if (toDate === fromDate) return { ok: false, reason: "same_date" };
+  }
   if (opts.kind === "reask") {
     if (status !== "signed" && status !== "approved") return { ok: false, reason: "no_document" };
     if (!opts.reason) return { ok: false, reason: "no_reason" };
@@ -130,8 +177,11 @@ export async function sendAgreementEmail(
   const at = new Date().toISOString();
   let doc: { pdf: Uint8Array; ref: string } | null;
   let key: string | undefined;
-  if (opts.kind === "sent") {
-    doc = await draftAgreement(candidate, at);
+  if (opts.kind === "sent" || opts.kind === "updated") {
+    doc =
+      opts.kind === "updated"
+        ? await draftAgreement(candidate, at, nextRef(candidate, at), toDate!)
+        : await draftAgreement(candidate, at);
     if (!doc) return { ok: false, reason: "missing" };
     if (r2Configured()) {
       const k = agreementKeyFor(id, doc.ref, at);
@@ -146,7 +196,16 @@ export async function sendAgreementEmail(
   const url = agreementUrl(base, id, at);
   const payload = { fullName: name, url, ref: doc.ref };
   const message =
-    opts.kind === "reask"
+    opts.kind === "updated"
+      ? (() => {
+          const e = {
+            ...payload,
+            fromDate: fromDate ? formatAgreementDate(fromDate) : "",
+            toDate: formatAgreementDate(toDate!),
+          };
+          return { subject: agreementUpdatedSubject(), html: agreementUpdatedHtml(e), text: agreementUpdatedText(e) };
+        })()
+      : opts.kind === "reask"
       ? {
           subject: agreementReaskSubject(),
           html: agreementReaskHtml({ ...payload, reason: opts.reason ?? "" }),
@@ -176,7 +235,8 @@ export async function sendAgreementEmail(
     at,
     by: opts.by,
     kind: opts.kind,
-    ...(opts.kind === "sent" ? { ref: doc.ref, ...(key ? { key } : {}) } : {}),
+    ...(opts.kind === "sent" || opts.kind === "updated" ? { ref: doc.ref, ...(key ? { key } : {}) } : {}),
+    ...(opts.kind === "updated" ? { ...(fromDate ? { fromDate } : {}), toDate: toDate! } : {}),
     ...(opts.kind === "reask" ? { reason: opts.reason } : {}),
   });
   if (!updated) return { ok: false, reason: "not_found" };

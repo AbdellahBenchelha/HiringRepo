@@ -3,6 +3,7 @@
  *
  *   sent      "Your final agreement — please sign and send it back", the PDF
  *             attached, with the link to upload the signed copy
+ *   updated   a new version with a new start date, replacing the one before
  *   reminder  the same, for somebody who has not sent it back yet
  *   reask     the signed copy will not do: says why, and opens their page again
  *   received  "We have your signed agreement" — sent when they upload it
@@ -39,7 +40,14 @@ export interface AgreementReaskEmail extends AgreementEmail {
   reason: string;
 }
 
+export interface AgreementUpdatedEmail extends AgreementEmail {
+  /** "2 November 2026"; empty when the earlier version had none. */
+  fromDate: string;
+  toDate: string;
+}
+
 export const agreementSentSubject = () => "Your final agreement — please sign and send it back";
+export const agreementUpdatedSubject = () => "Your agreement has been updated — new start date";
 export const agreementReminderSubject = () => "Reminder: your agreement is waiting for your signature";
 export const agreementReaskSubject = () => "Please send your signed agreement again";
 export const agreementReceivedSubject = () => "We have received your signed agreement";
@@ -204,6 +212,48 @@ export function agreementSentHtml(e: AgreementEmail): string {
       `Your verification is complete, and <strong style="color:${NAVY};">your final agreement is ready</strong>. You will find it attached to this email as a PDF.`,
       "Please read it carefully. It contains your rate, your weekly hours, your start date and the work hours and days you chose. If anything is unclear or not right, reply to this email before signing.",
     ],
+    ref: e.ref,
+    steps: { url: e.url, button: "Upload my signed agreement" },
+  });
+}
+
+/* --------------------------------- updated -------------------------------- */
+
+function changeLine(e: AgreementUpdatedEmail): string {
+  return e.fromDate
+    ? `Your start date has changed from ${e.fromDate} to ${e.toDate}.`
+    : `Your start date is now ${e.toDate}.`;
+}
+
+export function agreementUpdatedText(e: AgreementUpdatedEmail): string {
+  return [
+    `Hi ${firstName(e.fullName)},`,
+    "",
+    changeLine(e),
+    "",
+    "We have attached the updated agreement. Please sign this new version and send it back.",
+    "The earlier version no longer applies — please do not sign it. If you have already signed it, please sign this one instead.",
+    "",
+    ...HOW_TEXT,
+    "",
+    ...sendBackText(e.url),
+    "",
+    `Agreement reference: ${e.ref}`,
+    "",
+    ...footerText(),
+  ].join("\n");
+}
+
+export function agreementUpdatedHtml(e: AgreementUpdatedEmail): string {
+  return shell({
+    subject: agreementUpdatedSubject(),
+    preheader: `${changeLine(e)} Please sign the updated agreement attached.`,
+    heading: "Your agreement has been updated",
+    intro: [
+      `Hi ${esc(firstName(e.fullName))},`,
+      `We have attached the updated agreement. Please sign <strong style="color:${NAVY};">this new version</strong> and send it back. The earlier version no longer applies &mdash; please do not sign it. If you have already signed it, please sign this one instead.`,
+    ],
+    reason: changeLine(e),
     ref: e.ref,
     steps: { url: e.url, button: "Upload my signed agreement" },
   });

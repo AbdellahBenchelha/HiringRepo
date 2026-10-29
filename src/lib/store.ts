@@ -1668,13 +1668,15 @@ export function recordAgreementEmail(id: string, event: AgreementEvent): Promise
     const c = list.find((x) => x.id === id);
     if (!c) return { list, result: null };
     c.agreementEvents = [...(c.agreementEvents ?? []), event];
-    if (event.kind === "sent" || event.kind === "reask") {
+    if (event.kind === "sent" || event.kind === "updated" || event.kind === "reask") {
       c.agreementSentAt = event.at;
-      if (event.kind === "sent") {
+      if (event.kind === "sent" || event.kind === "updated") {
         if (event.ref) c.agreementRef = event.ref;
         if (event.key) c.agreementKey = event.key;
         else delete c.agreementKey;
       }
+      // The new version carries the new start date; the offer stays as sent.
+      if (event.kind === "updated" && event.toDate) c.agreementStartDate = event.toDate;
       if (event.kind === "reask" && event.reason) c.agreementReason = event.reason;
       else delete c.agreementReason;
       // A new signed copy is wanted, so the old acceptance no longer describes it.
