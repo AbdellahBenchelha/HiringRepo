@@ -20,6 +20,7 @@
  */
 import http from "node:http";
 import dns from "node:dns/promises";
+import { randomBytes } from "node:crypto";
 
 const PORT = Number(process.env.PORT || 8080);
 const rawTarget = process.env.TARGET_URL?.trim();
@@ -71,6 +72,15 @@ const HOP = new Set([
 // down one it has just closed fails ("ECONNRESET") — which showed up as page
 // refreshes that silently did nothing. Inside the private network a new
 // connection costs well under a millisecond.
+/**
+ * Marks every request this gateway forwards. If one comes back to us, the
+ * TARGET_URL is this gateway's own address (easy to do: it was created from
+ * the same repository, so Railway may give it the same name) — answer at once
+ * instead of calling ourselves in a circle until something times out.
+ */
+const LOOP_HEADER = "x-workroute-gateway";
+const INSTANCE = randomBytes(8).toString("hex");
+
 const agent = new http.Agent({ keepAlive: false, maxSockets: 256 });
 
 /** How long to wait for the main service to accept a connection. */
@@ -119,11 +129,15 @@ function probe(address) {
           method: "GET",
           path: "/robots.txt",
           agent,
-          headers: { host: ALLOWED[0] },
+          headers: { host: ALLOWED[0], [LOOP_HEADER]: INSTANCE },
         },
         (up) => {
           up.resume();
-          resolve({ ok: true, text: `answered (HTTP ${up.statusCode})` });
+          if (up.headers[LOOP_HEADER] === INSTANCE) {
+            resolve({ ok: false, code: "SELF", text: "this is the GATEWAY ITSELF, not the main service" });
+          } else {
+            resolve({ ok: true, text: `answered (HTTP ${up.statusCode})` });
+          }
         },
       ),
       10_000,
@@ -170,7 +184,11 @@ async function check(res) {
   const v6 = results.find((r) => r.family === 6);
   const used = results.filter((r) => !FAMILY || r.family === FAMILY);
   lines.push("");
-  if (used.length && used.every((r) => r.ok)) {
+  if (results.some((r) => r.code === "SELF")) {
+    lines.push(
+      "TARGET_URL points to this gateway, not to your main site. Open the MAIN service (the one with workroute.co.uk) → Settings → Networking → Private Networking, and put ITS address in TARGET_URL.",
+    );
+  } else if (used.length && used.every((r) => r.ok)) {
     lines.push("Everything is connected.");
   } else if (v4?.ok && !v6?.ok) {
     lines.push("The main service answers on IPv4 only. Fix: add the variable TARGET_FAMILY=4 to this gateway service.");
@@ -210,6 +228,11 @@ const server = http.createServer((req, res) => {
     void check(res);
     return;
   }
+  if (req.headers[LOOP_HEADER] === INSTANCE) {
+    res.writeHead(508, { "Content-Type": "text/plain; charset=utf-8", [LOOP_HEADER]: INSTANCE });
+    res.end("Loop: TARGET_URL points to this gateway itself, not to the main service.");
+    return;
+  }
   if (!ALLOWED.includes(host)) {
     res.writeHead(308, { Location: `https://${ALLOWED[0]}${req.url || "/"}` });
     res.end();
@@ -223,6 +246,7 @@ const server = http.createServer((req, res) => {
   headers["x-forwarded-for"] ??= req.socket.remoteAddress ?? "";
   headers["x-forwarded-proto"] ??= "https";
   headers["x-forwarded-host"] ??= hostHeader;
+  headers[LOOP_HEADER] = INSTANCE;
 
   const upstream = withConnectTimeout(http.request(
     {
