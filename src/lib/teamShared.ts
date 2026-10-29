@@ -311,6 +311,26 @@ export function formatDateTime(iso: string, timeZone?: string): string {
   }
 }
 
+/** A mail list's date: "13:56" today, "28 Oct" this year, "28 Oct 2025" before. */
+export function formatMailDate(iso: string, timeZone?: string, now = new Date()): string {
+  try {
+    const tz = timeZone ? { timeZone } : {};
+    const d = new Date(iso);
+    const day = (x: Date) => x.toLocaleDateString("en-CA", tz);
+    if (day(d) === day(now)) return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", ...tz });
+    const sameYear = day(d).slice(0, 4) === day(now).slice(0, 4);
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }), ...tz });
+  } catch {
+    return iso;
+  }
+}
+
+/** "820 KB", "2.4 MB". */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 /** "October 2026" for "2026-10". */
 export function formatMonth(month: string): string {
   return new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-GB", {

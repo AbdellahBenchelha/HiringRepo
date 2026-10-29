@@ -82,7 +82,13 @@ export type IconName =
   | "clockLine"
   | "userLine"
   | "chatLine"
-  | "checkThick";
+  | "checkThick"
+  | "paperclip"
+  | "inbox"
+  | "reply"
+  | "forward"
+  | "download"
+  | "copy";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -317,6 +323,19 @@ const paths: Record<IconName, React.ReactNode> = {
   ),
   expand: (
     <path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z" />
+  ),
+  // Team portal Mail.
+  paperclip: (
+    <path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6h-1.5Z" />
+  ),
+  inbox: (
+    <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10Z" />
+  ),
+  reply: <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11Z" />,
+  forward: <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11Z" />,
+  download: <path d="M5 20h14v-2H5v2Zm14-11h-4V3H9v6H5l7 7 7-7Z" />,
+  copy: (
+    <path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z" />
   ),
 };
 
