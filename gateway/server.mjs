@@ -41,6 +41,12 @@ try {
   );
   process.exit(1);
 }
+/**
+ * TARGET_FAMILY — optional, 4 or 6: reach the main service over IPv4 or IPv6
+ * only. Railway's private address has both, and a service listening on one
+ * leaves the other connected but silent. /__gateway/check says which works.
+ */
+const FAMILY = [4, 6].includes(Number(process.env.TARGET_FAMILY)) ? Number(process.env.TARGET_FAMILY) : 0;
 const ALLOWED = (process.env.ALLOWED_HOSTS || "workroute.team,www.workroute.team")
   .split(",")
   .map((h) => h.trim().toLowerCase())
@@ -78,7 +84,7 @@ const ANSWER_TIMEOUT_MS = 60_000;
  * an unreachable service does not refuse — it just never answers, which
  * looked like pages that load for ever.
  */
-function withConnectTimeout(request) {
+function withConnectTimeout(request, answerMs = ANSWER_TIMEOUT_MS) {
   request.on("socket", (socket) => {
     if (!socket.connecting) return;
     const timer = setTimeout(() => {
@@ -92,56 +98,92 @@ function withConnectTimeout(request) {
   // Connected, but no answer: give up rather than leave the visitor waiting
   // until Cloudflare or the browser does (Cloudflare's 524).
   const answer = setTimeout(() => {
-    const err = new Error(`${target.host} accepted the connection but sent no answer within ${ANSWER_TIMEOUT_MS / 1000}s`);
+    const err = new Error(`${target.host} accepted the connection but sent no answer within ${answerMs / 1000}s`);
     err.code = "ANSWER_TIMEOUT";
     request.destroy(err);
-  }, ANSWER_TIMEOUT_MS);
+  }, answerMs);
   request.once("response", () => clearTimeout(answer));
   request.once("close", () => clearTimeout(answer));
   return request;
 }
 
-/**
- * /__gateway/check — says whether the main service can be reached, and if
- * not, why: the address TARGET_URL names, what it resolves to, and what
- * happened when we tried. For setting up; it reveals nothing reachable from
- * outside Railway.
- */
-async function check(res) {
-  const lines = [`TARGET_URL: ${target.origin}`];
-  try {
-    const addrs = await dns.lookup(target.hostname, { all: true });
-    lines.push(`Address found: ${addrs.map((a) => a.address).join(", ")}`);
-  } catch (err) {
-    lines.push(`Address NOT found (${err.code}). The name before the port is wrong, or Private Networking is off on the main service.`);
-    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
-    res.end(lines.join("\n"));
-    return;
-  }
-  const result = await new Promise((resolve) => {
+/** Ask the main service for its robots.txt at one address; say how it went. */
+function probe(address) {
+  return new Promise((resolve) => {
     const r = withConnectTimeout(
       http.request(
-        { protocol: target.protocol, hostname: target.hostname, port: target.port || 80, method: "GET", path: "/robots.txt", agent, headers: { host: ALLOWED[0] } },
+        {
+          protocol: target.protocol,
+          host: address,
+          port: target.port || 80,
+          method: "GET",
+          path: "/robots.txt",
+          agent,
+          headers: { host: ALLOWED[0] },
+        },
         (up) => {
           up.resume();
-          resolve(`Main service answered: HTTP ${up.statusCode}. Everything is connected.`);
+          resolve({ ok: true, text: `answered (HTTP ${up.statusCode})` });
         },
       ),
+      10_000,
     );
     r.on("error", (err) =>
-      resolve(
-        err.code === "CONNECT_TIMEOUT" || err.code === "ECONNREFUSED"
-          ? `NO answer on port ${target.port || 80} (${err.code}). The port is probably wrong: use the number in the main service's deploy log line "Local: http://localhost:____". If the port is right, set the main service's start command to: npx next start -H ::`
-          : err.code === "ANSWER_TIMEOUT"
-            ? "Connected to the main service, but it did not answer. Check the main service's deploy logs for errors."
-            : `Failed: ${err.code || err.message}`,
-      ),
+      resolve({
+        ok: false,
+        code: err.code,
+        text:
+          err.code === "ANSWER_TIMEOUT"
+            ? "connected, but NO answer"
+            : err.code === "CONNECT_TIMEOUT" || err.code === "ECONNREFUSED"
+              ? `could not connect (${err.code})`
+              : `failed (${err.code || err.message})`,
+      }),
     );
     r.end();
   });
-  lines.push(result);
-  res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
-  res.end(lines.join("\n"));
+}
+
+/**
+ * /__gateway/check — says whether the main service can be reached, and if
+ * not, why: the address TARGET_URL names, what it resolves to, and how each
+ * of those addresses answered (IPv6 and IPv4 separately, since a service can
+ * listen on one and not the other). For setting up; it reveals nothing
+ * reachable from outside Railway.
+ */
+async function check(res) {
+  const lines = [`TARGET_URL: ${target.origin}`, `TARGET_FAMILY: ${FAMILY ? `IPv${FAMILY} only` : "not set (both)"}`];
+  const reply = () => {
+    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(lines.join("\n"));
+  };
+  let addrs;
+  try {
+    addrs = await dns.lookup(target.hostname, { all: true });
+  } catch (err) {
+    lines.push(`Address NOT found (${err.code}). The name before the port is wrong, or Private Networking is off on the main service.`);
+    return reply();
+  }
+  const results = await Promise.all(addrs.map(async (a) => ({ ...a, ...(await probe(a.address)) })));
+  for (const r of results) lines.push(`IPv${r.family} ${r.address}: ${r.text}`);
+  const v4 = results.find((r) => r.family === 4);
+  const v6 = results.find((r) => r.family === 6);
+  const used = results.filter((r) => !FAMILY || r.family === FAMILY);
+  lines.push("");
+  if (used.length && used.every((r) => r.ok)) {
+    lines.push("Everything is connected.");
+  } else if (v4?.ok && !v6?.ok) {
+    lines.push("The main service answers on IPv4 only. Fix: add the variable TARGET_FAMILY=4 to this gateway service.");
+  } else if (v6?.ok && !v4?.ok) {
+    lines.push("The main service answers on IPv6 only. Fix: add the variable TARGET_FAMILY=6 to this gateway service.");
+  } else if (results.some((r) => r.code === "CONNECT_TIMEOUT" || r.code === "ECONNREFUSED")) {
+    lines.push(
+      `NO answer on port ${target.port || 80}. Check the port: it is the number in the main service's deploy log line "Local: http://localhost:____".`,
+    );
+  } else {
+    lines.push("The main service did not answer. Check the main service's deploy logs for errors.");
+  }
+  reply();
 }
 
 function unavailable(res) {
@@ -187,6 +229,7 @@ const server = http.createServer((req, res) => {
       protocol: target.protocol,
       hostname: target.hostname,
       port: target.port || 80,
+      family: FAMILY || undefined,
       method: req.method,
       path: req.url,
       headers,

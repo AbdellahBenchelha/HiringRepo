@@ -32,4 +32,6 @@ the team admin panel; this service stores nothing.
 If the portal shows "WorkRoute Team is restarting", the gateway cannot reach
 the main service. Open `https://workroute.team/__gateway/check`: it says
 whether the address in `TARGET_URL` was found and whether the main service
-answered on that port, and what to change if not.
+answered on that port — over IPv6 and IPv4 separately — and what to change
+if not. If it says the main service answers on IPv4 only, add the variable
+`TARGET_FAMILY=4` to this gateway service.
