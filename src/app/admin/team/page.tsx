@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { memberRows } from "@/lib/teamAdminData";
 import { bankCryptoReady } from "@/lib/teamCrypto";
-import { MEMBER_STATUS_LABEL, formatDateTime, formatUsd } from "@/lib/teamShared";
+import { formatDateTime, formatUsd, memberStateOf } from "@/lib/teamShared";
 import { currentRate } from "@/lib/teamStore";
 import { teamPortalUrl } from "@/lib/teamHost";
 import { TeamFilter } from "@/components/admin/team/TeamFilter";
@@ -98,12 +98,8 @@ export default async function AdminTeamPage({ searchParams }: { searchParams: Pr
                     ) : null}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        m.status === "active" ? "bg-green-100 text-green-800" : m.status === "paused" ? "bg-amber-100 text-amber-900" : "bg-navy-100 text-navy-600"
-                      }`}
-                    >
-                      {MEMBER_STATUS_LABEL[m.status]}
+                    <span data-member-state={memberStateOf(m).key} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${memberStateOf(m).className}`}>
+                      {memberStateOf(m).label}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs">

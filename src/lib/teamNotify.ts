@@ -14,10 +14,13 @@
 import { sendEmail } from "@/lib/email";
 import { escapeHtml, sendTelegramMessage } from "@/lib/telegram";
 import { siteConfig } from "@/config/site";
-import { BANKS, formatDay, formatUsd, maskIban } from "@/lib/teamShared";
+import { BANKS, formatDay, formatLongDay, formatUsd, hoursCountedFrom, maskIban } from "@/lib/teamShared";
 import { markAlertSent, setTempPassword, type DayOff, type Payment, type StoredBank, type TeamMember, type Ticket } from "@/lib/teamStore";
 import { encryptPassword, generateTempPassword, TEMP_PASSWORD_DAYS } from "@/lib/teamPassword";
 import {
+  teamActivatedHtml,
+  teamActivatedSubject,
+  teamActivatedText,
   teamBankHtml,
   teamBankSubject,
   teamBankText,
@@ -70,7 +73,14 @@ function errorOf(r: Awaited<ReturnType<typeof sendEmail>>): string {
 
 /** The welcome email with the member's email and a temporary password. */
 export async function sendTeamInvite(m: TeamMember, tempPassword: string) {
-  const e = { fullName: m.fullName, workEmail: m.workEmail ?? "", tempPassword, portalUrl: teamPortalUrl() };
+  const e = {
+    fullName: m.fullName,
+    workEmail: m.workEmail ?? "",
+    tempPassword,
+    portalUrl: teamPortalUrl(),
+    startDate: m.firstWorkDay ? formatLongDay(m.firstWorkDay) : undefined,
+    needsActivation: !m.activatedAt,
+  };
   const r = await send(m, teamInviteSubject(), teamInviteHtml(e), teamInviteText(e));
   log("invite", m, r.ok, errorOf(r));
   return r;
@@ -149,17 +159,32 @@ export async function sendPaymentEmail(m: TeamMember, p: Payment) {
   log("payment", m, r.ok, errorOf(r));
 }
 
-export async function sendBankDecision(m: TeamMember, approved: boolean, b: StoredBank, reason?: string) {
+/**
+ * `activated` is the member as saved after an approval that activated their
+ * account: the email then says so, and from when hours are counted.
+ */
+export async function sendBankDecision(m: TeamMember, approved: boolean, b: StoredBank, reason?: string, activated?: TeamMember) {
+  const from = activated ? hoursCountedFrom(activated) : undefined;
   const e = {
     fullName: m.fullName,
     approved,
     bank: BANKS[b.bank].label,
     masked: maskIban(b.ibanCountry, b.last4),
     reason,
-    url: `${teamPortalUrl()}/bank`,
+    url: `${teamPortalUrl()}/${activated ? "" : "bank"}`,
+    activatedFrom: from ? formatLongDay(from) : undefined,
   };
-  const r = await send(m, teamBankSubject(approved), teamBankHtml(e), teamBankText(e));
+  const r = await send(m, teamBankSubject(approved, !!from), teamBankHtml(e), teamBankText(e));
   log(`bank ${approved ? "approved" : "refused"}`, m, r.ok, errorOf(r));
+}
+
+/** A recruiter activated the account by hand (Activate now). */
+export async function sendActivated(m: TeamMember) {
+  const from = hoursCountedFrom(m);
+  if (!from) return;
+  const e = { fullName: m.fullName, countedFrom: formatLongDay(from), needsBank: !m.bank, url: `${teamPortalUrl()}/${m.bank ? "" : "bank"}` };
+  const r = await send(m, teamActivatedSubject(), teamActivatedHtml(e), teamActivatedText(e));
+  log("account activated", m, r.ok, errorOf(r));
 }
 
 export async function sendDayOffDecision(m: TeamMember, d: DayOff) {

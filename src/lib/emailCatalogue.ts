@@ -96,6 +96,9 @@ import {
   voiceReminderText,
 } from "@/lib/emailTemplates";
 import {
+  teamActivatedHtml,
+  teamActivatedSubject,
+  teamActivatedText,
   teamBankHtml,
   teamBankSubject,
   teamBankText,
@@ -841,11 +844,18 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     id: "team-invite",
     name: "Welcome to the team — login details",
     stage: "team",
-    when: "Sent when you add someone to the team (Accepted → Add to team, or Team → Add member), or press Send login details again on their Team page. Includes their professional email and a temporary password.",
+    when: "Sent when you add someone to the team (Accepted → Add to team, or Team → Add member), press Send login details again on their Team page, or Send portal login in an onboarding chat. Includes their professional email, a temporary password and their start date — and, until the account is active, that bank details are required to activate it.",
     kind: "reactive",
     source: "teamInviteHtml",
     render: () => {
-      const e = { fullName: SAMPLE_NAME, workEmail: "amina.benali@workroute.team", tempPassword: "Kp7q-M4xR-a9zT", portalUrl: teamPortalUrl() };
+      const e = {
+        fullName: SAMPLE_NAME,
+        workEmail: "amina.benali@workroute.team",
+        tempPassword: "Kp7q-M4xR-a9zT",
+        portalUrl: teamPortalUrl(),
+        startDate: "Monday, 9 November 2026",
+        needsActivation: true,
+      };
       return { subject: teamInviteSubject(), html: teamInviteHtml(e), text: teamInviteText(e) };
     },
   },
@@ -913,12 +923,24 @@ export const EMAIL_CATALOGUE: readonly CatalogueEntry[] = [
     id: "team-bank",
     name: "Bank account approved / not approved",
     stage: "team",
-    when: "Sent when you approve or refuse the bank details a member added or changed (Team → member → Bank).",
+    when: "Sent when you approve or refuse the bank details a member added or changed (Team → member → Bank). Approving a new member's first bank details activates their account, and this email then says so (shown here).",
     kind: "reactive",
     source: "teamBankHtml",
     render: () => {
-      const e = { fullName: SAMPLE_NAME, approved: true, bank: "Revolut", masked: "LT •••• 8901", url: `${teamPortalUrl()}/bank` };
-      return { subject: teamBankSubject(true), html: teamBankHtml(e), text: teamBankText(e) };
+      const e = { fullName: SAMPLE_NAME, approved: true, bank: "Revolut", masked: "LT •••• 8901", url: `${teamPortalUrl()}/`, activatedFrom: "Monday, 9 November 2026" };
+      return { subject: teamBankSubject(true, true), html: teamBankHtml(e), text: teamBankText(e) };
+    },
+  },
+  {
+    id: "team-activated",
+    name: "Account activated (by hand)",
+    stage: "team",
+    when: "Sent when you press Activate now on a member's Team page, to activate their account without approved bank details.",
+    kind: "reactive",
+    source: "teamActivatedHtml",
+    render: () => {
+      const e = { fullName: SAMPLE_NAME, countedFrom: "Monday, 9 November 2026", needsBank: true, url: `${teamPortalUrl()}/bank` };
+      return { subject: teamActivatedSubject(), html: teamActivatedHtml(e), text: teamActivatedText(e) };
     },
   },
   {

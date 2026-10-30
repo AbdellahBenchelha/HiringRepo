@@ -285,6 +285,45 @@ export function nextPayday(p: PaydaySchedule, today: string): string {
 }
 
 /** "Fri 14 Nov 2026". */
+/**
+ * The label on a member: their status, except an active member whose account
+ * is not activated yet, which says what it is waiting for.
+ */
+export function memberStateOf(m: { status: MemberStatus; activatedAt?: string; bankPending?: unknown }): {
+  key: "waiting_bank" | "bank_to_approve" | MemberStatus;
+  label: string;
+  className: string;
+} {
+  if (m.status === "active" && !m.activatedAt) {
+    return m.bankPending
+      ? { key: "bank_to_approve", label: "Bank details to approve", className: "bg-amber-100 text-amber-900" }
+      : { key: "waiting_bank", label: "Waiting for bank details", className: "bg-amber-100 text-amber-900" };
+  }
+  const className =
+    m.status === "active" ? "bg-green-100 text-green-800" : m.status === "paused" ? "bg-amber-100 text-amber-900" : "bg-navy-100 text-navy-600";
+  return { key: m.status, label: MEMBER_STATUS_LABEL[m.status], className };
+}
+
+/** "Monday, 9 November 2026" — a start date, written out in full. */
+export function formatLongDay(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * The first day hours are counted for: the first work day, or the day the
+ * account was activated if that is later. Undefined until it is activated.
+ */
+export function hoursCountedFrom(m: { firstWorkDay: string; activatedOn?: string }): string | undefined {
+  if (!m.activatedOn) return undefined;
+  return m.activatedOn > m.firstWorkDay ? m.activatedOn : m.firstWorkDay;
+}
+
 export function formatDay(date: string, withYear = true): string {
   const d = new Date(`${date}T00:00:00Z`);
   return d.toLocaleDateString("en-GB", {
@@ -363,7 +402,8 @@ export function findCode(text: string): string | null {
 /* Getting started                                                             */
 /* -------------------------------------------------------------------------- */
 
-export const ONBOARDING_STEPS = ["profile", "mailbox", "bank", "rules"] as const;
+// Bank first: the account is not activated until bank details are approved.
+export const ONBOARDING_STEPS = ["bank", "profile", "mailbox", "rules"] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 export const ONBOARDING_LABEL: Record<OnboardingStep, string> = {
   profile: "Check your profile",

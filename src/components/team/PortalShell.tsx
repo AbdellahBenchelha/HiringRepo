@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { Logo } from "@/components/layout/Logo";
 import { listAnnouncements, type TeamMember } from "@/lib/teamStore";
+import { formatLongDay } from "@/lib/teamShared";
 import { PortalNav, type PortalTab } from "@/components/team/PortalNav";
 import { Announcements } from "@/components/team/Announcements";
 import { SignOutButton } from "@/components/team/SignOutButton";
 import { PortalTour } from "@/components/team/PortalTour";
+import { ActivationBanner } from "@/components/team/ActivationBanner";
 
 /**
  * Every signed-in portal page: the header, the tabs, any announcements, and
@@ -49,7 +51,13 @@ export async function PortalShell({
           <div className="flex items-center gap-3">
             <p className="hidden truncate text-sm text-navy-500 sm:block">{member.fullName}</p>
             {/* Opens by itself once, after the first sign-in; the button brings it back. */}
-            <PortalTour autoOpen={!member.onboarding?.tourDoneAt} workEmail={member.workEmail} firstName={member.fullName.split(/\s+/)[0]} />
+            <PortalTour
+              autoOpen={!member.onboarding?.tourDoneAt}
+              workEmail={member.workEmail}
+              firstName={member.fullName.split(/\s+/)[0]}
+              startDate={formatLongDay(member.firstWorkDay)}
+              activated={!!member.activatedAt}
+            />
             <SignOutButton />
           </div>
         </div>
@@ -59,10 +67,14 @@ export async function PortalShell({
       <div className={wide ? "" : "mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8"}>
         {wide ? (
           <div className="px-4 pt-4 empty:hidden sm:px-6">
+            <ActivationBanner member={member} />
             <Announcements items={announcements} />
           </div>
         ) : (
-          <Announcements items={announcements} />
+          <>
+            <ActivationBanner member={member} onBankPage={active === "bank"} />
+            <Announcements items={announcements} />
+          </>
         )}
         {hideTitle ? (
           <h1 className="sr-only">{title}</h1>

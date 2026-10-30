@@ -18,12 +18,13 @@ import { bankView, onboardingState } from "@/lib/teamView";
 import {
   BANKS,
   MEMBER_STATUSES,
-  MEMBER_STATUS_LABEL,
   ONBOARDING_LABEL,
   ONBOARDING_STEPS,
   formatDateTime,
   formatDay,
   formatUsd,
+  hoursCountedFrom,
+  memberStateOf,
 } from "@/lib/teamShared";
 import { formatAvailability, windowInCompanyTime } from "@/lib/availability";
 import { teamPortalUrl } from "@/lib/teamHost";
@@ -96,11 +97,10 @@ export default async function AdminTeamMemberPage({
           <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">{m.fullName}</h1>
           <span
             data-member-status={m.status}
-            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-              m.status === "active" ? "bg-green-100 text-green-800" : m.status === "paused" ? "bg-amber-100 text-amber-900" : "bg-navy-100 text-navy-600"
-            }`}
+            data-member-state={memberStateOf(m).key}
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${memberStateOf(m).className}`}
           >
-            {MEMBER_STATUS_LABEL[m.status]}
+            {memberStateOf(m).label}
           </span>
           {m.candidateId ? (
             <a href={`${hiringAdmin}/admin/accepted`} className="text-xs font-semibold text-navy-500 hover:underline">
@@ -137,6 +137,40 @@ export default async function AdminTeamMemberPage({
           </Link>
         ))}
       </nav>
+
+      {m.status === "active" && !m.activatedAt ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-activation="waiting">
+          <p className="min-w-0 max-w-3xl">
+            <strong>Not active yet.</strong>{" "}
+            {m.bankPending ? (
+              <>
+                They added bank details —{" "}
+                <Link href={`/admin/team/${id}?tab=bank`} className="font-semibold underline">
+                  approve them on the Bank tab
+                </Link>{" "}
+                to activate the account.
+              </>
+            ) : (
+              <>The account activates when you approve the bank details they add in the portal.</>
+            )}{" "}
+            No hours are counted until then. First work day: {formatDay(m.firstWorkDay)}.
+          </p>
+          <AdminAction
+            url={api}
+            body={{ action: "activate" }}
+            confirm={`Activate ${m.fullName}'s account now, without approved bank details? Hours are counted from today (or the first work day, if later). They get an email.`}
+            className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            Activate now
+          </AdminAction>
+        </div>
+      ) : m.activatedAt ? (
+        <p className="-mt-3 mb-6 text-xs text-navy-500" data-activation="active">
+          Account active since {formatDateTime(m.activatedAt)}
+          {m.activatedBy && m.activatedBy !== "existing member" ? ` (by ${m.activatedBy})` : ""} · hours counted from{" "}
+          {formatDay(hoursCountedFrom(m) ?? m.firstWorkDay)}
+        </p>
+      ) : null}
 
       {tab === "profile" ? (
         <div className="space-y-6">

@@ -10,7 +10,9 @@ import {
   formatDateTime,
   formatDay,
   formatHours,
+  formatLongDay,
   formatUsd,
+  hoursCountedFrom,
   nextPayday,
 } from "@/lib/teamShared";
 import { onboardingProgress, onboardingState } from "@/lib/teamView";
@@ -65,6 +67,24 @@ export default async function TeamDashboard() {
           </p>
         ) : null}
 
+        <div className="card flex flex-wrap items-center gap-4" data-start-card>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-800">
+            <Icon name="calendar" className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-navy-400">Your first work day</p>
+            <p className="font-display text-lg font-extrabold text-navy-900" data-start-date>{formatLongDay(member.firstWorkDay)}</p>
+            <p className="text-sm text-navy-500" data-start-note>
+              {(() => {
+                const from = hoursCountedFrom(member);
+                if (!from) return "Your hours are counted once your account is active — add your bank details first.";
+                if (from > today) return `Your account is active. Your hours are counted from ${formatLongDay(from)}.`;
+                return `Your account is active. Hours counted since ${formatLongDay(from)}.`;
+              })()}
+            </p>
+          </div>
+        </div>
+
         {progress.done < progress.total ? (
           <Section title="Get started" action={<span className="text-sm text-navy-500">{progress.done} of {progress.total} done</span>}>
             <ol className="grid gap-2 sm:grid-cols-2">
@@ -86,6 +106,11 @@ export default async function TeamDashboard() {
                       {steps[s] === "done" ? <Icon name="check" className="h-4 w-4" /> : i + 1}
                     </span>
                     <span className="font-semibold">{ONBOARDING_LABEL[s]}</span>
+                    {s === "bank" && steps[s] !== "done" ? (
+                      <span className="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white" data-step-required>
+                        Required
+                      </span>
+                    ) : null}
                     {steps[s] === "waiting" ? <span className="ml-auto text-xs text-navy-400">Not ready yet</span> : null}
                   </Link>
                 </li>

@@ -448,6 +448,7 @@ export function LiveChatInbox({
       portal: p?.portalUrl.replace(/^https?:\/\//, ""),
       email: p?.member?.workEmail,
       name: p?.member?.firstName || open.candidateName.split(/\s+/)[0],
+      start: p?.member?.startDate,
     };
     return onboarding.map((m) => ({ title: m.title, text: fillOnboarding(m.text, values) }));
   }, [open, onboarding]);
@@ -815,7 +816,16 @@ export function LiveChatInbox({
                   ) : view.portal.member.passwordSet ? (
                     <>
                       Signed in to the portal and chose their own password
-                      {view.portal.member.lastSignInAt ? ` · last sign-in ${agoText(view.portal.member.lastSignInAt, now)}` : ""}.
+                      {view.portal.member.lastSignInAt ? ` · last sign-in ${agoText(view.portal.member.lastSignInAt, now)}` : ""}.{" "}
+                      <span data-portal-bank={view.portal.member.activated ? "active" : view.portal.member.bank}>
+                        {view.portal.member.activated
+                          ? "Account active."
+                          : view.portal.member.bank === "pending"
+                            ? "Bank details added — approve them on their Team page to activate the account."
+                            : view.portal.member.bank === "refused"
+                              ? "Bank details refused — waiting for new ones."
+                              : "Bank details not added yet (required to activate)."}
+                      </span>
                     </>
                   ) : view.portal.member.invitedAt ? (
                     <>Portal login emailed {agoText(view.portal.member.invitedAt, now)} · not signed in yet.</>

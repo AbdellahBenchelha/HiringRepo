@@ -111,7 +111,14 @@ export interface TeamInviteEmail {
   workEmail: string;
   tempPassword: string;
   portalUrl: string;
+  /** "Monday, 9 November 2026" — their first work day. */
+  startDate?: string;
+  /** Not activated yet: say that bank details are needed first. */
+  needsActivation?: boolean;
 }
+
+const ACTIVATE_TEXT =
+  "Important: add your bank details in the portal (Bank tab) to activate your account. Your account becomes active once we have checked and approved them — we can only count your hours and pay you after that.";
 
 export function teamInviteSubject(): string {
   return `Welcome to the ${siteConfig.company.name} team — your login details`;
@@ -132,6 +139,8 @@ export function teamInviteText(e: TeamInviteEmail): string {
     "",
     "When you first sign in, you will be asked to choose your own password.",
     "The temporary password above works for 7 days.",
+    ...(e.startDate ? ["", `Your work starts on ${e.startDate}.`] : []),
+    ...(e.needsActivation ? ["", ACTIVATE_TEXT] : []),
     "",
     "Keep these details to yourself. We will never ask you for your password,",
     "your card number, your PIN or any bank code.",
@@ -151,6 +160,12 @@ export function teamInviteHtml(e: TeamInviteEmail): string {
       "In it you will find your profile, your tickets, your work phone number and its messages, your hours and earnings, and where to add your bank account for payments.",
       `Here are your login details:<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:10px;">${box("Email", e.workEmail)}${box("Temporary password", e.tempPassword)}</table>`,
       "When you first sign in, you will be asked to choose your own password. The temporary password above works for 7 days.",
+      ...(e.startDate ? [`Your work starts on <strong style="color:${NAVY};">${esc(e.startDate)}</strong>.`] : []),
+      ...(e.needsActivation
+        ? [
+            `<span style="display:block;padding:14px 16px;border:2px solid #f5a524;border-radius:10px;background:#fffaf0;color:${NAVY};"><strong>Required: add your bank details to activate your account.</strong><br>Open the Bank tab in the portal and add your account. Your account becomes active once we have checked and approved them &mdash; we can only count your hours and pay you after that.</span>`,
+          ]
+        : []),
     ],
     button: { label: "Sign in to my portal", url: `${e.portalUrl}/login` },
     note: `Keep these details to yourself. ${esc(siteConfig.company.name)} will never ask you for your password, your card number, your PIN or any bank code.`,
@@ -323,9 +338,12 @@ export interface TeamBankEmail {
   masked: string;
   reason?: string;
   url: string;
+  /** This approval activated the account: from when hours are counted. */
+  activatedFrom?: string;
 }
 
-export function teamBankSubject(approved: boolean): string {
+export function teamBankSubject(approved: boolean, activated = false): string {
+  if (approved && activated) return "Your bank account is approved — your account is active";
   return approved ? "Your bank account is approved" : "Please check your bank details";
 }
 
@@ -338,6 +356,9 @@ export function teamBankText(e: TeamBankEmail): string {
       : `We could not approve the ${e.bank} account you added (${e.masked}).`,
     !e.approved && e.reason ? `Reason: ${e.reason}` : undefined,
     !e.approved ? "Please sign in and enter your details again." : undefined,
+    e.activatedFrom ? "" : undefined,
+    e.activatedFrom ? `Your account is now active. Your hours are counted from ${e.activatedFrom}.` : undefined,
+    !e.approved ? "Your account becomes active once your bank details are approved." : undefined,
     "",
     e.url,
   ]);
@@ -345,18 +366,67 @@ export function teamBankText(e: TeamBankEmail): string {
 
 export function teamBankHtml(e: TeamBankEmail): string {
   return shell({
-    subject: teamBankSubject(e.approved),
-    preheader: e.approved ? "Your payments will be sent to it." : "Please sign in and enter them again.",
-    heading: e.approved ? "Your bank account is approved" : "Please check your bank details",
+    subject: teamBankSubject(e.approved, !!e.activatedFrom),
+    preheader: e.activatedFrom
+      ? "Your account is now active."
+      : e.approved
+        ? "Your payments will be sent to it."
+        : "Please sign in and enter them again.",
+    heading: e.activatedFrom ? "Your account is active" : e.approved ? "Your bank account is approved" : "Please check your bank details",
     paragraphs: [
       `Hi ${esc(firstNameOf(e.fullName))},`,
       e.approved
         ? `Your <strong style="color:${NAVY};">${esc(e.bank)}</strong> account (${esc(e.masked)}) is approved. Your payments will be sent to it.`
         : `We could not approve the <strong style="color:${NAVY};">${esc(e.bank)}</strong> account you added (${esc(e.masked)}).`,
       ...(!e.approved && e.reason ? [`Reason: ${esc(e.reason)}`] : []),
-      ...(!e.approved ? ["Please sign in and enter your details again."] : []),
+      ...(!e.approved ? ["Please sign in and enter your details again. Your account becomes active once your bank details are approved."] : []),
+      ...(e.activatedFrom
+        ? [`Your account is now <strong style="color:${NAVY};">active</strong>. Your hours are counted from <strong style="color:${NAVY};">${esc(e.activatedFrom)}</strong>.`]
+        : []),
     ],
     button: { label: e.approved ? "Open my portal" : "Update my bank details", url: e.url },
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Account activated by a recruiter                                            */
+/* -------------------------------------------------------------------------- */
+
+export interface TeamActivatedEmail {
+  fullName: string;
+  /** From when hours are counted. */
+  countedFrom: string;
+  /** No approved bank account yet: ask for it, for the payments. */
+  needsBank: boolean;
+  url: string;
+}
+
+export function teamActivatedSubject(): string {
+  return `Your ${siteConfig.company.name} account is active`;
+}
+
+export function teamActivatedText(e: TeamActivatedEmail): string {
+  return text([
+    `Hi ${firstNameOf(e.fullName)},`,
+    "",
+    `Your ${siteConfig.company.name} team account is now active. Your hours are counted from ${e.countedFrom}.`,
+    e.needsBank ? "Please add your bank details in the portal (Bank tab) so we can pay you." : undefined,
+    "",
+    e.url,
+  ]);
+}
+
+export function teamActivatedHtml(e: TeamActivatedEmail): string {
+  return shell({
+    subject: teamActivatedSubject(),
+    preheader: `Your hours are counted from ${e.countedFrom}.`,
+    heading: "Your account is active",
+    paragraphs: [
+      `Hi ${esc(firstNameOf(e.fullName))},`,
+      `Your ${esc(siteConfig.company.name)} team account is now <strong style="color:${NAVY};">active</strong>. Your hours are counted from <strong style="color:${NAVY};">${esc(e.countedFrom)}</strong>.`,
+      ...(e.needsBank ? ["Please add your bank details in the portal (Bank tab) so we can pay you."] : []),
+    ],
+    button: { label: e.needsBank ? "Add my bank details" : "Open my portal", url: e.url },
   });
 }
 

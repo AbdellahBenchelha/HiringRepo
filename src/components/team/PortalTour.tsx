@@ -17,12 +17,14 @@ const CLOSED_KEY = "wr-tour-closed";
 
 type Step = { icon: IconName; title: string; body: string; href?: string; link?: string };
 
-function stepsFor(firstName: string, workEmail?: string): Step[] {
+function stepsFor(firstName: string, workEmail: string | undefined, startDate: string, activated: boolean): Step[] {
   return [
     {
       icon: "sparkles",
       title: `Welcome to WorkRoute, ${firstName}!`,
-      body: "This is your team portal — everything for your work is here. This short tour shows you where things are. It takes about a minute.",
+      body: `This is your team portal — everything for your work is here. Your work starts on ${startDate}.${
+        activated ? "" : " First, add your bank details: your account is activated once we approve them."
+      } This short tour shows you where things are. It takes about a minute.`,
     },
     {
       icon: "chartBar",
@@ -55,7 +57,11 @@ function stepsFor(firstName: string, workEmail?: string): Step[] {
     {
       icon: "wallet",
       title: "Bank details",
-      body: "Add the account your earnings are paid to: the account holder name, IBAN and BIC. We check it and email you when it is approved. Never send bank or card details by chat or email.",
+      body: `${
+        activated ? "" : "Required to activate your account. "
+      }Add the account your earnings are paid to: the account holder name, IBAN and BIC. We check it and email you when it is approved${
+        activated ? "" : " — your account is active from then, and your hours are counted"
+      }. Never send bank or card details by chat or email.`,
       href: "/bank",
       link: "Add bank details",
     },
@@ -69,12 +75,25 @@ function stepsFor(firstName: string, workEmail?: string): Step[] {
   ];
 }
 
-export function PortalTour({ autoOpen, firstName, workEmail }: { autoOpen: boolean; firstName: string; workEmail?: string }) {
+export function PortalTour({
+  autoOpen,
+  firstName,
+  workEmail,
+  startDate,
+  activated,
+}: {
+  autoOpen: boolean;
+  firstName: string;
+  workEmail?: string;
+  /** "Monday, 9 November 2026". */
+  startDate: string;
+  activated: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const recorded = useRef(!autoOpen);
   const dialog = useRef<HTMLDivElement>(null);
-  const steps = stepsFor(firstName || "there", workEmail);
+  const steps = stepsFor(firstName || "there", workEmail, startDate, activated);
   const step = steps[i];
   const last = i === steps.length - 1;
 

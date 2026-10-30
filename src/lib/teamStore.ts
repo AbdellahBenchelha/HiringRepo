@@ -18,9 +18,10 @@ import { newId } from "@/lib/id";
 import { normaliseEmail } from "@/lib/identity";
 import type { DayKey } from "@/lib/availability";
 import { decryptSecret, encryptSecret } from "@/lib/teamCrypto";
-import { localDate, planAccrual, rateOn, type RateFrom } from "@/lib/teamHours";
+import { localDate, planAccrual, rateOn, windowEndsAt, type RateFrom } from "@/lib/teamHours";
 import {
   DEFAULT_PAYDAY,
+  addDays,
   round2,
   type BankId,
   type MemberStatus,
@@ -112,6 +113,14 @@ export interface TeamMember {
   bankRejected?: { at: string; by: string; reason: string };
   bankViews?: { at: string; by: string }[];
   onboarding?: { profileConfirmedAt?: string; mailboxOpenedAt?: string; rulesReadAt?: string; tourDoneAt?: string };
+  /**
+   * When the account was activated — by approving their bank details, or a
+   * recruiter's Activate now — by whom, and that day in their timezone. Hours
+   * are counted from activatedOn (or the first work day, if later).
+   */
+  activatedAt?: string;
+  activatedBy?: string;
+  activatedOn?: string;
   /** The portal password, encrypted (AES-256-GCM) so it can be read back. */
   password?: string;
   /** When the member last set their own password. */
@@ -162,6 +171,8 @@ interface TeamFile {
   announcements: Announcement[];
   settings: TeamSettings;
   ticketSeq: number;
+  /** Set once members from before account activation have been given theirs. */
+  activationMigrated?: boolean;
 }
 
 export interface Attachment {
@@ -284,12 +295,35 @@ async function readJson<T>(f: keyof typeof FILES, fallback: () => T): Promise<T>
 
 async function readTeam(): Promise<TeamFile> {
   const t = await readJson<Partial<TeamFile>>("team", () => ({}));
+  const members = Array.isArray(t.members) ? t.members : [];
+  if (!t.activationMigrated) migrateActivation(members);
   return {
-    members: Array.isArray(t.members) ? t.members : [],
+    members,
     announcements: Array.isArray(t.announcements) ? t.announcements : [],
     settings: { ...DEFAULT_SETTINGS, ...(t.settings ?? {}) },
     ticketSeq: typeof t.ticketSeq === "number" ? t.ticketSeq : 1000,
+    activationMigrated: true,
   };
+}
+
+/**
+ * Members added before accounts needed activating: those who had already
+ * given bank details stay active, counted from their first work day as
+ * before; the rest wait for their bank details like a new member. Hours
+ * already counted are kept. The same on every read until it is saved.
+ */
+function migrateActivation(members: TeamMember[]): void {
+  for (const m of members) {
+    if (m.activatedAt || !(m.bank || m.bankPending)) continue;
+    m.activatedAt = m.bank?.approvedAt ?? m.createdAt;
+    m.activatedBy = "existing member";
+    m.activatedOn = m.firstWorkDay;
+  }
+}
+
+/** Has this member's account been activated? Hours are only counted once it has. */
+export function isActivated(m: Pick<TeamMember, "activatedAt">): boolean {
+  return !!m.activatedAt;
 }
 
 async function readWork(): Promise<WorkFile> {
@@ -522,10 +556,29 @@ export function decideBank(
     if (!m.bankPending) return false;
     if (approve) {
       m.bank = { ...m.bankPending, approvedAt: nowIso(), approvedBy: by };
+      // Approved bank details are what activates an account.
+      if (!m.activatedAt) activateInPlace(m, by);
     } else {
       m.bankRejected = { at: nowIso(), by, reason: (reason ?? "").slice(0, 300) };
     }
     delete m.bankPending;
+  });
+}
+
+function activateInPlace(m: TeamMember, by: string): void {
+  const now = Date.now();
+  m.activatedAt = new Date(now).toISOString();
+  m.activatedBy = by;
+  // The first work window still to finish: today, unless today's is over.
+  const today = localDate(m.schedule.timeZone, new Date(now));
+  m.activatedOn = windowEndsAt(today, m.schedule) > now ? today : addDays(today, 1);
+}
+
+/** A recruiter's Activate now — without approved bank details. Once only. */
+export function activateMember(id: string, by: string): Promise<TeamMember | null> {
+  return mutateMember(id, (m) => {
+    if (m.activatedAt) return false;
+    activateInPlace(m, by);
   });
 }
 

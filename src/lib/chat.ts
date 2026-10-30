@@ -257,8 +257,9 @@ export const DEFAULT_QUESTIONS: string[] = [
 
 /**
  * The portal explained, one part at a time. {portal} becomes the portal's
- * address, {email} their professional email and {name} their first name when
- * the message is put in the box — so the recruiter sees exactly what is sent.
+ * address, {email} their professional email, {name} their first name and
+ * {start} their first work day when the message is put in the box — so the
+ * recruiter sees exactly what is sent.
  */
 export const DEFAULT_ONBOARDING: OnboardingMessage[] = [
   {
@@ -272,6 +273,10 @@ export const DEFAULT_ONBOARDING: OnboardingMessage[] = [
   {
     title: "First sign-in",
     text: "1. Open {portal}\n2. Sign in with your professional email ({email}) and the temporary password from the email.\n3. The portal asks you to choose your own password (at least 10 characters). Choose one only you know.\nThe temporary password works for 7 days. Tell me when you are in.",
+  },
+  {
+    title: "Start date",
+    text: "Your work starts on {start}. Before that, please add your bank details: your account is activated once we approve them, and we can only count your hours and pay you from then.",
   },
   {
     title: "Dashboard",
@@ -291,7 +296,7 @@ export const DEFAULT_ONBOARDING: OnboardingMessage[] = [
   },
   {
     title: "Bank details",
-    text: "Your earnings are paid to your bank account. Open the Bank tab and add the account holder name, IBAN and BIC. That is all we need — never send bank details, card numbers or passwords in a chat or by email. We check the account and you get an email when it is approved.",
+    text: "Adding your bank details is required to activate your account. Open the Bank tab and add the account holder name, IBAN and BIC. That is all we need — never send bank details, card numbers or passwords in a chat or by email. We check the account and email you when it is approved: your account is active from then, and your hours are counted from then (or from {start}, if later).",
   },
   {
     title: "Profile",
@@ -312,8 +317,9 @@ export const DEFAULT_ONBOARDING: OnboardingMessage[] = [
 ];
 
 /** {portal}, {email} and {name} in a ready-made message, filled in. */
-export function fillOnboarding(text: string, values: { portal?: string; email?: string; name?: string }): string {
+export function fillOnboarding(text: string, values: { portal?: string; email?: string; name?: string; start?: string }): string {
   return text
+    .replace(/\{start\}/g, values.start || "your first work day")
     .replace(/\{portal\}/g, values.portal || "the team portal")
     .replace(/\{email\}/g, values.email || "your professional email")
     .replace(/\{name\}/g, values.name || "there");
@@ -449,6 +455,12 @@ export interface PortalState {
     invitedAt?: string;
     /** They signed in and chose their own password. */
     passwordSet: boolean;
+    /** "Monday, 9 November 2026" — their first work day. */
+    startDate: string;
+    /** Bank details: none yet, waiting for approval, approved, or refused. */
+    bank: "none" | "pending" | "approved" | "refused";
+    /** The account is activated (hours are counted). */
+    activated: boolean;
     lastSignInAt?: string;
     active: boolean;
   };

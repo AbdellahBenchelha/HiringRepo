@@ -29,6 +29,7 @@ import { FULL_VERIFIED } from "@/lib/candidateStatus";
 import { getMemberByCandidate, recordInvite } from "@/lib/teamStore";
 import { sendLoginDetails } from "@/lib/teamNotify";
 import { teamPortalUrl } from "@/lib/teamHost";
+import { formatLongDay } from "@/lib/teamShared";
 
 /**
  * One conversation, from the recruiter's side.
@@ -104,6 +105,9 @@ async function portalOf(s: ChatSession): Promise<PortalState> {
             firstName: m.fullName.split(/\s+/)[0] || m.fullName,
             invitedAt: m.invitedAt,
             passwordSet: !!m.passwordSetAt && !m.mustChangePassword,
+            startDate: formatLongDay(m.firstWorkDay),
+            bank: m.bankPending ? "pending" : m.bank ? "approved" : m.bankRejected ? "refused" : "none",
+            activated: !!m.activatedAt,
             lastSignInAt: m.lastSignInAt,
             active: m.status === "active",
           },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import {
+  activateMember,
   decideBank,
   getMember,
   getMemberByEmail,
@@ -13,7 +14,7 @@ import {
   setRate,
   signOutEverywhere,
 } from "@/lib/teamStore";
-import { sendBankDecision, sendLoginDetails } from "@/lib/teamNotify";
+import { sendActivated, sendBankDecision, sendLoginDetails, telegramTeam } from "@/lib/teamNotify";
 import { revealPassword } from "@/lib/teamStore";
 import { MEMBER_STATUSES, type MemberStatus } from "@/lib/teamShared";
 import { readBanks, readDate, readEmail, readHours, readMoney, readPhone, readSchedule, readText } from "@/lib/teamValidate";
@@ -26,7 +27,8 @@ import { readBanks, readDate, readEmail, readHours, readMoney, readPhone, readSc
  *   rate { rate, from }         a new hourly rate from a date
  *   invite                      send the invitation email again
  *   signout                     sign them out of every device
- *   bank_decide { approve, reason? }
+ *   bank_decide { approve, reason? }  approving the first bank details activates the account
+ *   activate                    activate the account without approved bank details
  *   bank_reveal { which }       the full IBAN, recorded
  */
 
@@ -151,10 +153,22 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       if (!approve && !reason) {
         return NextResponse.json({ ok: false, problems: ["Write the reason the member will see."] }, { status: 400 });
       }
-      await decideBank(id, approve, by, reason);
-      await sendBankDecision(member, approve, pending, reason);
+      const saved = await decideBank(id, approve, by, reason);
+      const activated = approve && !member.activatedAt && saved?.activatedAt ? saved : undefined;
+      await sendBankDecision(member, approve, pending, reason, activated);
+      if (activated) telegramTeam("✅", "Account activated", activated, "Bank details approved — hours are counted from now.", `/admin/team/${id}`);
       // eslint-disable-next-line no-console
-      console.log(`[team] ${by} ${approve ? "approved" : "refused"} bank details for ${id}`);
+      console.log(`[team] ${by} ${approve ? "approved" : "refused"} bank details for ${id}${activated ? " (account activated)" : ""}`);
+      return NextResponse.json({ ok: true });
+    }
+    case "activate": {
+      if (member.activatedAt) return NextResponse.json({ ok: false, problems: ["This account is already active."] }, { status: 409 });
+      const saved = await activateMember(id, by);
+      if (!saved?.activatedAt) return NextResponse.json({ ok: false, problems: ["Could not activate."] }, { status: 409 });
+      await sendActivated(saved);
+      telegramTeam("✅", "Account activated", saved, `Activated by ${by}, without approved bank details.`, `/admin/team/${id}`);
+      // eslint-disable-next-line no-console
+      console.log(`[team] ${by} activated ${id} by hand`);
       return NextResponse.json({ ok: true });
     }
     case "bank_reveal": {

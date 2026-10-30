@@ -72,6 +72,12 @@ export interface AccrualMember {
   firstWorkDay: string;
   accruedThrough?: string;
   checkInRequired: boolean;
+  /**
+   * The member's own date (their timezone) the account was activated — bank
+   * details approved, or a recruiter's Activate now. Nothing is counted before
+   * it, nor at all while it is missing. See teamStore activateMember.
+   */
+  activatedOn?: string;
 }
 
 export interface AccrualContext {
@@ -111,7 +117,10 @@ export function planAccrual(
   for (let i = 0; i < MAX_DAYS_PER_RUN; i++) {
     if (windowEndsAt(date, m.schedule) > now) break;
     const scheduled = m.schedule.days.includes(dayKeyOf(date));
-    if (m.status === "active" && scheduled && !ctx.hasEntry(date)) {
+    // Not activated yet, or a day before activation: passed over for good —
+    // activating later does not pay the days missed.
+    const counted = m.status === "active" && !!m.activatedOn && date >= m.activatedOn;
+    if (counted && scheduled && !ctx.hasEntry(date)) {
       const rate = rateOn(m.rates, date);
       if (ctx.dayOffApproved(date)) entries.push({ date, hours: 0, rate, status: "dayoff" });
       else if (m.checkInRequired && !ctx.checkedIn(date)) entries.push({ date, hours: 0, rate, status: "no_checkin" });
