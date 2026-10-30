@@ -28,6 +28,7 @@ import type { CandidateStatus } from "@/lib/candidateStatus";
 import type { CandidateView } from "@/lib/candidateView";
 import { ADDRESS_STATUS_LABEL, type AddressProofStatus } from "@/lib/addressProof";
 import { AGREEMENT_STATUS_LABEL, type AgreementStatus } from "@/lib/agreement";
+import { ID_TYPE_FILTERS, matchesIdTypeFilter, type IdTypeFilter } from "@/lib/identityDocuments";
 
 /** The proof-of-address tag's colour, by where it stands. */
 const ADDRESS_TAG: Record<AddressProofStatus, string> = {
@@ -115,6 +116,7 @@ export function AcceptedTable({
   const [chatSent, setChatSent] = useState<"all" | "yes" | "notStarted" | "no">("all");
   const [addressProof, setAddressProof] = useState<"all" | AddressProofStatus>("all");
   const [agreement, setAgreement] = useState<"all" | AgreementStatus>("all");
+  const [idType, setIdType] = useState<IdTypeFilter>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const tableTop = useRef<HTMLDivElement>(null);
@@ -171,9 +173,10 @@ export function AcceptedTable({
       if (chatSent === "notStarted" && (!c.chatLinkSentAt || c.chatStarted)) return false;
       if (addressProof !== "all" && (c.addressProofStatus ?? "not_asked") !== addressProof) return false;
       if (agreement !== "all" && (c.agreementStatus ?? "not_sent") !== agreement) return false;
+      if (!matchesIdTypeFilter(idType, c.identityDocumentType)) return false;
       return true;
     });
-  }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent, addressProof, agreement]);
+  }, [live, search, country, hiddenCountries, verified, engagedAs, gstin, chatSent, addressProof, agreement, idType]);
 
   /** How many each GSTIN choice would show, among the people not hidden by country. */
   const gstinCounts = useMemo(() => {
@@ -254,7 +257,7 @@ export function AcceptedTable({
 
   useEffect(() => {
     setPage(1);
-  }, [search, country, hiddenCountries.hidden, verified, engagedAs, gstin, chatSent, addressProof, agreement, pageSize]);
+  }, [search, country, hiddenCountries.hidden, verified, engagedAs, gstin, chatSent, addressProof, agreement, idType, pageSize]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -300,6 +303,19 @@ export function AcceptedTable({
               <option value="all">All</option>
               <option value="yes">Full verified</option>
               <option value="no">Not full verified</option>
+            </select>
+          </label>
+
+          {/* Which identity document they sent: a passport, a national ID card
+              or a driver's licence ("Not recorded" for those from before). */}
+          <label className="block">
+            <span className="label">ID document</span>
+            <select id="idtype" className="select" value={idType} onChange={(e) => setIdType(e.target.value as IdTypeFilter)}>
+              {ID_TYPE_FILTERS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -732,6 +748,8 @@ export function AcceptedTable({
           onOpenDocument={setViewing}
           onStatusChange={changeStatus}
           onChange={(p) => patch(profile.id, p)}
+          // The address review steps through the rows on screen, filters and all.
+          addressQueue={{ candidates: shown, onChange: patch }}
         />
       ) : null}
 

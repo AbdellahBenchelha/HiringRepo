@@ -28,7 +28,7 @@ import type { CandidateView } from "@/lib/candidateView";
  * current one.
  */
 
-const STYLE: Record<AddressProofStatus, { chip: string; icon: IconName }> = {
+export const ADDRESS_STATUS_STYLE: Record<AddressProofStatus, { chip: string; icon: IconName }> = {
   not_asked: { chip: "bg-navy-100 text-navy-600", icon: "home" },
   asked: { chip: "bg-amber-100 text-amber-800", icon: "clock" },
   received: { chip: "bg-blue-100 text-blue-800", icon: "document" },
@@ -63,10 +63,13 @@ export function AddressProofPanel({
   candidate,
   onOpenDocument,
   onChange,
+  onReview,
 }: {
   candidate: CandidateView;
   onOpenDocument: (doc: CandidateDocument) => void;
   onChange: (patch: Patch) => void;
+  /** Open the address review: this document, and the next candidate's with the arrows. */
+  onReview?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<"request" | "reminder" | null>(null);
@@ -80,7 +83,7 @@ export function AddressProofPanel({
   // says the agreement is ready, which is only true after acceptance.
   if (status === "not_asked" && !candidate.offerAcceptedAt) return null;
 
-  const style = STYLE[status];
+  const style = ADDRESS_STATUS_STYLE[status];
   const events = candidate.addressProofEvents ?? [];
   const submissions = candidate.addressProofSubmissions ?? [];
   const latest = submissions.at(-1);
@@ -159,10 +162,24 @@ export function AddressProofPanel({
             Optional last step before the final agreement — a bill or bank statement (PDF).
           </p>
         </div>
-        <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${style.chip}`} data-address-status>
-          <Icon name={style.icon} className="h-3.5 w-3.5" />
-          {ADDRESS_STATUS_LABEL[status]}
-        </span>
+        {onReview && (status === "received" || status === "approved") && current ? (
+          <button
+            type="button"
+            onClick={onReview}
+            title="See the address document — the arrows go to the next candidate's"
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold underline-offset-2 transition hover:underline hover:ring-2 hover:ring-blue-300 ${style.chip}`}
+            data-address-status
+            data-address-review
+          >
+            <Icon name={style.icon} className="h-3.5 w-3.5" />
+            {ADDRESS_STATUS_LABEL[status]} — view
+          </button>
+        ) : (
+          <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${style.chip}`} data-address-status>
+            <Icon name={style.icon} className="h-3.5 w-3.5" />
+            {ADDRESS_STATUS_LABEL[status]}
+          </span>
+        )}
       </div>
 
       {/* What we asked */}
@@ -191,7 +208,15 @@ export function AddressProofPanel({
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-navy-400">Received</dt>
-                <dd className="mt-0.5 text-navy-900">{fmt(latest.at)}</dd>
+                <dd className="mt-0.5 text-navy-900">
+                  {onReview && current ? (
+                    <button type="button" onClick={onReview} className="font-semibold text-blue-800 underline hover:text-blue-950" data-address-received-date>
+                      {fmt(latest.at)}
+                    </button>
+                  ) : (
+                    fmt(latest.at)
+                  )}
+                </dd>
               </div>
             </dl>
             {current ? (
@@ -428,7 +453,7 @@ export function AddressProofPanel({
 }
 
 /** The address they typed, and ours beside it when the two differ. */
-function AddressCompare({ given, onFile }: { given: string; onFile: string }) {
+export function AddressCompare({ given, onFile }: { given: string; onFile: string }) {
   const differs = addressDiffers(given, onFile);
   return (
     <div className="mt-3 space-y-2 text-sm">

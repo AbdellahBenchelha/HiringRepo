@@ -14,6 +14,7 @@ import {
 } from "@/components/admin/VerificationPanel";
 import { ResidencePanel } from "@/components/admin/ResidencePanel";
 import { AddressProofPanel } from "@/components/admin/AddressProofPanel";
+import { AddressReviewViewer } from "@/components/admin/AddressReviewViewer";
 import { AgreementPanel } from "@/components/admin/AgreementPanel";
 import type { CandidateDocument } from "@/lib/documents";
 import type { CandidateView } from "@/lib/candidateView";
@@ -162,8 +163,14 @@ export function CandidateProfileModal({
   onOpenDocument,
   onStatusChange,
   selection,
+  addressQueue,
 }: {
   candidate: CandidateView;
+  /**
+   * The candidates the address review steps through — the list on screen. Without
+   * it, the review shows this candidate only.
+   */
+  addressQueue?: { candidates: CandidateView[]; onChange: (id: string, patch: Partial<CandidateView>) => void };
   /** Omitted where there is nothing to step through, which hides the controls. */
   nav?: ProfileNav;
   /**
@@ -183,6 +190,7 @@ export function CandidateProfileModal({
   selection?: ProfileSelection;
 }) {
   const verification = verificationStateOf(candidate);
+  const [reviewingAddress, setReviewingAddress] = useState(false);
 
   /**
    * Notes are saved on a button, not on every keystroke, so a half-written note
@@ -613,7 +621,16 @@ export function CandidateProfileModal({
             candidate={candidate}
             onOpenDocument={onOpenDocument}
             onChange={onChange}
+            onReview={() => setReviewingAddress(true)}
           />
+          {reviewingAddress ? (
+            <AddressReviewViewer
+              queue={addressQueue?.candidates.length ? addressQueue.candidates : [candidate]}
+              startId={candidate.id}
+              onClose={() => setReviewingAddress(false)}
+              onChange={(id, patch) => (id === candidate.id ? onChange(patch) : addressQueue?.onChange(id, patch))}
+            />
+          ) : null}
 
           {/* Last, because it answers for both panels above: what they sent
               under either has arrived and is waiting for us. */}
