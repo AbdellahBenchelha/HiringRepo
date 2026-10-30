@@ -11,6 +11,7 @@ import { RefreshButton } from "@/components/admin/RefreshButton";
 import { VerificationBadge } from "@/components/admin/VerificationPanel";
 import { CandidateProfileModal, openProfileOn } from "@/components/admin/CandidateProfileModal";
 import { DocumentViewer } from "@/components/admin/DocumentViewer";
+import { AddressReviewViewer, hasAddressDocument } from "@/components/admin/AddressReviewViewer";
 import { useProfileNav } from "@/components/admin/useProfileNav";
 import {
   HideCountryPicker,
@@ -225,6 +226,8 @@ export function AcceptedTable({
     setPage,
   );
   const [viewing, setViewing] = useState<CandidateDocument | null>(null);
+  /** The address review, opened from a row's "Address received" tag. */
+  const [addressFrom, setAddressFrom] = useState<string | null>(null);
 
   function dropRow(id: string) {
     setDeleted((prev) => [...prev, id]);
@@ -646,14 +649,25 @@ export function AcceptedTable({
                         </span>
                       ) : null}
                       {c.addressProofStatus && c.addressProofStatus !== "not_asked" ? (
-                        <span
+                        // Received or approved: opens the document itself, with
+                        // Next to the following candidate's. Asked: View info → ID check.
+                        <button
+                          type="button"
                           data-address-tag={c.addressProofStatus}
-                          title="Proof of address — see View info → ID check"
-                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${ADDRESS_TAG[c.addressProofStatus]}`}
+                          onClick={() => {
+                            if (hasAddressDocument(c)) {
+                              setAddressFrom(c.id);
+                            } else {
+                              openProfileOn("id");
+                              openProfile(c);
+                            }
+                          }}
+                          title={hasAddressDocument(c) ? "See the proof of address — Next goes to the following candidate's" : "Proof of address — open View info → ID check"}
+                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold underline-offset-2 transition hover:underline hover:brightness-95 ${ADDRESS_TAG[c.addressProofStatus]}`}
                         >
                           <Icon name="home" className="h-3 w-3" />
                           Address {ADDRESS_STATUS_LABEL[c.addressProofStatus].toLowerCase()}
-                        </span>
+                        </button>
                       ) : null}
                       {c.agreementStatus && c.agreementStatus !== "not_sent" ? (
                         <span
@@ -754,6 +768,10 @@ export function AcceptedTable({
       ) : null}
 
       {bulkEmail.dialog}
+
+      {addressFrom ? (
+        <AddressReviewViewer queue={shown} startId={addressFrom} onClose={() => setAddressFrom(null)} onChange={patch} />
+      ) : null}
 
       {viewing && profile ? (
         <DocumentViewer
