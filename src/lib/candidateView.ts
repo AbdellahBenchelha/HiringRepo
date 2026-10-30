@@ -277,6 +277,7 @@ export interface CandidateView {
   confirmedDetailsAt?: string;
   /** The window and days they chose when accepting, with the zone they meant. */
   availability?: Availability;
+  availabilitySetBy?: string;
   /** The company they contract through, once confirmed with its paperwork. */
   companyDetails?: CompanyDetails;
   companyDetailsAt?: string;
@@ -465,6 +466,7 @@ export function toCandidateView(
     confirmedDetails: c.confirmedDetails,
     confirmedDetailsAt: c.confirmedDetailsAt,
     availability: c.availability,
+    availabilitySetBy: c.availabilitySetBy,
     companyDetails: c.companyDetails,
     companyDetailsAt: c.companyDetailsAt,
     companyRequestedAt: c.companyRequestedAt,

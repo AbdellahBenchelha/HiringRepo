@@ -179,6 +179,9 @@ export interface Candidate {
    * schedule is the thing an agreement is built on.
    */
   availability?: Availability;
+  /** Set when a recruiter chose the hours and days (Agreement tab), not the candidate. */
+  availabilitySetBy?: string;
+  availabilitySetAt?: string;
   /**
    * Result of looking this candidate up in the UK register of company
    * officers. Cached because it is a paid-for-with-requests lookup and a
@@ -1764,6 +1767,21 @@ export function setAgreementStartDate(id: string, date: string | null): Promise<
     if (!c) return { list, result: null };
     if (date) c.agreementStartDate = date;
     else delete c.agreementStartDate;
+    return { list, result: c };
+  });
+}
+
+/**
+ * Work hours and days chosen by a recruiter — for somebody who accepted
+ * without choosing them — so the agreement can be drawn up. Already checked.
+ */
+export function setAvailabilityByRecruiter(id: string, availability: Availability, by: string): Promise<Candidate | null> {
+  return withWrite((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return { list, result: null };
+    c.availability = availability;
+    c.availabilitySetBy = by;
+    c.availabilitySetAt = new Date().toISOString();
     return { list, result: c };
   });
 }

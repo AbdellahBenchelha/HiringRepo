@@ -17,6 +17,18 @@ import {
 } from "@/lib/agreement";
 import type { CandidateView } from "@/lib/candidateView";
 import { OnboardingChatBox } from "@/components/admin/OnboardingChatBox";
+import {
+  COMPANY_TIME_ZONE,
+  DAY_KEYS,
+  DAY_LABELS,
+  REQUIRED_DAYS,
+  START_TIMES,
+  endTimeFor,
+  formatAvailability,
+  knownTimeZones,
+  windowInCompanyTime,
+  type DayKey,
+} from "@/lib/availability";
 
 /**
  * The final agreement for one candidate — see lib/agreement.
@@ -60,6 +72,8 @@ const ERRORS: Record<string, string> = {
   storage_unavailable: "file storage is not available",
   bad_date: "choose a valid date",
   same_date: "that is already the start date in their agreement",
+  bad_availability: "choose a start time, a timezone and exactly 5 days",
+  already_sent: "the agreement has already been sent",
 };
 
 function fmt(iso?: string): string {
@@ -71,6 +85,7 @@ type Patch = Partial<CandidateView>;
 const PATCH_KEYS = [
   "agreementStartDate", "agreementSentAt", "agreementRef", "agreementReason", "agreementEvents", "agreementSignedAt",
   "agreementSubmissions", "agreementApprovedAt", "agreementApprovedBy", "agreementStatus", "agreementMissing", "documents",
+  "availability", "availabilitySetBy",
 ] as const;
 
 export function AgreementPanel({
@@ -94,6 +109,12 @@ export function AgreementPanel({
   const currentStart = candidate.agreementStartDate || offerStart;
   const [startDate, setStartDate] = useState(currentStart);
   const fileInput = useRef<HTMLInputElement>(null);
+  const hours = candidate.availability;
+  const [editHours, setEditHours] = useState(!hours);
+  const [hStart, setHStart] = useState(hours?.startTime ?? "09:00");
+  const [hZone, setHZone] = useState(hours?.timeZone ?? COMPANY_TIME_ZONE);
+  const [hDays, setHDays] = useState<DayKey[]>(hours?.days ?? ["Mon", "Tue", "Wed", "Thu", "Fri"]);
+  const zones = knownTimeZones();
 
   const status = candidate.agreementStatus ?? "not_sent";
   const missing = candidate.agreementMissing ?? [];
@@ -185,6 +206,20 @@ export function AgreementPanel({
     }
   }
 
+  async function saveHours() {
+    if (busy || hDays.length !== REQUIRED_DAYS) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await adminPost(api, { action: "availability", availability: { startTime: hStart, timeZone: hZone, days: hDays } });
+      if (await handle(res, "Work hours and days saved.")) setEditHours(false);
+    } catch {
+      setResult({ ok: false, text: "Could not reach the server." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function markSigned() {
     if (busy || !files.length) return;
     setBusy(true);
@@ -234,6 +269,104 @@ export function AgreementPanel({
               <li key={m}>{m}</li>
             ))}
           </ul>
+        </div>
+      ) : null}
+
+      {/* Work hours and days: the candidate's choice, or set here when they made none */}
+      {status === "not_sent" ? (
+        <div
+          className={`mt-4 rounded-xl border p-3.5 ${hours ? "border-cream-300 bg-white" : "border-2 border-brand-300 bg-brand-50/50"}`}
+          data-agreement-hours={hours ? "set" : "missing"}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-navy-500">Work hours and days</p>
+              <p className="mt-0.5 text-xs text-navy-500">
+                {hours
+                  ? candidate.availabilitySetBy
+                    ? `Set here by ${candidate.availabilitySetBy}.`
+                    : "Chosen by the candidate when they accepted the offer."
+                  : "They did not choose their hours and days. Choose them here — they go into the agreement."}
+              </p>
+              {hours && !editHours ? (
+                <p className="mt-1.5 text-sm font-semibold text-navy-900" data-agreement-hours-value>
+                  {formatAvailability(hours)} <span className="font-normal text-navy-500">(UK {windowInCompanyTime(hours)})</span>
+                </p>
+              ) : null}
+            </div>
+            {hours && !editHours ? (
+              <button type="button" onClick={() => setEditHours(true)} className={`${btn} border border-navy-200 bg-white text-navy-700 hover:bg-navy-50`} data-agreement-hours-change>
+                Change
+              </button>
+            ) : null}
+          </div>
+          {editHours ? (
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="block text-xs font-semibold text-navy-600">
+                  Starts at (8-hour window)
+                  <select value={hStart} onChange={(e) => setHStart(e.target.value)} className="select mt-1 py-2 text-sm" data-agreement-hours-start>
+                    {START_TIMES.map((t) => (
+                      <option key={t} value={t}>
+                        {t} – {endTimeFor(t)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs font-semibold text-navy-600">
+                  Their timezone
+                  <select value={hZone} onChange={(e) => setHZone(e.target.value)} className="select mt-1 py-2 text-sm" data-agreement-hours-zone>
+                    {(zones.includes(hZone) ? zones : [hZone, ...zones]).map((z) => (
+                      <option key={z} value={z}>
+                        {z}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <fieldset>
+                <legend className="text-xs font-semibold text-navy-600">
+                  Days ({hDays.length} of {REQUIRED_DAYS})
+                </legend>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {DAY_KEYS.map((d) => {
+                    const on = hDays.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={on}
+                        data-agreement-hours-day={d}
+                        onClick={() => setHDays((x) => (on ? x.filter((k) => k !== d) : x.length < REQUIRED_DAYS ? [...x, d] : x))}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                          on ? "border-navy-900 bg-navy-900 text-white" : "border-navy-200 bg-white text-navy-700 hover:bg-navy-50"
+                        }`}
+                        title={DAY_LABELS[d]}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy || hDays.length !== REQUIRED_DAYS}
+                  onClick={() => void saveHours()}
+                  className={`${btn} bg-navy-900 text-white hover:bg-navy-800`}
+                  data-agreement-hours-save
+                >
+                  Save hours and days
+                </button>
+                {hours ? (
+                  <button type="button" onClick={() => setEditHours(false)} className={`${btn} border border-navy-200 bg-white text-navy-700 hover:bg-navy-50`}>
+                    Cancel
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

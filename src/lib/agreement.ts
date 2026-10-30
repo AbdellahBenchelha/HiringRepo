@@ -159,7 +159,7 @@ export function agreementMissing(c: AgreementCandidate): string[] {
   }
   if (!contractorName(c)) out.push("no name");
   if (!contractorAddress(c) && !companyOf(c)?.address) out.push("no address");
-  if (!c.availability) out.push("no work hours and days chosen");
+  if (!c.availability) out.push("no work hours and days chosen (add them in the Agreement tab)");
   if (!(c.email ?? "").includes("@")) out.push("no email address");
   return out;
 }

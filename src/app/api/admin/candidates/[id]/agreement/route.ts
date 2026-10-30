@@ -6,6 +6,7 @@ import {
   getCandidate,
   setAgreementApproved,
   setAgreementStartDate,
+  setAvailabilityByRecruiter,
   type Candidate,
 } from "@/lib/store";
 import {
@@ -34,6 +35,7 @@ import {
 } from "@/lib/documents";
 import { newId } from "@/lib/id";
 import { createHash } from "node:crypto";
+import { validateAvailability } from "@/lib/availability";
 
 /**
  * Recruiter actions on a candidate's final agreement — see lib/agreement.
@@ -53,6 +55,9 @@ import { createHash } from "node:crypto";
  *     unapprove  take the acceptance back
  *     startDate  { date } the start date for the agreement, when the offer
  *                has none (or a new one); used from the next copy sent
+ *     availability { availability: {startTime, timeZone, days} } work hours and
+ *                days, for somebody who accepted without choosing them —
+ *                before the agreement is sent
  *
  *   POST multipart    action=signed, files=… — a signed copy that came back by
  *                     email, uploaded by the recruiter
@@ -71,6 +76,8 @@ function baseUrl(req: NextRequest): string {
 function patchOf(c: Candidate) {
   return {
     agreementStartDate: c.agreementStartDate ?? null,
+    availability: c.availability ?? null,
+    availabilitySetBy: c.availabilitySetBy ?? null,
     agreementSentAt: c.agreementSentAt ?? null,
     agreementRef: c.agreementRef ?? null,
     agreementReason: c.agreementReason ?? null,
@@ -142,7 +149,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return markSigned(req, candidate, by);
   }
 
-  let body: { action?: string; reason?: unknown; custom?: unknown; date?: unknown };
+  let body: { action?: string; reason?: unknown; custom?: unknown; date?: unknown; availability?: unknown };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -195,6 +202,20 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
     // eslint-disable-next-line no-console
     console.log(`[agreement] ${id} start date set to ${date} by ${by}`);
+    return NextResponse.json({ ok: true, ...patchOf(updated) });
+  }
+
+  if (body.action === "availability") {
+    // Before it is sent: a sent agreement carries the hours it was sent with.
+    if (agreementStatus(candidate) !== "not_sent") {
+      return NextResponse.json({ ok: false, error: "already_sent" }, { status: 409 });
+    }
+    const checked = validateAvailability(body.availability);
+    if (!checked.ok) return NextResponse.json({ ok: false, error: "bad_availability", problems: checked.problems }, { status: 400 });
+    const updated = await setAvailabilityByRecruiter(id, checked.availability, by);
+    if (!updated) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    // eslint-disable-next-line no-console
+    console.log(`[agreement] ${id} work hours set by ${by}`);
     return NextResponse.json({ ok: true, ...patchOf(updated) });
   }
 
