@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireMember } from "@/lib/teamAuth";
 import { bankView } from "@/lib/teamView";
-import { DEFAULT_BANK_NOTICE, boldParts, formatDateTime } from "@/lib/teamShared";
+import { DEFAULT_BANK_NOTICE, boldParts, fillNotice, formatDateTime, formatLongDay } from "@/lib/teamShared";
 import { getTeamSettings } from "@/lib/teamStore";
 import { PortalShell } from "@/components/team/PortalShell";
 import { BankForm } from "@/components/team/BankForm";
@@ -14,7 +14,14 @@ export default async function TeamBankPage() {
   const member = await requireMember();
   const current = bankView(member.bank);
   const pending = bankView(member.bankPending);
-  const notice = (await getTeamSettings()).bankNotice || DEFAULT_BANK_NOTICE;
+  const notice = fillNotice((await getTeamSettings()).bankNotice || DEFAULT_BANK_NOTICE, {
+    name: member.fullName,
+    firstName: member.fullName.split(/\s+/)[0],
+    email: member.workEmail,
+    phone: member.phoneNumber,
+    personalEmail: member.loginEmail,
+    startDate: formatLongDay(member.firstWorkDay),
+  });
 
   return (
     <PortalShell member={member} active="bank" title="Bank details" intro="Where your earnings are paid. Payments are in US dollars.">

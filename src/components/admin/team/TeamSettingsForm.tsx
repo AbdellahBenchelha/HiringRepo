@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { adminPost } from "@/lib/adminClient";
-import { DEFAULT_BANK_NOTICE, MAX_BANK_NOTICE, boldParts, type PaydaySchedule } from "@/lib/teamShared";
+import {
+  DEFAULT_BANK_NOTICE,
+  MAX_BANK_NOTICE,
+  NOTICE_FIELDS,
+  boldParts,
+  fillNotice,
+  type PaydaySchedule,
+} from "@/lib/teamShared";
+
+/** Sample values, so the preview reads like a real member's page. */
+const SAMPLE = Object.fromEntries(NOTICE_FIELDS.map((f) => [f.key, f.sample]));
 import { refreshAfterSave } from "@/lib/refreshAfterSave";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -21,6 +31,21 @@ export function TeamSettingsForm({
   const [day, setDay] = useState(initial.payday.kind === "monthly" ? initial.payday.day : 5);
   const [rulesText, setRules] = useState(initial.rulesText);
   const [bankNotice, setBankNotice] = useState(initial.bankNotice || DEFAULT_BANK_NOTICE);
+  const noticeBox = useRef<HTMLTextAreaElement>(null);
+
+  /** Put a {field} where the cursor is in the note. */
+  function insertField(key: string) {
+    const el = noticeBox.current;
+    const tag = `{${key}}`;
+    const start = el?.selectionStart ?? bankNotice.length;
+    const end = el?.selectionEnd ?? bankNotice.length;
+    const next = (bankNotice.slice(0, start) + tag + bankNotice.slice(end)).slice(0, MAX_BANK_NOTICE);
+    setBankNotice(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + tag.length, start + tag.length);
+    });
+  }
   // No longer edited here — mailboxes are built into the portal now — but
   // sent back unchanged so saving the form does not wipe them.
   const { mailboxUrl, mailboxHelp } = initial;
@@ -90,9 +115,25 @@ export function TeamSettingsForm({
         </label>
         <p className="mb-2 text-xs text-navy-400">
           Shown at the top of every member&rsquo;s Bank page. Put words between <code>**</code> and <code>**</code> to make them
-          bold. Leave it empty to use the standard note.
+          bold. Click a field below to add it where the cursor is: each member sees their own. Leave it empty to use the
+          standard note.
         </p>
+        <div className="mb-2 flex flex-wrap gap-1.5" data-notice-fields>
+          {NOTICE_FIELDS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => insertField(f.key)}
+              data-notice-field={f.key}
+              title={`Adds {${f.key}}`}
+              className="inline-flex items-center gap-1 rounded-full border border-navy-200 bg-white px-2.5 py-1 text-xs font-semibold text-navy-700 hover:border-brand-300 hover:bg-brand-50"
+            >
+              + {f.label}
+            </button>
+          ))}
+        </div>
         <textarea
+          ref={noticeBox}
           id="ts-bank-notice"
           value={bankNotice}
           maxLength={MAX_BANK_NOTICE}
@@ -109,9 +150,9 @@ export function TeamSettingsForm({
             </button>
           ) : null}
         </div>
-        <p className="mt-2 text-xs font-bold uppercase tracking-wide text-navy-400">Preview</p>
+        <p className="mt-2 text-xs font-bold uppercase tracking-wide text-navy-400">Preview (with sample details)</p>
         <p className="mt-1 whitespace-pre-line rounded-xl border border-navy-100 bg-navy-50 p-3 text-sm text-navy-700" data-bank-notice-preview>
-          {boldParts(bankNotice.trim() || DEFAULT_BANK_NOTICE).map((p, i) =>
+          {boldParts(fillNotice(bankNotice.trim() || DEFAULT_BANK_NOTICE, SAMPLE)).map((p, i) =>
             p.bold ? <strong key={i}>{p.text}</strong> : <span key={i}>{p.text}</span>,
           )}
         </p>

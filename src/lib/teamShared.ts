@@ -313,6 +313,27 @@ export const DEFAULT_BANK_NOTICE =
 
 export const MAX_BANK_NOTICE = 1000;
 
+/**
+ * Fields a recruiter can put in the Bank page note, filled in for each member.
+ * An unknown {word} is left as typed, so a mistake shows instead of vanishing.
+ */
+export const NOTICE_FIELDS = [
+  { key: "name", label: "Full name", sample: "Aisha Benali" },
+  { key: "firstName", label: "First name", sample: "Aisha" },
+  { key: "email", label: "Professional email", sample: "aisha.benali@workroute.team" },
+  { key: "phone", label: "WorkRoute phone number", sample: "+44 7700 900123" },
+  { key: "personalEmail", label: "Personal email", sample: "aisha@example.com" },
+  { key: "startDate", label: "First work day", sample: "Monday, 9 November 2026" },
+] as const;
+
+export type NoticeValues = Partial<Record<(typeof NOTICE_FIELDS)[number]["key"], string>>;
+
+export function fillNotice(text: string, values: NoticeValues): string {
+  return text.replace(/\{(\w+)\}/g, (whole, key: string) =>
+    key in values ? (values as Record<string, string | undefined>)[key] || "—" : whole,
+  );
+}
+
 /** A notice split into plain and **bold** parts, for rendering as text — never HTML. */
 export function boldParts(text: string): { text: string; bold: boolean }[] {
   return text
