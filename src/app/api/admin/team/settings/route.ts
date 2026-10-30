@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession, verifyAdminRequest } from "@/lib/adminAuth";
 import { readJsonBody, badBodyResponse } from "@/lib/http";
 import { addAnnouncement, saveTeamSettings, updateAnnouncement } from "@/lib/teamStore";
+import { DEFAULT_BANK_NOTICE, MAX_BANK_NOTICE } from "@/lib/teamShared";
 import type { PaydaySchedule } from "@/lib/teamShared";
 import { readDate } from "@/lib/teamValidate";
 
 /**
  * Team settings and announcements.
  *
- *   settings { payday, rulesText, mailboxUrl, mailboxHelp }
+ *   settings { payday, rulesText, mailboxUrl, mailboxHelp, bankNotice }
  *   announce { title, body }
  *   announcement { id, active? , remove? }
  */
@@ -43,8 +44,14 @@ export async function POST(req: NextRequest) {
     if (mailboxUrl && !/^https:\/\/[^\s]+$/.test(mailboxUrl)) {
       return NextResponse.json({ ok: false, problems: ["The mailbox link must start with https://"] }, { status: 400 });
     }
+    const notice = typeof b.bankNotice === "string" ? b.bankNotice.replace(/\r\n?/g, "\n").trim() : "";
+    if (notice.length > MAX_BANK_NOTICE) {
+      return NextResponse.json({ ok: false, problems: [`The Bank page note can be at most ${MAX_BANK_NOTICE} characters.`] }, { status: 400 });
+    }
     await saveTeamSettings({
       payday,
+      // The standard text is kept as "standard", so a later change to it reaches everyone who never edited it.
+      bankNotice: notice === DEFAULT_BANK_NOTICE ? "" : notice,
       mailboxUrl,
       rulesText: typeof b.rulesText === "string" ? b.rulesText.slice(0, 20_000) : "",
       mailboxHelp: typeof b.mailboxHelp === "string" ? b.mailboxHelp.slice(0, 2000) : "",

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { requireMember } from "@/lib/teamAuth";
 import { bankView } from "@/lib/teamView";
-import { formatDateTime } from "@/lib/teamShared";
+import { DEFAULT_BANK_NOTICE, boldParts, formatDateTime } from "@/lib/teamShared";
+import { getTeamSettings } from "@/lib/teamStore";
 import { PortalShell } from "@/components/team/PortalShell";
 import { BankForm } from "@/components/team/BankForm";
 import { Section } from "@/components/team/ui";
@@ -13,15 +14,15 @@ export default async function TeamBankPage() {
   const member = await requireMember();
   const current = bankView(member.bank);
   const pending = bankView(member.bankPending);
+  const notice = (await getTeamSettings()).bankNotice || DEFAULT_BANK_NOTICE;
 
   return (
     <PortalShell member={member} active="bank" title="Bank details" intro="Where your earnings are paid. Payments are in US dollars.">
       <div className="space-y-6">
         <div className="flex gap-3 rounded-2xl border border-navy-100 bg-navy-50 p-4 text-sm text-navy-700">
           <Icon name="shieldCheck" className="h-5 w-5 shrink-0 text-navy-600" />
-          <p>
-            We only need your account holder name, IBAN and BIC. <strong>WorkRoute will never ask for your card number, PIN,
-            CVV, online-banking password or any code from your bank</strong> — not here, by email or by phone.
+          <p className="whitespace-pre-line" data-bank-notice>
+            {boldParts(notice).map((p, i) => (p.bold ? <strong key={i}>{p.text}</strong> : <span key={i}>{p.text}</span>))}
           </p>
         </div>
 

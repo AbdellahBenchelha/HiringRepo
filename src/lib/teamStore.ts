@@ -157,6 +157,8 @@ export interface TeamSettings {
   rulesText: string;
   mailboxUrl: string;
   mailboxHelp: string;
+  /** The note on the member's Bank page. Empty means the standard one (DEFAULT_BANK_NOTICE). */
+  bankNotice: string;
 }
 
 export const DEFAULT_SETTINGS: TeamSettings = {
@@ -164,6 +166,7 @@ export const DEFAULT_SETTINGS: TeamSettings = {
   rulesText: "",
   mailboxUrl: "",
   mailboxHelp: "",
+  bankNotice: "",
 };
 
 interface TeamFile {

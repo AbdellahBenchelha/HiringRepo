@@ -304,6 +304,23 @@ export function memberStateOf(m: { status: MemberStatus; activatedAt?: string; b
   return { key: m.status, label: MEMBER_STATUS_LABEL[m.status], className };
 }
 
+/**
+ * The safety note at the top of the member's Bank page, until a recruiter
+ * writes their own in Team settings. **Words between double stars** are bold.
+ */
+export const DEFAULT_BANK_NOTICE =
+  "We only need your account holder name, IBAN and BIC. **WorkRoute will never ask for your card number, PIN, CVV, online-banking password or any code from your bank** — not here, by email or by phone.";
+
+export const MAX_BANK_NOTICE = 1000;
+
+/** A notice split into plain and **bold** parts, for rendering as text — never HTML. */
+export function boldParts(text: string): { text: string; bold: boolean }[] {
+  return text
+    .split(/\*\*/)
+    .map((t, i) => ({ text: t, bold: i % 2 === 1 }))
+    .filter((p) => p.text);
+}
+
 /** "Monday, 9 November 2026" — a start date, written out in full. */
 export function formatLongDay(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", {
