@@ -10,12 +10,14 @@ import {
   AGREEMENT_STATUS_LABEL,
   MAX_AGREEMENT_REASON,
   MAX_SIGNED_FILES,
+  NOT_FULL_VERIFIED,
   agreementReaskMessage,
   agreementVersions,
   formatAgreementDate,
   type AgreementStatus,
 } from "@/lib/agreement";
 import type { CandidateView } from "@/lib/candidateView";
+import { FULL_VERIFIED } from "@/lib/candidateStatus";
 import { OnboardingChatBox } from "@/components/admin/OnboardingChatBox";
 import {
   COMPANY_TIME_ZONE,
@@ -117,8 +119,13 @@ export function AgreementPanel({
   const zones = knownTimeZones();
 
   const status = candidate.agreementStatus ?? "not_sent";
-  const missing = candidate.agreementMissing ?? [];
-  const canPreview = !missing.some((m) => m !== "the candidate is not Full verified");
+  // The list comes from the server when the page loaded; the status is changed
+  // right here in View info, so that one line follows the status as it is now.
+  const missing = [
+    ...(candidate.status !== FULL_VERIFIED ? [NOT_FULL_VERIFIED] : []),
+    ...(candidate.agreementMissing ?? []).filter((m) => m !== NOT_FULL_VERIFIED),
+  ];
+  const canPreview = !missing.some((m) => m !== NOT_FULL_VERIFIED);
   const events = candidate.agreementEvents ?? [];
   const submissions = candidate.agreementSubmissions ?? [];
   const latest = submissions.at(-1);

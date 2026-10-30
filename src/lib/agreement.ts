@@ -149,9 +149,12 @@ export function formatAgreementDate(iso: string): string {
  * What stops an agreement being drawn up for this candidate, in words a
  * recruiter reads. Empty when it can be sent.
  */
+/** The one missing item the recruiter fixes from the status menu, not the Agreement tab. */
+export const NOT_FULL_VERIFIED = "the candidate is not Full verified";
+
 export function agreementMissing(c: AgreementCandidate): string[] {
   const out: string[] = [];
-  if (c.status !== FULL_VERIFIED) out.push("the candidate is not Full verified");
+  if (c.status !== FULL_VERIFIED) out.push(NOT_FULL_VERIFIED);
   if (!c.offer || !c.offerAcceptedAt) out.push("no accepted offer");
   else {
     if (!effectiveOffer(c.offer).hoursPerWeek) out.push("the offer has no weekly hours");
